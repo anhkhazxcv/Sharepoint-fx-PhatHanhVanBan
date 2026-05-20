@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json",
+  "id": "7db6d7b3-dbe0-48ec-9506-6d58e071d506",
+  "alias": "PhvbMagWebPart",
+  "componentType": "WebPart",
+  "version": "*",
+  "manifestVersion": 2,
+  "requiresCustomScript": false,
+
+  "supportedHosts": [
+    "SharePointWebPart",
+    "SharePointFullPage"
+  ],
+
+  "supportsFullBleed": true,
+
+  "supportsThemeVariants": true,
+
+  "preconfiguredEntries": [
+    {
+      "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
+      "group": {
+        "default": "Advanced"
+      },
+      "title": {
+        "default": "PHVB-MAG"
+      },
+      "description": {
+        "default": "PHVB-MAG description"
+      },
+      "officeFabricIconFontName": "Page",
+      "properties": {
+        "description": "PHVB-MAG"
+      }
+    }
+  ]
+}

@@ -1,0 +1,1351 @@
+// Sophisticated Warm-Cream & Golden-Bronze Color Palette
+$primary-color: #7B4C2C;       // Warm deep bronze/gold
+$primary-hover: #5C3D2E;       // Darker bronze
+$primary-light: #F5EBE0;       // Soft warm beige
+$bg-sidebar: #FFFFFF;          // Pure white sidebar
+$bg-folders: #FAF6F0;          // Soft cream-beige sub-sidebar
+$bg-content: #FCF9F5;          // Extra light off-white content
+$text-main: #2C2520;           // Dark brown charcoal text
+$text-muted: #8C827A;          // Muted taupe
+$border-color: #EFECE6;        // Very soft beige border
+$shadow-sm: 0 2px 8px rgba(123, 76, 44, 0.03);
+$shadow-md: 0 8px 24px rgba(123, 76, 44, 0.05);
+$shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
+
+.phvbContainer {
+  display: flex;
+  min-height: 800px;
+  background-color: $bg-content;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  color: $text-main;
+  overflow: hidden;
+  box-sizing: border-box;
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+.btnIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 18px;
+}
+
+.connectionBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #FFF5E8;
+  border: 1px solid #F1DFC2;
+  border-radius: 12px;
+  color: $text-main;
+  font-size: 13px;
+  padding: 12px 16px;
+
+  strong {
+    color: $primary-color;
+  }
+}
+
+// -------------------------------------------------------------
+// 1. LEFT NAVIGATION SIDEBAR
+// -------------------------------------------------------------
+.sidebar {
+  width: 280px;
+  background-color: $bg-sidebar;
+  border-right: 1px solid $border-color;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+  transition: width 0.2s ease, padding 0.2s ease;
+
+  .sidebarTop {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-grow: 1;
+  }
+
+  .sidebarHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+
+    .sidebarBrand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      padding-left: 8px;
+    }
+
+    .collapseButton {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid $border-color;
+      background-color: #FFFFFF;
+      color: $text-main;
+      cursor: pointer;
+      line-height: 1;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: $bg-folders;
+        color: $primary-color;
+      }
+    }
+
+    .logoBox {
+      width: 40px;
+      height: 40px;
+      background-color: $primary-color;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(123, 76, 44, 0.2);
+
+      .logoM {
+        color: #FFFFFF;
+        font-weight: 800;
+        font-size: 20px;
+        font-family: Georgia, serif;
+      }
+    }
+
+    .headerTitle {
+      min-width: 0;
+
+      h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: $text-main;
+      }
+      p {
+        margin: 2px 0 0 0;
+        font-size: 11px;
+        color: $text-muted;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+
+  .navMenu {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .navGroupLabel {
+      font-size: 11px;
+      font-weight: 700;
+      color: $text-muted;
+      margin: 20px 0 8px 12px;
+      letter-spacing: 1px;
+    }
+
+    .navItem {
+      display: flex;
+      align-items: center;
+      padding: 12px 14px;
+      width: 100%;
+      border: none;
+      background: transparent;
+      border-radius: 10px;
+      cursor: pointer;
+      color: $text-main;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      gap: 12px;
+      position: relative;
+      text-align: left;
+
+      .iconWrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: $text-muted;
+        transition: color 0.2s ease;
+      }
+
+      .navText {
+        flex-grow: 1;
+      }
+
+      &.navItemCollapsed {
+        justify-content: center;
+        padding-left: 12px;
+        padding-right: 12px;
+
+        .countBadge {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          min-width: 18px;
+          padding: 1px 5px;
+        }
+      }
+
+      .countBadge {
+        background-color: #D37A3F; // Muted orange badge
+        color: #FFFFFF;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 20px;
+        min-width: 22px;
+        text-align: center;
+        box-shadow: 0 2px 6px rgba(211, 122, 63, 0.2);
+
+        &.blueBadge {
+          background-color: #4A89A4; // Sophisticated teal
+          box-shadow: 0 2px 6px rgba(74, 137, 164, 0.2);
+        }
+
+        &.goldBadge {
+          background-color: $primary-color;
+          box-shadow: 0 2px 6px rgba(123, 76, 44, 0.2);
+        }
+      }
+
+      &:hover {
+        background-color: $bg-folders;
+        .iconWrapper {
+          color: $primary-color;
+        }
+      }
+
+      &.active {
+        background-color: $primary-light;
+        color: $primary-color;
+
+        .iconWrapper {
+          color: $primary-color;
+        }
+
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 25%;
+          height: 50%;
+          width: 4px;
+          background-color: $primary-color;
+          border-radius: 0 4px 4px 0;
+        }
+      }
+    }
+  }
+
+  .sidebarFooter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid $border-color;
+    margin-top: 24px;
+
+    .userAvatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: $primary-light;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: $primary-color;
+      font-size: 13px;
+      border: 1.5px solid rgba(123, 76, 44, 0.15);
+    }
+
+    .userInfo {
+      overflow: hidden;
+      h4 {
+        margin: 0;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: $text-main;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      p {
+        margin: 2px 0 0 0;
+        font-size: 11px;
+        color: $text-muted;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  &.sidebarCollapsed {
+    width: 92px;
+    padding-left: 12px;
+    padding-right: 12px;
+
+    .sidebarHeader {
+      margin-bottom: 24px;
+
+      .sidebarBrand {
+        padding-left: 0;
+      }
+    }
+
+    .navMenu {
+      align-items: center;
+    }
+
+    .sidebarFooter {
+      justify-content: center;
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// 2. FOLDERS SUB-SIDEBAR
+// -------------------------------------------------------------
+.folderPane {
+  width: 250px;
+  background-color: $bg-folders;
+  border-right: 1px solid $border-color;
+  padding: 24px 12px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+
+  .folderPaneHeader {
+    padding-left: 12px;
+    margin-bottom: 16px;
+    h4 {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 800;
+      color: $text-muted;
+      letter-spacing: 1.2px;
+    }
+  }
+
+  .folderList {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+    flex-grow: 1;
+    padding-right: 4px;
+
+    /* Custom Scrollbar */
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(123, 76, 44, 0.1);
+      border-radius: 4px;
+    }
+
+    .folderSeparator {
+      height: 1px;
+      background-color: $border-color;
+      margin: 12px 10px;
+    }
+
+    .folderItem {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: $text-main;
+      transition: all 0.15s ease;
+
+      .folderIcon {
+        font-size: 15px;
+        display: inline-block;
+        transition: transform 0.2s ease;
+      }
+
+      .folderBold {
+        font-weight: 700;
+      }
+
+      &:hover {
+        background-color: rgba(123, 76, 44, 0.04);
+        .folderIcon {
+          transform: scale(1.15);
+        }
+      }
+
+      &.active {
+        background-color: #EFE6DC;
+        color: $primary-color;
+        font-weight: 700;
+      }
+    }
+
+    .subFolderList {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-left: 20px;
+      margin: 2px 0;
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// 3. MAIN CONTENT VIEW
+// -------------------------------------------------------------
+.contentPane {
+  flex-grow: 1;
+  padding: 32px 40px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+
+  .contentHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+
+    h2 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      color: $text-main;
+    }
+
+    .headerActions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      // Premium rounded search input
+      .searchBox {
+        position: relative;
+        display: flex;
+        align-items: center;
+
+        .searchIcon {
+          position: absolute;
+          left: 14px;
+          color: $text-muted;
+          pointer-events: none;
+          font-size: 16px;
+        }
+
+        input {
+          background-color: #FFFFFF;
+          border: 1px solid $border-color;
+          border-radius: 30px;
+          padding: 10px 16px 10px 40px;
+          font-size: 13.5px;
+          width: 260px;
+          color: $text-main;
+          outline: none;
+          transition: all 0.2s ease;
+          box-shadow: $shadow-sm;
+
+          &::placeholder {
+            color: $text-muted;
+          }
+
+          &:focus {
+            border-color: $primary-color;
+            width: 320px;
+            box-shadow: 0 4px 15px rgba(123, 76, 44, 0.08);
+          }
+        }
+      }
+
+      .btnTemplate {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background-color: #FFFFFF;
+        border: 1px solid $border-color;
+        border-radius: 30px;
+        padding: 10px 20px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: $text-main;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: $shadow-sm;
+
+        &:hover {
+          background-color: $bg-folders;
+          border-color: rgba(123, 76, 44, 0.2);
+        }
+      }
+
+      .btnCreate {
+        background-color: $primary-color;
+        border: none;
+        border-radius: 30px;
+        padding: 10px 22px;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: #FFFFFF;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(123, 76, 44, 0.15);
+
+        &:hover {
+          background-color: $primary-hover;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(123, 76, 44, 0.25);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+
+        &:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+          transform: none;
+          box-shadow: none;
+        }
+      }
+    }
+  }
+
+  .subHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .titleArea {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: $text-main;
+      }
+
+      .resultsBadge {
+        background-color: $primary-light;
+        color: $primary-color;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 20px;
+      }
+    }
+
+    .filterWrapper {
+      position: relative;
+
+      .btnFilter {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background-color: transparent;
+        border: none;
+        font-size: 13px;
+        font-weight: 700;
+        color: $text-main;
+        cursor: pointer;
+        padding: 6px 12px;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+
+        &:hover {
+          background-color: rgba(123, 76, 44, 0.05);
+          color: $primary-color;
+        }
+
+        &.filterActive {
+          color: $primary-color;
+          background-color: $primary-light;
+        }
+      }
+
+      .filterDropdown {
+        position: absolute;
+        right: 0;
+        top: 100%;
+        margin-top: 8px;
+        width: 280px;
+        background-color: #FFFFFF;
+        border: 1px solid $border-color;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: $shadow-lg;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
+        .filterGroup {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+
+          label {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: $text-muted;
+          }
+
+          select {
+            padding: 8px 10px;
+            border: 1px solid $border-color;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            width: 100%;
+            background-color: #FFFFFF;
+
+            &:focus {
+              border-color: $primary-color;
+            }
+          }
+        }
+
+        .filterActions {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 8px;
+          gap: 10px;
+
+          .btnClearFilter {
+            background-color: transparent;
+            border: none;
+            color: $text-muted;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 12px;
+
+            &:hover {
+              color: $text-main;
+            }
+          }
+
+          .btnApplyFilter {
+            background-color: $primary-color;
+            border: none;
+            color: #FFFFFF;
+            font-size: 12.5px;
+            font-weight: 700;
+            border-radius: 6px;
+            padding: 6px 16px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+
+            &:hover {
+              background-color: $primary-hover;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // -------------------------------------------------------------
+  // DATA TABLE SECTION
+  // -------------------------------------------------------------
+  .tableCard {
+    background-color: #FFFFFF;
+    border-radius: 16px;
+    border: 1px solid $border-color;
+    box-shadow: $shadow-sm;
+    overflow: hidden;
+
+    .emptyState {
+      padding: 60px;
+      text-align: center;
+      color: $text-muted;
+      font-size: 14px;
+
+      p {
+        margin: 0;
+      }
+    }
+
+    .docTable {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+
+      th {
+        padding: 18px 24px;
+        font-size: 11px;
+        font-weight: 700;
+        color: $text-muted;
+        letter-spacing: 0.8px;
+        border-bottom: 1.5px solid $border-color;
+        background-color: rgba(250, 246, 240, 0.4);
+      }
+
+      td {
+        padding: 20px 24px;
+        border-bottom: 1px solid $border-color;
+        font-size: 13.5px;
+        vertical-align: middle;
+      }
+
+      .tableRow {
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+
+        &:hover {
+          background-color: rgba(123, 76, 44, 0.015);
+        }
+
+        &:last-child td {
+          border-bottom: none;
+        }
+      }
+
+      .titleColumn {
+        width: 45%;
+
+        .docTitleText {
+          font-weight: 700;
+          color: $text-main;
+          line-height: 1.4;
+          margin-bottom: 4px;
+          transition: color 0.15s ease;
+        }
+
+        .docSubtitleText {
+          font-size: 12px;
+          color: $text-muted;
+          line-height: 1.4;
+        }
+
+        &:hover {
+          .docTitleText {
+            color: $primary-color;
+          }
+        }
+      }
+
+      .codeColumn {
+        width: 18%;
+
+        .codeText {
+          font-family: monospace;
+          font-size: 12.5px;
+          color: $text-main;
+        }
+
+        .missingCode {
+          font-style: italic;
+          color: $text-muted;
+          font-size: 12px;
+        }
+      }
+
+      .typeColumn {
+        width: 12%;
+      }
+
+      .deptColumn {
+        width: 15%;
+
+        .deptPill {
+          background-color: #F0EDE9;
+          color: #554E48;
+          font-size: 12px;
+          font-weight: 600;
+          padding: 4px 12px;
+          border-radius: 12px;
+          display: inline-block;
+        }
+      }
+
+      .dateColumn {
+        width: 10%;
+        color: $text-muted;
+        font-size: 12.5px;
+      }
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// BADGE STYLING FOR LOAI
+// -------------------------------------------------------------
+.badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: inline-block;
+  text-align: center;
+}
+
+.badgeTC { // Tiêu chuẩn
+  background-color: #F6EFE9;
+  color: #8C5B38;
+}
+
+.badgeQC { // Quy chế
+  background-color: #EFEAE3;
+  color: #6C5A49;
+}
+
+.badgeQD { // Quyết định
+  background-color: #ECE7DF;
+  color: #70675D;
+}
+
+.badgeCS { // Chính sách
+  background-color: #E2DDD5;
+  color: #4F473E;
+}
+
+.badgeHD { // Hướng dẫn
+  background-color: #EAE6DE;
+  color: #5A544A;
+}
+
+// -------------------------------------------------------------
+// SKELETON LOADING EFFECTS
+// -------------------------------------------------------------
+.skeletonContainer {
+  padding: 12px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.skeletonRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(123, 76, 44, 0.05);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.skeletonCell {
+  height: 16px;
+  background: linear-gradient(90deg, #F0ECE6 25%, #E9E3D9 50%, #F0ECE6 75%);
+  background-size: 200% 100%;
+  animation: loadingShimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes loadingShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// -------------------------------------------------------------
+// 4. DRAWER: DOCUMENT DETAILS (SLIDE-IN EFFECT)
+// -------------------------------------------------------------
+.drawerOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(44, 37, 32, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.drawerContent {
+  width: 580px;
+  height: 100%;
+  background-color: #FFFFFF;
+  box-shadow: -10px 0 40px rgba(44, 37, 32, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+
+  .drawerHeader {
+    padding: 24px 32px;
+    border-bottom: 1px solid $border-color;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: $bg-folders;
+
+    h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: $text-main;
+    }
+
+    .btnClose {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      color: $text-muted;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: $text-main;
+      }
+    }
+  }
+
+  .drawerBody {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+
+    /* Scrollbar */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(123, 76, 44, 0.1);
+      border-radius: 4px;
+    }
+
+    .drawerMainTitle {
+      h4 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 800;
+        color: $text-main;
+        line-height: 1.4;
+      }
+
+      .engTitle {
+        margin: 6px 0 0 0;
+        font-size: 13.5px;
+        color: $text-muted;
+        font-style: italic;
+        line-height: 1.4;
+      }
+    }
+
+    .statusBanner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      background-color: $bg-folders;
+      border-radius: 10px;
+      border: 1px dashed rgba(123, 76, 44, 0.15);
+
+      .label {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: $text-muted;
+      }
+
+      .statusPill {
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 6px;
+
+        &.statusApproved {
+          background-color: #E2ECE5;
+          color: #2E7D32;
+        }
+
+        &.statusPending {
+          background-color: #FFF3E0;
+          color: #EF6C00;
+        }
+      }
+    }
+
+    .metaSection {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      h5 {
+        margin: 0;
+        font-size: 12.5px;
+        font-weight: 800;
+        color: $primary-color;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        border-left: 3px solid $primary-color;
+        padding-left: 8px;
+      }
+
+      .summaryText {
+        background-color: $bg-content;
+        border: 1px solid $border-color;
+        border-radius: 8px;
+        padding: 16px;
+        font-size: 13.5px;
+        line-height: 1.6;
+        color: #4A4038;
+      }
+
+      .metaTable {
+        width: 100%;
+        border-collapse: collapse;
+
+        td {
+          padding: 8px 0;
+          font-size: 13.5px;
+          border-bottom: 1px solid rgba(123, 76, 44, 0.04);
+
+          &:last-child {
+            border-bottom: none;
+          }
+        }
+
+        .metaLabel {
+          width: 38%;
+          color: $text-muted;
+          font-weight: 500;
+        }
+
+        .metaValue {
+          color: $text-main;
+          line-height: 1.4;
+
+          code {
+            background-color: $bg-folders;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+          }
+
+          .textWarning {
+            color: #D32F2F;
+            font-weight: 600;
+          }
+        }
+      }
+
+      .approvalWorkflow {
+        padding-left: 4px;
+
+        .workflowStep {
+          display: flex;
+          gap: 14px;
+
+          .stepDot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: $primary-color;
+            margin-top: 4px;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 4px rgba(123, 76, 44, 0.15);
+          }
+
+          .stepInfo {
+            h6 {
+              margin: 0;
+              font-size: 13px;
+              font-weight: 700;
+              color: $text-main;
+            }
+            p {
+              margin: 4px 0 0 0;
+              font-size: 12.5px;
+              color: $text-muted;
+              line-height: 1.4;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .drawerFooter {
+    padding: 20px 32px;
+    border-top: 1px solid $border-color;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background-color: $bg-folders;
+
+    .btnSecondary {
+      background-color: #FFFFFF;
+      border: 1px solid $border-color;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: $text-main;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background-color: $bg-content;
+      }
+    }
+
+    .btnPrimaryLink {
+      background-color: $primary-color;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #FFFFFF;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+
+      &:hover {
+        background-color: $primary-hover;
+      }
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// 5. MODAL: + TẠO YÊU CẦU (POPUP FORM)
+// -------------------------------------------------------------
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(44, 37, 32, 0.45);
+  backdrop-filter: blur(5px);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalContent {
+  width: 720px;
+  max-width: 100%;
+  max-height: 90vh;
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: $shadow-lg;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  .modalHeader {
+    padding: 20px 28px;
+    border-bottom: 1px solid $border-color;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: $bg-folders;
+
+    h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      color: $text-main;
+    }
+
+    .btnClose {
+      background: transparent;
+      border: none;
+      font-size: 26px;
+      color: $text-muted;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: $text-main;
+      }
+    }
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-grow: 1;
+  }
+
+  .modalBody {
+    padding: 28px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+
+    /* Custom scrollbar */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(123, 76, 44, 0.15);
+      border-radius: 4px;
+    }
+
+    .formRow {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .formRowTwoCol {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .formGroup {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #4A4038;
+
+        .required {
+          color: #D32F2F;
+          margin-left: 2px;
+        }
+      }
+
+      input[type="text"], select, textarea {
+        padding: 10px 14px;
+        border: 1px solid $border-color;
+        border-radius: 8px;
+        font-size: 13.5px;
+        outline: none;
+        background-color: #FFFFFF;
+        color: $text-main;
+        transition: border-color 0.2s ease;
+        width: 100%;
+
+        &:focus {
+          border-color: $primary-color;
+          box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+        }
+
+        &::placeholder {
+          color: $text-muted;
+        }
+      }
+
+      textarea {
+        resize: vertical;
+      }
+    }
+  }
+
+  .modalFooter {
+    padding: 20px 28px;
+    border-top: 1px solid $border-color;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background-color: $bg-folders;
+
+    .btnSecondary {
+      background-color: #FFFFFF;
+      border: 1px solid $border-color;
+      border-radius: 8px;
+      padding: 10px 22px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: $text-main;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background-color: $bg-content;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .btnPrimary {
+      background-color: $primary-color;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 4px 10px rgba(123, 76, 44, 0.15);
+
+      &:hover {
+        background-color: $primary-hover;
+      }
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// KEYFRAMES ANIMATIONS
+// -------------------------------------------------------------
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
