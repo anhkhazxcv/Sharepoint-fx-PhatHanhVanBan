@@ -1,29 +1,32 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
+import type { ICreateRequestInput } from '../PhvbMag.models';
 import styles from './PhvbMag.module.scss';
-import type { ICreateRequestInput } from './PhvbMag.types';
-import { DEFAULT_REQUEST_FORM, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS, FOLDER_OPTIONS } from './PhvbMag.types';
 import { CloseIcon } from './PhvbMagIcons';
 
 interface IPhvbMagCreateModalProps {
   isOpen: boolean;
   isSaving: boolean;
+  defaultValues: ICreateRequestInput;
+  documentTypes: ReadonlyArray<string>;
+  departments: ReadonlyArray<string>;
+  folders: ReadonlyArray<string>;
   onClose: () => void;
   onSubmit: (input: ICreateRequestInput) => Promise<boolean>;
 }
 
-export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.ReactElement | null {
-  const { isOpen, isSaving, onClose, onSubmit } = props;
-  const [formValues, setFormValues] = useState<ICreateRequestInput>(DEFAULT_REQUEST_FORM);
+export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.ReactElement {
+  const { isOpen, isSaving, defaultValues, documentTypes, departments, folders, onClose, onSubmit } = props;
+  const [formValues, setFormValues] = useState<ICreateRequestInput>({ ...defaultValues });
 
   useEffect(() => {
     if (isOpen) {
-      setFormValues(DEFAULT_REQUEST_FORM);
+      setFormValues({ ...defaultValues });
     }
-  }, [isOpen]);
+  }, [defaultValues, isOpen]);
 
   if (!isOpen) {
-    return null;
+    return <></>;
   }
 
   const updateField = (field: keyof ICreateRequestInput, value: string): void => {
@@ -37,7 +40,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     event.preventDefault();
     const isSuccess = await onSubmit(formValues);
     if (isSuccess) {
-      setFormValues(DEFAULT_REQUEST_FORM);
+      setFormValues({ ...defaultValues });
     }
   };
 
@@ -82,7 +85,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
               <div className={styles.formGroup}>
                 <label>Loại văn bản</label>
                 <select value={formValues.type} onChange={event => updateField('type', event.target.value)}>
-                  {DOCUMENT_TYPE_OPTIONS.map(option => (
+                  {documentTypes.map(option => (
                     <option key={option} value={option}>
                       {option}
                     </option>
@@ -95,7 +98,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
               <div className={styles.formGroup}>
                 <label>Phòng ban soạn thảo</label>
                 <select value={formValues.department} onChange={event => updateField('department', event.target.value)}>
-                  {DEPARTMENT_OPTIONS.map(option => (
+                  {departments.map(option => (
                     <option key={option} value={option}>
                       {option}
                     </option>
@@ -106,7 +109,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
               <div className={styles.formGroup}>
                 <label>Thư mục ban hành</label>
                 <select value={formValues.folder} onChange={event => updateField('folder', event.target.value)}>
-                  {FOLDER_OPTIONS.map(option => (
+                  {folders.map(option => (
                     <option key={option} value={option}>
                       {option}
                     </option>

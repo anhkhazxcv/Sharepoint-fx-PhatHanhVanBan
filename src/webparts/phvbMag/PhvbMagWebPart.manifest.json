@@ -9,6 +9,8 @@
 
   "supportedHosts": [
     "SharePointWebPart",
+    "TeamsPersonalApp",
+    "TeamsTab",
     "SharePointFullPage"
   ],
 
@@ -18,7 +20,7 @@
 
   "preconfiguredEntries": [
     {
-      "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
+      "groupId": "a7b4e92d-4f18-4c3a-b5e6-f321d8a6c4b7",
       "group": {
         "default": "Advanced"
       },

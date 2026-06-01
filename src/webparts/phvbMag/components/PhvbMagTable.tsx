@@ -1,7 +1,7 @@
 import * as React from 'react';
+import { getBadgeVariant, getSummaryPreview } from '../PhvbMag.selectors';
+import type { IVanBanItem } from '../PhvbMag.models';
 import styles from './PhvbMag.module.scss';
-import type { IVanBanItem } from './PhvbMag.types';
-import { getBadgeVariant } from './PhvbMag.types';
 
 interface IPhvbMagTableProps {
   items: IVanBanItem[];
@@ -18,11 +18,11 @@ export function PhvbMagTable(props: IPhvbMagTableProps): React.ReactElement {
         <div className={styles.skeletonContainer}>
           {[1, 2, 3, 4, 5].map(index => (
             <div key={index} className={styles.skeletonRow}>
-              <div className={styles.skeletonCell} style={{ width: '40%' }}></div>
-              <div className={styles.skeletonCell} style={{ width: '15%' }}></div>
-              <div className={styles.skeletonCell} style={{ width: '10%' }}></div>
-              <div className={styles.skeletonCell} style={{ width: '15%' }}></div>
-              <div className={styles.skeletonCell} style={{ width: '10%' }}></div>
+              <div className={styles.skeletonCell} style={{ width: '40%' }} />
+              <div className={styles.skeletonCell} style={{ width: '15%' }} />
+              <div className={styles.skeletonCell} style={{ width: '10%' }} />
+              <div className={styles.skeletonCell} style={{ width: '15%' }} />
+              <div className={styles.skeletonCell} style={{ width: '10%' }} />
             </div>
           ))}
         </div>
@@ -42,28 +42,28 @@ export function PhvbMagTable(props: IPhvbMagTableProps): React.ReactElement {
             </tr>
           </thead>
           <tbody>
-            {items.map(item => (
-              <tr key={item.Id} onClick={() => onSelectItem(item)} className={styles.tableRow}>
-                <td className={styles.titleColumn}>
-                  <div className={styles.docTitleText}>{item.Tenvanban || 'Chưa có tên văn bản'}</div>
-                  {item.TomTatNoiDung && (
-                    <div className={styles.docSubtitleText}>
-                      {item.TomTatNoiDung.length > 80 ? `${item.TomTatNoiDung.substring(0, 80)}...` : item.TomTatNoiDung}
-                    </div>
-                  )}
-                </td>
-                <td className={styles.codeColumn}>
-                  {item.SoVanBan ? <span className={styles.codeText}>{item.SoVanBan}</span> : <span className={styles.missingCode}>Chờ cấp số</span>}
-                </td>
-                <td className={styles.typeColumn}>
-                  {item.LoaiYeuCau && <span className={`${styles.badge} ${styles[getBadgeVariant(item.LoaiYeuCau)]}`}>{item.LoaiYeuCau}</span>}
-                </td>
-                <td className={styles.deptColumn}>
-                  {item.KhoaPhongNguoiTao && <span className={styles.deptPill}>{item.KhoaPhongNguoiTao}</span>}
-                </td>
-                <td className={styles.dateColumn}>{item.NgayPhatHanh || item.NgayTaoYeuCau || '---'}</td>
-              </tr>
-            ))}
+            {items.map(item => {
+              const summaryPreview = getSummaryPreview(item.TomTatNoiDung);
+
+              return (
+                <tr key={item.Id} onClick={() => onSelectItem(item)} className={styles.tableRow}>
+                  <td className={styles.titleColumn}>
+                    <div className={styles.docTitleText}>{item.Tenvanban || 'Chưa có tên văn bản'}</div>
+                    {summaryPreview && <div className={styles.docSubtitleText}>{summaryPreview}</div>}
+                  </td>
+                  <td className={styles.codeColumn}>
+                    {item.SoVanBan ? <span className={styles.codeText}>{item.SoVanBan}</span> : <span className={styles.missingCode}>Chờ cấp số</span>}
+                  </td>
+                  <td className={styles.typeColumn}>
+                    {item.LoaiYeuCau && <span className={`${styles.badge} ${styles[getBadgeVariant(item.LoaiYeuCau)]}`}>{item.LoaiYeuCau}</span>}
+                  </td>
+                  <td className={styles.deptColumn}>
+                    {item.KhoaPhongNguoiTao && <span className={styles.deptPill}>{item.KhoaPhongNguoiTao}</span>}
+                  </td>
+                  <td className={styles.dateColumn}>{item.NgayPhatHanh || item.NgayTaoYeuCau || '---'}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

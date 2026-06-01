@@ -1,6 +1,7 @@
 import * as React from 'react';
+import { TAB_LABELS } from '../PhvbMag.configuration';
+import type { ITabCounts, TabType } from '../PhvbMag.models';
 import styles from './PhvbMag.module.scss';
-import type { ITabCounts, TabType } from './PhvbMag.types';
 import {
   SidebarAdminIcon,
   SidebarCollapseIcon,
@@ -83,7 +84,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
         <nav className={styles.navMenu}>
           <NavItem
             tab="ViecCanLam"
-            label="Việc cần làm"
+            label={TAB_LABELS.ViecCanLam}
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
@@ -95,7 +96,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
 
           <NavItem
             tab="YeuCauCuaToi"
-            label="Yêu cầu của tôi"
+            label={TAB_LABELS.YeuCauCuaToi}
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
@@ -108,7 +109,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
 
           <NavItem
             tab="Admin"
-            label="Admin"
+            label={TAB_LABELS.Admin}
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
@@ -118,7 +119,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
 
           <NavItem
             tab="CapSo"
-            label="Cấp số"
+            label={TAB_LABELS.CapSo}
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}

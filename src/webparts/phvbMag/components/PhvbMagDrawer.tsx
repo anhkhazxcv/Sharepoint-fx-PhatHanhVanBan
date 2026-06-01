@@ -1,19 +1,19 @@
 import * as React from 'react';
+import { getBadgeVariant } from '../PhvbMag.selectors';
+import type { IVanBanItem } from '../PhvbMag.models';
 import styles from './PhvbMag.module.scss';
-import type { IVanBanItem } from './PhvbMag.types';
-import { getBadgeVariant } from './PhvbMag.types';
 import { CloseIcon } from './PhvbMagIcons';
 
 interface IPhvbMagDrawerProps {
-  item: IVanBanItem | null;
+  item?: IVanBanItem;
   onClose: () => void;
 }
 
-export function PhvbMagDrawer(props: IPhvbMagDrawerProps): React.ReactElement | null {
+export function PhvbMagDrawer(props: IPhvbMagDrawerProps): React.ReactElement {
   const { item, onClose } = props;
 
   if (!item) {
-    return null;
+    return <></>;
   }
 
   return (
@@ -110,7 +110,7 @@ export function PhvbMagDrawer(props: IPhvbMagDrawerProps): React.ReactElement | 
               <h5>Quy trình Phê duyệt</h5>
               <div className={styles.approvalWorkflow}>
                 <div className={styles.workflowStep}>
-                  <span className={styles.stepDot}></span>
+                  <span className={styles.stepDot} />
                   <div className={styles.stepInfo}>
                     <h6>Danh sách người phê duyệt:</h6>
                     <p>{item.PheDuyet}</p>

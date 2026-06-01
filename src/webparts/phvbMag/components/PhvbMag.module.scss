@@ -14,7 +14,8 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
 .phvbContainer {
   display: flex;
-  min-height: 800px;
+  min-height: 100vh;
+  min-height: 100dvh;
   background-color: $bg-content;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   color: $text-main;
@@ -412,12 +413,14 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 // 3. MAIN CONTENT VIEW
 // -------------------------------------------------------------
 .contentPane {
+  flex: 1 1 auto;
   flex-grow: 1;
   padding: 32px 40px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-height: 0;
   min-width: 0;
 
   .contentHeader {
@@ -671,14 +674,22 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   // DATA TABLE SECTION
   // -------------------------------------------------------------
   .tableCard {
+    flex: 1 1 auto;
+    min-height: 0;
     background-color: #FFFFFF;
     border-radius: 16px;
     border: 1px solid $border-color;
     box-shadow: $shadow-sm;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 
     .emptyState {
+      flex: 1 1 auto;
       padding: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       text-align: center;
       color: $text-muted;
       font-size: 14px;

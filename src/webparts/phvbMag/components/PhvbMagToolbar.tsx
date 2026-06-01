@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { useState } from 'react';
+import { ALL_FILTER_VALUE, TAB_LABELS } from '../PhvbMag.configuration';
+import type { TabType } from '../PhvbMag.models';
 import styles from './PhvbMag.module.scss';
-import type { TabType } from './PhvbMag.types';
-import { TAB_LABELS } from './PhvbMag.types';
 import { FilterIcon, SearchIcon } from './PhvbMagIcons';
 
 interface IPhvbMagToolbarProps {
@@ -68,7 +68,7 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
         <div className={styles.filterWrapper}>
           <button
             type="button"
-            className={`${styles.btnFilter} ${filterType !== 'All' || filterDept !== 'All' ? styles.filterActive : ''}`}
+            className={`${styles.btnFilter} ${filterType !== ALL_FILTER_VALUE || filterDept !== ALL_FILTER_VALUE ? styles.filterActive : ''}`}
             onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
           >
             <FilterIcon className={styles.btnIcon} />
@@ -80,7 +80,7 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
               <div className={styles.filterGroup}>
                 <label>Loại văn bản:</label>
                 <select value={filterType} onChange={event => onFilterTypeChange(event.target.value)}>
-                  <option value="All">Tất cả loại</option>
+                  <option value={ALL_FILTER_VALUE}>Tất cả loại</option>
                   {uniqueTypes.map(item => (
                     <option key={item} value={item}>
                       {item}
@@ -92,7 +92,7 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
               <div className={styles.filterGroup}>
                 <label>Phòng ban:</label>
                 <select value={filterDept} onChange={event => onFilterDeptChange(event.target.value)}>
-                  <option value="All">Tất cả phòng ban</option>
+                  <option value={ALL_FILTER_VALUE}>Tất cả phòng ban</option>
                   {uniqueDepts.map(item => (
                     <option key={item} value={item}>
                       {item}
@@ -105,8 +105,8 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
                 <button
                   type="button"
                   onClick={() => {
-                    onFilterTypeChange('All');
-                    onFilterDeptChange('All');
+                    onFilterTypeChange(ALL_FILTER_VALUE);
+                    onFilterDeptChange(ALL_FILTER_VALUE);
                   }}
                   className={styles.btnClearFilter}
                 >

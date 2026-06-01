@@ -1,5 +1,8 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
+import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS, FOLDER_OPTIONS } from '../PhvbMag.configuration';
+import { getUniqueFieldValues, selectFilteredItems } from '../PhvbMag.selectors';
+import type { ICreateRequestInput, IVanBanItem, TabType } from '../PhvbMag.models';
 import styles from './PhvbMag.module.scss';
 import type { IPhvbMagProps } from './IPhvbMagProps';
 import { usePhvbDocuments } from './PhvbMag.hooks';
@@ -8,17 +11,16 @@ import { PhvbMagDrawer } from './PhvbMagDrawer';
 import { PhvbMagSidebar } from './PhvbMagSidebar';
 import { PhvbMagTable } from './PhvbMagTable';
 import { PhvbMagToolbar } from './PhvbMagToolbar';
-import type { ICreateRequestInput, IVanBanItem, TabType } from './PhvbMag.types';
-import { getUniqueValues } from './PhvbMag.types';
 
 export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
   const { userDisplayName, userEmail, spHttpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle } = props;
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filterType, setFilterType] = useState<string>('All');
-  const [filterDept, setFilterDept] = useState<string>('All');
+  const [filterType, setFilterType] = useState<string>(ALL_FILTER_VALUE);
+  const [filterDept, setFilterDept] = useState<string>(ALL_FILTER_VALUE);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-  const [selectedItem, setSelectedItem] = useState<IVanBanItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<IVanBanItem | undefined>(undefined);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const defaultRequestForm = useMemo(() => cloneDefaultRequestForm(), []);
 
   const { activeTab, counts, items, isLoading, isSaving, errorMessage, setActiveTab, createRequest } = usePhvbDocuments({
     userDisplayName,
@@ -30,39 +32,14 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
     listTitle
   });
 
-  const processedItems = useMemo(() => {
-    let result = items.slice();
+  const processedItems = useMemo(() => selectFilteredItems(items, { searchQuery, filterType, filterDept }), [items, searchQuery, filterType, filterDept]);
 
-    if (filterType !== 'All') {
-      result = result.filter(item => item.LoaiYeuCau === filterType);
-    }
-
-    if (filterDept !== 'All') {
-      result = result.filter(item => item.KhoaPhongNguoiTao === filterDept);
-    }
-
-    if (searchQuery.trim() !== '') {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(item => {
-        return (
-          (item.Tenvanban || '').toLowerCase().indexOf(query) > -1 ||
-          (item.SoVanBan || '').toLowerCase().indexOf(query) > -1 ||
-          (item.TomTatNoiDung || '').toLowerCase().indexOf(query) > -1 ||
-          (item.KhoaPhongNguoiTao || '').toLowerCase().indexOf(query) > -1 ||
-          (item.NguoiTao || '').toLowerCase().indexOf(query) > -1
-        );
-      });
-    }
-
-    return result;
-  }, [items, searchQuery, filterType, filterDept]);
-
-  const uniqueTypes = useMemo(() => getUniqueValues(items, 'LoaiYeuCau'), [items]);
-  const uniqueDepts = useMemo(() => getUniqueValues(items, 'KhoaPhongNguoiTao'), [items]);
+  const uniqueTypes = useMemo(() => getUniqueFieldValues(items, 'LoaiYeuCau'), [items]);
+  const uniqueDepts = useMemo(() => getUniqueFieldValues(items, 'KhoaPhongNguoiTao'), [items]);
 
   const handleSelectTab = (tab: TabType): void => {
     setActiveTab(tab);
-    setSelectedItem(null);
+    setSelectedItem(undefined);
   };
 
   const handleCreateRequest = async (input: ICreateRequestInput): Promise<boolean> => {
@@ -111,8 +88,17 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
         <PhvbMagTable items={processedItems} isLoading={isLoading} onSelectItem={setSelectedItem} />
       </main>
 
-      <PhvbMagDrawer item={selectedItem} onClose={() => setSelectedItem(null)} />
-      <PhvbMagCreateModal isOpen={isCreateModalOpen} isSaving={isSaving} onClose={() => setIsCreateModalOpen(false)} onSubmit={handleCreateRequest} />
+      <PhvbMagDrawer item={selectedItem} onClose={() => setSelectedItem(undefined)} />
+      <PhvbMagCreateModal
+        isOpen={isCreateModalOpen}
+        isSaving={isSaving}
+        defaultValues={defaultRequestForm}
+        documentTypes={DOCUMENT_TYPE_OPTIONS}
+        departments={DEPARTMENT_OPTIONS}
+        folders={FOLDER_OPTIONS}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateRequest}
+      />
     </div>
   );
 }
