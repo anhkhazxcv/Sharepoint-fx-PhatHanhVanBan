@@ -1,4 +1,4 @@
-import type { ICreateRequestInput, IPhvbSiteContext, TabType } from './PhvbMag.models';
+import type { ICreateRequestInput, IPhvbSiteContext, TabType } from '../models/PhvbMag.models';
 
 export const DEFAULT_LIST_TITLE = 'InDoc_Release';
 export const ALL_FILTER_VALUE = 'All';

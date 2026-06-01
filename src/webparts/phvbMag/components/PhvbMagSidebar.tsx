@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { TAB_LABELS } from '../PhvbMag.configuration';
-import type { ITabCounts, TabType } from '../PhvbMag.models';
+import { TAB_LABELS } from '../config/PhvbMag.configuration';
+import type { ITabCounts, TabType } from '../models/PhvbMag.models';
 import styles from './PhvbMag.module.scss';
 import {
   SidebarAdminIcon,

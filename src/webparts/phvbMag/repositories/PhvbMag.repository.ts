@@ -1,7 +1,7 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
-import { resolveListTitle } from './PhvbMag.configuration';
-import { SharePointRequestError } from './PhvbMag.error';
-import type { IPhvbSiteContext, IVanBanItem } from './PhvbMag.models';
+import { resolveListTitle } from '../config/PhvbMag.configuration';
+import { SharePointRequestError } from '../services/PhvbMag.error';
+import type { IPhvbSiteContext, IVanBanItem } from '../models/PhvbMag.models';
 
 export interface IFetchPhvbItemsQuery extends IPhvbSiteContext {
   selectFields: ReadonlyArray<string>;

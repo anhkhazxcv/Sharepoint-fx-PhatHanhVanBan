@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { getBadgeVariant, getSummaryPreview } from '../PhvbMag.selectors';
-import type { IVanBanItem } from '../PhvbMag.models';
+import type { IVanBanItem } from '../models/PhvbMag.models';
+import { getBadgeVariant, getSummaryPreview } from '../utils/PhvbMag.selectors';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagTableProps {

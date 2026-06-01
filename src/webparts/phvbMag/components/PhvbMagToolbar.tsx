@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState } from 'react';
-import { ALL_FILTER_VALUE, TAB_LABELS } from '../PhvbMag.configuration';
-import type { TabType } from '../PhvbMag.models';
+import { ALL_FILTER_VALUE, TAB_LABELS } from '../config/PhvbMag.configuration';
+import type { TabType } from '../models/PhvbMag.models';
 import styles from './PhvbMag.module.scss';
 import { FilterIcon, SearchIcon } from './PhvbMagIcons';
 

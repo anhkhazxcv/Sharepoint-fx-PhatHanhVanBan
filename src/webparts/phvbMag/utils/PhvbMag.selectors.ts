@@ -1,5 +1,5 @@
-import { ALL_FILTER_VALUE } from './PhvbMag.configuration';
-import type { BadgeVariant, IVanBanItem, UniqueItemField } from './PhvbMag.models';
+import { ALL_FILTER_VALUE } from '../config/PhvbMag.configuration';
+import type { BadgeVariant, IVanBanItem, UniqueItemField } from '../models/PhvbMag.models';
 
 export interface IPhvbFilterState {
   searchQuery: string;

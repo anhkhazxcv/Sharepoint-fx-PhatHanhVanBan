@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import type { ICreateRequestInput } from '../PhvbMag.models';
+import type { ICreateRequestInput } from '../models/PhvbMag.models';
 import styles from './PhvbMag.module.scss';
 import { CloseIcon } from './PhvbMagIcons';
 

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { SPHttpClient } from '@microsoft/sp-http';
-import { hasSharePointSiteContext, resolveListTitle } from '../PhvbMag.configuration';
-import { SITE_CONTEXT_ERROR_MESSAGE } from '../PhvbMag.error';
-import { phvbDocumentsService } from '../PhvbMag.service';
-import type { ICreateRequestInput, ITabCounts, IVanBanItem, TabType } from '../PhvbMag.models';
-import { DEFAULT_TAB_COUNTS } from '../PhvbMag.models';
+import { hasSharePointSiteContext, resolveListTitle } from '../config/PhvbMag.configuration';
+import { SITE_CONTEXT_ERROR_MESSAGE } from '../services/PhvbMag.error';
+import { phvbDocumentsService } from '../services/PhvbMag.service';
+import type { ICreateRequestInput, ITabCounts, IVanBanItem, TabType } from '../models/PhvbMag.models';
+import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 
 interface IUsePhvbDocumentsOptions {
   userDisplayName: string;

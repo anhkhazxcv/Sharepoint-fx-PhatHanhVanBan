@@ -1,11 +1,11 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
-import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS, FOLDER_OPTIONS } from '../PhvbMag.configuration';
-import { getUniqueFieldValues, selectFilteredItems } from '../PhvbMag.selectors';
-import type { ICreateRequestInput, IVanBanItem, TabType } from '../PhvbMag.models';
+import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS, FOLDER_OPTIONS } from '../config/PhvbMag.configuration';
+import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
+import type { ICreateRequestInput, IVanBanItem, TabType } from '../models/PhvbMag.models';
+import { getUniqueFieldValues, selectFilteredItems } from '../utils/PhvbMag.selectors';
 import styles from './PhvbMag.module.scss';
 import type { IPhvbMagProps } from './IPhvbMagProps';
-import { usePhvbDocuments } from './PhvbMag.hooks';
 import { PhvbMagCreateModal } from './PhvbMagCreateModal';
 import { PhvbMagDrawer } from './PhvbMagDrawer';
 import { PhvbMagSidebar } from './PhvbMagSidebar';

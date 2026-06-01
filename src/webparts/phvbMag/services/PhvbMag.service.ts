@@ -1,8 +1,8 @@
-import { hasSharePointSiteContext, resolveListTitle } from './PhvbMag.configuration';
+import { hasSharePointSiteContext, resolveListTitle } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE, toRuntimeMessage } from './PhvbMag.error';
-import { phvbRepository } from './PhvbMag.repository';
-import type { ICreateRequestInput, IPhvbDocumentContext, IPhvbSiteContext, ITabCounts, IVanBanItem, TabType } from './PhvbMag.models';
-import { DEFAULT_TAB_COUNTS } from './PhvbMag.models';
+import { phvbRepository } from '../repositories/PhvbMag.repository';
+import type { ICreateRequestInput, IPhvbDocumentContext, IPhvbSiteContext, ITabCounts, IVanBanItem, TabType } from '../models/PhvbMag.models';
+import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 
 const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'Id',

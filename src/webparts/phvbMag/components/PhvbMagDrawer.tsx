@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { getBadgeVariant } from '../PhvbMag.selectors';
-import type { IVanBanItem } from '../PhvbMag.models';
+import type { IVanBanItem } from '../models/PhvbMag.models';
+import { getBadgeVariant } from '../utils/PhvbMag.selectors';
 import styles from './PhvbMag.module.scss';
 import { CloseIcon } from './PhvbMagIcons';
 
