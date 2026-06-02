@@ -8,6 +8,8 @@
   "main": "lib/index.js",
   "scripts": {
     "build": "gulp bundle",
+    "build:uat": "node scripts/use-env.js uat && gulp bundle --ship && gulp package-solution --ship",
+    "build:prod": "node scripts/use-env.js prod && gulp bundle --ship && gulp package-solution --ship",
     "clean": "gulp clean",
     "test": "gulp test"
   },
