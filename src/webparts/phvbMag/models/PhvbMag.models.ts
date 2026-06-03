@@ -32,7 +32,7 @@ export interface IVanBanItem {
   LinkToFolderOld?: string;
 }
 
-export type TabType = 'ViecCanLam' | 'YeuCauCuaToi' | 'Admin' | 'CapSo';
+export type TabType = 'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'CapSo' | 'QLVanBan';
 
 export interface ITabCounts {
   viecCanLam: number;
@@ -46,12 +46,42 @@ export interface ICreateRequestInput {
   code: string;
   type: string;
   department: string;
+  approvalUsers: string[];
   summary: string;
   contact: string;
   folder: string;
   hieuLucTu: string;
   hieuLucDen: string;
   noiLuu: string;
+
+  // New fields for the redesigned UI dialog:
+  requestType: 'Viết mới' | 'Điều chỉnh' | 'Thu hồi';
+  titleEn?: string;
+  folderLuuTru: string;
+  taiLieuFile?: File;
+  bieuMauFile?: File;
+  folderBieuMauDinhKem?: string;
+  loaiSla?: string;
+  nguoiGopY: string[];
+  deadlineGopY?: string;
+  nguoiThamDinh: string[];
+  deadlineThamDinh?: string;
+  deadlinePheDuyet?: string;
+  ghiChuThamDinh?: string;
+}
+
+export interface IPhvbDirectoryUser {
+  id: string;
+  displayName: string;
+  email: string;
+  department?: string;
+  jobTitle?: string;
+}
+
+export interface IPhvbCurrentUserProfile {
+  displayName: string;
+  email: string;
+  department?: string;
 }
 
 export interface IPhvbSiteContext {

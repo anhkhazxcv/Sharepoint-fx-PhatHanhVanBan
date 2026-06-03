@@ -1,12 +1,15 @@
 import * as React from 'react';
 import {
   Apps20Regular,
+  BookOpen20Regular,
   CheckmarkCircle20Regular,
+  ClipboardBulletListLtr20Regular,
   ChevronLeft20Regular,
   ChevronRight20Regular,
   ClipboardTask20Regular,
   Dismiss20Regular,
   Filter20Regular,
+  Folder20Regular,
   NumberSymbol20Regular,
   Person20Regular,
   Search16Regular,
@@ -27,6 +30,18 @@ export function SidebarMyRequestsIcon(props: IIconProps): React.ReactElement {
 
 export function SidebarAdminIcon(props: IIconProps): React.ReactElement {
   return <Shield20Regular className={props.className} />;
+}
+
+export function SidebarDraftIcon(props: IIconProps): React.ReactElement {
+  return <ClipboardBulletListLtr20Regular className={props.className} />;
+}
+
+export function SidebarLibraryIcon(props: IIconProps): React.ReactElement {
+  return <BookOpen20Regular className={props.className} />;
+}
+
+export function SidebarReleaseIcon(props: IIconProps): React.ReactElement {
+  return <Folder20Regular className={props.className} />;
 }
 
 export function SidebarNumberingIcon(props: IIconProps): React.ReactElement {

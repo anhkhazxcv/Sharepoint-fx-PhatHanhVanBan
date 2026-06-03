@@ -25,6 +25,7 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
       {
         userDisplayName: this.context.pageContext.user.displayName,
         userEmail: this.context.pageContext.user.email,
+        msGraphClientFactory: this.context.msGraphClientFactory,
         spHttpClient: this.context.spHttpClient,
         currentWebUrl: this.context.pageContext.web.absoluteUrl,
         siteCollectionUrl: this.context.pageContext.site.absoluteUrl,

@@ -6,8 +6,11 @@ export const ALL_FILTER_VALUE = 'All';
 export const TAB_LABELS: Record<TabType, string> = {
   ViecCanLam: 'Việc cần làm',
   YeuCauCuaToi: 'Yêu cầu của tôi',
-  Admin: 'Admin',
-  CapSo: 'Cấp số'
+  BanNhap: 'Bản nháp',
+  ThuVienTaiLieu: 'Thư viện tài liệu',
+  MoiBanHanh: 'Mới ban hành',
+  CapSo: 'DC cấp số',
+  QLVanBan: 'QL văn bản'
 };
 
 export const DOCUMENT_TYPE_OPTIONS: ReadonlyArray<string> = [
@@ -43,17 +46,40 @@ export const FOLDER_OPTIONS: ReadonlyArray<string> = [
   'Thiết kế'
 ];
 
+export const SLA_OPTIONS: ReadonlyArray<string> = [
+  'SLA 1 - Phê duyệt nhanh (24h)',
+  'SLA 2 - Tiêu chuẩn (3 ngày)',
+  'SLA 3 - Thẩm định chi tiết (5 ngày)',
+  'SLA 4 - Đặc biệt (7 ngày)'
+];
+
 export const DEFAULT_REQUEST_FORM: ICreateRequestInput = {
   title: '',
   code: '',
   type: 'Tiêu chuẩn',
   department: 'Ops. Control',
+  approvalUsers: [],
   summary: '',
   contact: '',
   folder: '1. Quản trị chung/Tiêu chuẩn',
   hieuLucTu: '',
   hieuLucDen: '',
-  noiLuu: ''
+  noiLuu: '',
+
+  // New fields default values:
+  requestType: 'Viết mới',
+  titleEn: '',
+  folderLuuTru: '1. Quản trị chung/Tiêu chuẩn',
+  taiLieuFile: undefined,
+  bieuMauFile: undefined,
+  folderBieuMauDinhKem: '',
+  loaiSla: 'SLA 2 - Tiêu chuẩn (3 ngày)',
+  nguoiGopY: [],
+  deadlineGopY: '',
+  nguoiThamDinh: [],
+  deadlineThamDinh: '',
+  deadlinePheDuyet: '',
+  ghiChuThamDinh: ''
 };
 
 export function cloneDefaultRequestForm(): ICreateRequestInput {

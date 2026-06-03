@@ -53,6 +53,7 @@ interface ICreateSharePointPayload {
   SoVanBan: string;
   LoaiYeuCau: string;
   KhoaPhongNguoiTao: string;
+  PheDuyet: string;
   NgayPhatHanh: string;
   HieuLucTu: string;
   HieuLucDen: string;
@@ -63,6 +64,15 @@ interface ICreateSharePointPayload {
   StatusApproved: string;
   ThuMucBanHanh: string;
   NoiLuuBanCung: string;
+
+  // Redesigned form columns:
+  TenVanBan_ENG: string;
+  Loai_SLA: string;
+  NguoiGopY: string;
+  Date_GopY: string;
+  ThamDinh: string;
+  Date_ThamDinh: string;
+  Date_PheDuyet: string;
 }
 
 function escapeODataValue(value: string): string {
@@ -108,19 +118,29 @@ function mapCreateRequestPayload(options: ICreateRequestOptions): ICreateSharePo
   return {
     Title: options.input.title,
     Tenvanban: options.input.title,
-    SoVanBan: options.input.code,
-    LoaiYeuCau: options.input.type,
-    KhoaPhongNguoiTao: options.input.department,
+    SoVanBan: options.input.code || '',
+    LoaiYeuCau: options.input.requestType || options.input.type, // Map LoaiYeuCau to 'Viết mới' / 'Điều chỉnh' / 'Thu hồi'
+    KhoaPhongNguoiTao: options.input.department || '',
+    PheDuyet: options.input.approvalUsers.join('; '),
     NgayPhatHanh: today,
     HieuLucTu: options.input.hieuLucTu || today,
     HieuLucDen: options.input.hieuLucDen || 'Vô thời hạn',
     TomTatNoiDung: options.input.summary,
     NguoiTao: options.userDisplayName || '',
     EmailNguoiTao: options.userEmail || '',
-    LienHe: options.input.contact,
+    LienHe: options.input.contact || '',
     StatusApproved: 'Pending',
-    ThuMucBanHanh: options.input.folder,
-    NoiLuuBanCung: options.input.noiLuu
+    ThuMucBanHanh: options.input.folderLuuTru || options.input.folder, // Map to new storage folder
+    NoiLuuBanCung: options.input.noiLuu || '',
+
+    // Redesigned form columns mapping:
+    TenVanBan_ENG: options.input.titleEn || '',
+    Loai_SLA: options.input.loaiSla || '',
+    NguoiGopY: options.input.nguoiGopY ? options.input.nguoiGopY.join('; ') : '',
+    Date_GopY: options.input.deadlineGopY || '',
+    ThamDinh: options.input.nguoiThamDinh ? options.input.nguoiThamDinh.join('; ') : '',
+    Date_ThamDinh: options.input.deadlineThamDinh || '',
+    Date_PheDuyet: options.input.deadlinePheDuyet || ''
   };
 }
 

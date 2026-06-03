@@ -5,9 +5,12 @@ import styles from './PhvbMag.module.scss';
 import {
   SidebarAdminIcon,
   SidebarCollapseIcon,
+  SidebarDraftIcon,
   SidebarExpandIcon,
+  //SidebarLibraryIcon,
   SidebarMyRequestsIcon,
   SidebarNumberingIcon,
+  //SidebarReleaseIcon,
   SidebarTasksIcon
 } from './PhvbMagIcons';
 
@@ -18,6 +21,7 @@ interface IPhvbMagSidebarProps {
   onSelectTab: (tab: TabType) => void;
   onToggleCollapse: () => void;
   userDisplayName: string;
+  userDepartment?: string;
 }
 
 interface INavItemProps {
@@ -49,7 +53,7 @@ function NavItem(props: INavItemProps): React.ReactElement {
 }
 
 export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement {
-  const { activeTab, counts, isCollapsed, onSelectTab, onToggleCollapse, userDisplayName } = props;
+  const { activeTab, counts, isCollapsed, onSelectTab, onToggleCollapse, userDisplayName, userDepartment } = props;
   const initials = userDisplayName
     ? userDisplayName.split(' ').pop()?.substring(0, 2).toUpperCase()
     : 'MG';
@@ -105,17 +109,37 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             icon={<SidebarMyRequestsIcon />}
           />
 
-          {!isCollapsed && <div className={styles.navGroupLabel}>QUẢN TRỊ</div>}
+          <NavItem
+            tab="BanNhap"
+            label={TAB_LABELS.BanNhap}
+            activeTab={activeTab}
+            isCollapsed={isCollapsed}
+            onSelectTab={onSelectTab}
+            icon={<SidebarDraftIcon />}
+          />
+
+          {/* {!isCollapsed && <div className={styles.navGroupLabel}>THƯ VIỆN</div>}
 
           <NavItem
-            tab="Admin"
-            label={TAB_LABELS.Admin}
+            tab="ThuVienTaiLieu"
+            label={TAB_LABELS.ThuVienTaiLieu}
+            activeTab={activeTab}
+            isCollapsed={isCollapsed}
+            onSelectTab={onSelectTab}
+            icon={<SidebarLibraryIcon />}
+          />
+
+          <NavItem
+            tab="MoiBanHanh"
+            label={TAB_LABELS.MoiBanHanh}
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
             badgeCount={counts.admin}
-            icon={<SidebarAdminIcon />}
-          />
+            icon={<SidebarReleaseIcon />}
+          /> */}
+
+          {!isCollapsed && <div className={styles.navGroupLabel}>QUẢN TRỊ HỆ THỐNG</div>}
 
           <NavItem
             tab="CapSo"
@@ -124,8 +148,16 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
             badgeCount={counts.capSo}
-            badgeClassName={styles.goldBadge}
             icon={<SidebarNumberingIcon />}
+          />
+
+          <NavItem
+            tab="QLVanBan"
+            label={TAB_LABELS.QLVanBan}
+            activeTab={activeTab}
+            isCollapsed={isCollapsed}
+            onSelectTab={onSelectTab}
+            icon={<SidebarAdminIcon />}
           />
         </nav>
       </div>
@@ -137,7 +169,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
         {!isCollapsed && (
           <div className={styles.userInfo}>
             <h4>{userDisplayName || 'Người dùng'}</h4>
-            <p>SharePoint user</p>
+            <p>{userDepartment || 'SharePoint user'}</p>
           </div>
         )}
       </div>
