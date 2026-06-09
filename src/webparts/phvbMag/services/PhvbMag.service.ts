@@ -96,8 +96,16 @@ function isTodoTab(tab: TabType): boolean {
   return tab === 'ViecCanLam';
 }
 
-function matchesApproverField(value: string | undefined, userEmail: string): boolean {
+function matchesUserInField(value: string | undefined, userEmail: string): boolean {
   return Boolean(userEmail && value && value.toLowerCase().indexOf(userEmail.toLowerCase()) > -1);
+}
+
+function isTodoItemForUser(item: IVanBanItem, userEmail: string): boolean {
+  return (
+    matchesUserInField(item.PheDuyet, userEmail) ||
+    matchesUserInField(item.NguoiGopY, userEmail) ||
+    matchesUserInField(item.ThamDinh, userEmail)
+  );
 }
 
 function filterItemsForTab(items: IVanBanItem[], tab: TabType, userEmail: string): IVanBanItem[] {
@@ -105,7 +113,7 @@ function filterItemsForTab(items: IVanBanItem[], tab: TabType, userEmail: string
     return items;
   }
 
-  return items.filter(item => matchesApproverField(item.PheDuyet, userEmail));
+  return items.filter(item => isTodoItemForUser(item, userEmail));
 }
 
 function formatCurrentDate(): string {
@@ -153,7 +161,7 @@ export class PhvbDocumentsService {
     const [todoItems, myRequestItems, adminItems, capSoItems] = await Promise.all([
       phvbRepository.fetchItems({
         ...options,
-        selectFields: ['Id', 'PheDuyet'],
+        selectFields: ['Id', 'PheDuyet', 'NguoiGopY', 'ThamDinh'],
         top: 5000
       }),
       phvbRepository.fetchItems({

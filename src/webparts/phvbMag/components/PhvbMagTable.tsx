@@ -294,20 +294,119 @@ function getRequestFolderLabel(item: IVanBanItem): string {
   return item.ThuMucBanHanh || 'Thư mục ban hành';
 }
 
+const PAGE_SIZE_OPTIONS: ReadonlyArray<number> = [10, 20, 50];
+
+interface IPagedItemsResult<T> {
+  pageSize: number;
+  setPageSize: (size: number) => void;
+  pagedItems: T[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  rangeStart: number;
+  rangeEnd: number;
+  goToPreviousPage: () => void;
+  goToNextPage: () => void;
+}
+
+function usePagedItems<T>(items: T[], resetDeps: React.DependencyList): IPagedItemsResult<T> {
+  const [pageSize, setPageSizeState] = React.useState<number>(20);
+  const [page, setPage] = React.useState<number>(1);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, resetDeps);
+
+  const setPageSize = (size: number): void => {
+    setPageSizeState(size);
+    setPage(1);
+  };
+
+  const totalItems = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const currentPage = page > totalPages ? totalPages : page;
+  const pagedItems = items.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const rangeStart = totalItems === 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, totalItems);
+
+  return {
+    pageSize,
+    setPageSize,
+    pagedItems,
+    totalItems,
+    totalPages,
+    currentPage,
+    rangeStart,
+    rangeEnd,
+    goToPreviousPage: () => setPage(currentPage - 1),
+    goToNextPage: () => setPage(currentPage + 1)
+  };
+}
+
+interface IListPagerProps {
+  pageSize: number;
+  rangeStart: number;
+  rangeEnd: number;
+  totalItems: number;
+  currentPage: number;
+  totalPages: number;
+  onPageSizeChange: (size: number) => void;
+  onPreviousPage: () => void;
+  onNextPage: () => void;
+}
+
+function ListPager(props: IListPagerProps): React.ReactElement {
+  const {
+    pageSize,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+    currentPage,
+    totalPages,
+    onPageSizeChange,
+    onPreviousPage,
+    onNextPage
+  } = props;
+
+  return (
+    <div className={styles.requestFooter}>
+      <button type="button" className={styles.requestReloadButton} onClick={() => window.location.reload()}>
+        Tải lại
+      </button>
+
+      <div className={styles.requestPager}>
+        <label className={styles.requestPageSizeLabel}>
+          Hiển thị:
+          <select value={pageSize} onChange={event => onPageSizeChange(Number(event.target.value))}>
+            {PAGE_SIZE_OPTIONS.map(size => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <span className={styles.requestRangeText}>{rangeStart}-{rangeEnd}/{totalItems}</span>
+
+        <button type="button" className={styles.requestPageButton} onClick={onPreviousPage} disabled={currentPage <= 1}>
+          ‹
+        </button>
+        <button type="button" className={styles.requestPageButton} onClick={onNextPage} disabled={currentPage >= totalPages}>
+          ›
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MyRequestsTable(props: IPhvbMagTableProps): React.ReactElement {
   const { items, isLoading, searchQuery, onSearchChange, onOpenCreate, onSelectItem } = props;
   const [statusFilter, setStatusFilter] = React.useState<RequestStatusFilterKey>('all');
   const [searchDraft, setSearchDraft] = React.useState<string>(searchQuery);
-  const [pageSize, setPageSize] = React.useState<number>(20);
-  const [page, setPage] = React.useState<number>(1);
 
   React.useEffect(() => {
     setSearchDraft(searchQuery);
   }, [searchQuery]);
-
-  React.useEffect(() => {
-    setPage(1);
-  }, [statusFilter, searchQuery, pageSize]);
 
   const filteredItems = React.useMemo(() => items.filter(item => {
     if (statusFilter === 'all') {
@@ -317,12 +416,8 @@ function MyRequestsTable(props: IPhvbMagTableProps): React.ReactElement {
     return getRequestStatusState(item).filterKey === statusFilter;
   }), [items, statusFilter]);
 
-  const totalItems = filteredItems.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const currentPage = page > totalPages ? totalPages : page;
-  const pagedItems = filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const rangeStart = totalItems === 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
-  const rangeEnd = Math.min(currentPage * pageSize, totalItems);
+  const pagination = usePagedItems(filteredItems, [statusFilter, searchQuery]);
+  const { pagedItems, totalItems } = pagination;
 
   const handleSearchSubmit = (): void => {
     onSearchChange(searchDraft);
@@ -437,46 +532,30 @@ function MyRequestsTable(props: IPhvbMagTableProps): React.ReactElement {
             </table>
           </div>
 
-          <div className={styles.requestFooter}>
-            <button type="button" className={styles.requestReloadButton} onClick={() => window.location.reload()}>
-              Tải lại
-            </button>
-
-            <div className={styles.requestPager}>
-              <label className={styles.requestPageSizeLabel}>
-                Hiển thị:
-                <select value={pageSize} onChange={event => setPageSize(Number(event.target.value))}>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </label>
-
-              <span className={styles.requestRangeText}>{rangeStart}-{rangeEnd}/{totalItems}</span>
-
-              <button type="button" className={styles.requestPageButton} onClick={() => setPage(currentPage - 1)} disabled={currentPage <= 1}>
-                ‹
-              </button>
-              <button type="button" className={styles.requestPageButton} onClick={() => setPage(currentPage + 1)} disabled={currentPage >= totalPages}>
-                ›
-              </button>
-            </div>
-          </div>
+          <ListPager
+            pageSize={pagination.pageSize}
+            rangeStart={pagination.rangeStart}
+            rangeEnd={pagination.rangeEnd}
+            totalItems={pagination.totalItems}
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            onPageSizeChange={pagination.setPageSize}
+            onPreviousPage={pagination.goToPreviousPage}
+            onNextPage={pagination.goToNextPage}
+          />
         </>
       )}
     </div>
   );
 }
 
-export function PhvbMagTable(props: IPhvbMagTableProps): React.ReactElement {
-  const { activeTab, items, isLoading, onSelectItem } = props;
+function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
+  const { activeTab, items, isLoading, searchQuery, onSelectItem } = props;
   const today = toStartOfDay(new Date());
   const metrics = getMetricCards(items, today, activeTab);
   const sectionTitle = activeTab === 'ViecCanLam' ? 'Cần xử lý' : TAB_LABELS[activeTab];
-
-  if (activeTab === 'YeuCauCuaToi') {
-    return <MyRequestsTable {...props} />;
-  }
+  const pagination = usePagedItems(items, [searchQuery, items]);
+  const { pagedItems, totalItems } = pagination;
 
   return (
     <div className={styles.tableCard}>
@@ -513,49 +592,73 @@ export function PhvbMagTable(props: IPhvbMagTableProps): React.ReactElement {
             </div>
           ))}
         </div>
-      ) : items.length === 0 ? (
+      ) : totalItems === 0 ? (
         <div className={styles.emptyState}>
           <p>Không có dữ liệu phù hợp với bộ lọc hiện tại.</p>
         </div>
       ) : (
-        <div className={styles.taskList}>
-          {items.map(item => {
-            const summaryPreview = getSummaryPreview(item.TomTatNoiDung, 120);
-            const deadline = getDeadlineState(item, today);
-            const stageLabel = getStageLabel(item);
-            const iconLabel = (item.LoaiYeuCau || item.Tenvanban || 'V').substring(0, 1).toUpperCase();
-            const cardToneClassName = cardToneClassMap[deadline.tone];
+        <>
+          <div className={styles.taskList}>
+            {pagedItems.map(item => {
+              const summaryPreview = getSummaryPreview(item.TomTatNoiDung, 120);
+              const deadline = getDeadlineState(item, today);
+              const stageLabel = getStageLabel(item);
+              const iconLabel = (item.LoaiYeuCau || item.Tenvanban || 'V').substring(0, 1).toUpperCase();
+              const cardToneClassName = cardToneClassMap[deadline.tone];
 
-            return (
-              <article key={item.Id} className={[styles.taskCard, cardToneClassName].join(' ')} onClick={() => onSelectItem(item)}>
-                <div className={styles.taskCardAccent} />
+              return (
+                <article key={item.Id} className={[styles.taskCard, cardToneClassName].join(' ')} onClick={() => onSelectItem(item)}>
+                  <div className={styles.taskCardAccent} />
 
-                <div className={[styles.taskIconBadge, cardToneClassName].join(' ')}>
-                  {iconLabel}
-                </div>
-
-                <div className={styles.taskCardBody}>
-                  <div className={styles.taskCardTitleRow}>
-                    <h4 className={styles.taskCardTitle}>{item.Tenvanban || 'Chưa có tên văn bản'}</h4>
-                    <div className={[styles.taskDeadline, cardToneClassName].join(' ')}>{deadline.label}</div>
+                  <div className={[styles.taskIconBadge, cardToneClassName].join(' ')}>
+                    {iconLabel}
                   </div>
 
-                  <p className={styles.taskCardDescription}>{getWorkflowText(item)}</p>
+                  <div className={styles.taskCardBody}>
+                    <div className={styles.taskCardTitleRow}>
+                      <h4 className={styles.taskCardTitle}>{item.Tenvanban || 'Chưa có tên văn bản'}</h4>
+                      <div className={[styles.taskDeadline, cardToneClassName].join(' ')}>{deadline.label}</div>
+                    </div>
 
-                  <div className={styles.taskTagRow}>
-                    <span className={styles.taskMetaPill}>{stageLabel}</span>
-                    {item.LoaiYeuCau && <span className={`${styles.badge} ${styles[getBadgeVariant(item.LoaiYeuCau)]}`}>{item.LoaiYeuCau}</span>}
-                    {item.KhoaPhongNguoiTao && <span className={styles.deptPill}>{item.KhoaPhongNguoiTao}</span>}
-                    {item.SoVanBan && <span className={styles.taskMetaPill}>{item.SoVanBan}</span>}
+                    <p className={styles.taskCardDescription}>{getWorkflowText(item)}</p>
+
+                    <div className={styles.taskTagRow}>
+                      <span className={styles.taskMetaPill}>{stageLabel}</span>
+                      {item.LoaiYeuCau && <span className={`${styles.badge} ${styles[getBadgeVariant(item.LoaiYeuCau)]}`}>{item.LoaiYeuCau}</span>}
+                      {item.KhoaPhongNguoiTao && <span className={styles.deptPill}>{item.KhoaPhongNguoiTao}</span>}
+                      {item.SoVanBan && <span className={styles.taskMetaPill}>{item.SoVanBan}</span>}
+                    </div>
+
+                    {summaryPreview && <div className={styles.taskCardMeta}>{summaryPreview}</div>}
                   </div>
+                </article>
+              );
+            })}
+          </div>
 
-                  {summaryPreview && <div className={styles.taskCardMeta}>{summaryPreview}</div>}
-                </div>
-              </article>
-            );
-          })}
-        </div>
+          <ListPager
+            pageSize={pagination.pageSize}
+            rangeStart={pagination.rangeStart}
+            rangeEnd={pagination.rangeEnd}
+            totalItems={pagination.totalItems}
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            onPageSizeChange={pagination.setPageSize}
+            onPreviousPage={pagination.goToPreviousPage}
+            onNextPage={pagination.goToNextPage}
+          />
+        </>
       )}
     </div>
   );
+}
+
+export function PhvbMagTable(props: IPhvbMagTableProps): React.ReactElement {
+  const { activeTab } = props;
+
+  if (activeTab === 'YeuCauCuaToi') {
+    return <MyRequestsTable {...props} />;
+  }
+
+  return <TaskListView key={activeTab} {...props} />;
 }
