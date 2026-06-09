@@ -1,3 +1,13 @@
+/**
+ * Web Part IDs:
+ * - PROD: 7db6d7b3-dbe0-48ec-9506-6d58e071d506
+ * - UAT:  7db6d7b3-dbe0-48ec-9506-6d58e071d502
+ */
+/**
+ * Solution IDs:
+ * - PROD: 869587ed-8ad3-42bd-82c1-ad961ba436c1
+ * - UAT:  869587ed-8ad3-42bd-82c1-ad961ba436c2
+ */
 import * as React from 'react';
 import * as ReactDom from 'react-dom';
 import { Version } from '@microsoft/sp-core-library';
@@ -5,7 +15,7 @@ import {
   type IPropertyPaneConfiguration,
   PropertyPaneTextField
 } from '@microsoft/sp-property-pane';
-import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
+import { BaseClientSideWebPart, IWebPartPropertiesMetadata } from '@microsoft/sp-webpart-base';
 import { IReadonlyTheme } from '@microsoft/sp-component-base';
 
 import * as strings from 'PhvbMagWebPartStrings';
@@ -18,6 +28,18 @@ export interface IPhvbMagWebPartProps {
 }
 
 export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPartProps> {
+  protected get propertiesMetadata(): IWebPartPropertiesMetadata {
+    return {};
+  }
+
+  protected onInit(): Promise<void> {
+    if (!this.properties.sourceSiteUrl) {
+      this.properties.sourceSiteUrl = 'https://masterisegroup.sharepoint.com/sites/test';
+      //this.properties.sourceSiteUrl = 'https://masterisegroup.sharepoint.com';
+    }
+
+    return super.onInit();
+  }
 
   public render(): void {
     const element: React.ReactElement<IPhvbMagProps> = React.createElement(
@@ -75,10 +97,6 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
                 PropertyPaneTextField('sourceSiteUrl', {
                   label: 'SharePoint source site URL',
                   description: 'Optional. Leave empty to try current web first, then site collection.'
-                }),
-                PropertyPaneTextField('listTitle', {
-                  label: 'SharePoint list title',
-                  description: 'Optional. Defaults to InDoc_Release when empty.'
                 })
               ]
             }

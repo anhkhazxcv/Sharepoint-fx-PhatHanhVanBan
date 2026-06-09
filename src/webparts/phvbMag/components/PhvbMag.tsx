@@ -1,5 +1,8 @@
 import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { HashRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS, FOLDER_OPTIONS } from '../config/PhvbMag.configuration';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
 import type { ICreateRequestInput, IPhvbDirectoryUser, IVanBanItem, TabType } from '../models/PhvbMag.models';
@@ -13,16 +16,23 @@ import { PhvbMagSidebar } from './PhvbMagSidebar';
 import { PhvbMagTable } from './PhvbMagTable';
 import { PhvbMagToolbar } from './PhvbMagToolbar';
 
-export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
+function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle } = props;
+  
+  const { tabName, itemId } = useParams<{ tabName: string; itemId?: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isCreateRoute = /\/create$/.test(location.pathname);
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<IVanBanItem | undefined>(undefined);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [userDepartment, setUserDepartment] = useState<string>('');
   const [approverUsers, setApproverUsers] = useState<IPhvbDirectoryUser[]>([]);
   const [isLoadingApprovers, setIsLoadingApprovers] = useState<boolean>(true);
   const [graphErrorMessage, setGraphErrorMessage] = useState<string | undefined>(undefined);
+
   const defaultRequestForm = useMemo(() => {
     const form = cloneDefaultRequestForm();
 
@@ -32,6 +42,7 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
 
     return form;
   }, [userDepartment]);
+
   const departmentOptions = useMemo(() => {
     const nextDepartments = DEPARTMENT_OPTIONS.slice();
 
@@ -51,6 +62,29 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
     sourceSiteUrl,
     listTitle
   });
+
+  // Sync activeTab with tabName from URL
+  useEffect(() => {
+    if (tabName && tabName !== activeTab) {
+      setActiveTab(tabName as TabType);
+    }
+  }, [tabName, activeTab, setActiveTab]);
+
+  // Sync selectedItem with itemId from URL
+  useEffect(() => {
+    if (itemId && items.length > 0) {
+      let foundItem: IVanBanItem | undefined;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].Id.toString() === itemId) {
+          foundItem = items[i];
+          break;
+        }
+      }
+      setSelectedItem(foundItem);
+    } else {
+      setSelectedItem(undefined);
+    }
+  }, [itemId, items]);
 
   const processedItems = useMemo(() => selectFilteredItems(items, {
     searchQuery,
@@ -99,14 +133,13 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
   }, [msGraphClientFactory]);
 
   const handleSelectTab = (tab: TabType): void => {
-    setActiveTab(tab);
-    setSelectedItem(undefined);
+    navigate(`/tab/${tab}`);
   };
 
   const handleCreateRequest = async (input: ICreateRequestInput): Promise<boolean> => {
     const isSuccess = await createRequest(input);
     if (isSuccess) {
-      setIsCreateModalOpen(false);
+      navigate(`/tab/${activeTab}`);
     }
 
     return isSuccess;
@@ -144,7 +177,7 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
           searchQuery={searchQuery}
           canCreate={Boolean(currentWebUrl || siteCollectionUrl || sourceSiteUrl)}
           onSearchChange={setSearchQuery}
-          onOpenCreate={() => setIsCreateModalOpen(true)}
+          onOpenCreate={() => navigate(`/tab/${activeTab}/create`)}
         />
 
         <PhvbMagTable
@@ -153,14 +186,14 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
           isLoading={isLoading}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          onOpenCreate={() => setIsCreateModalOpen(true)}
-          onSelectItem={setSelectedItem}
+          onOpenCreate={() => navigate(`/tab/${activeTab}/create`)}
+          onSelectItem={(item) => navigate(`/tab/${activeTab}/item/${item.Id}`)}
         />
       </main>
 
-      <PhvbMagDrawer item={selectedItem} onClose={() => setSelectedItem(undefined)} />
+      <PhvbMagDrawer item={selectedItem} onClose={() => navigate(`/tab/${activeTab}`)} />
       <PhvbMagCreateModal
-        isOpen={isCreateModalOpen}
+        isOpen={isCreateRoute}
         isSaving={isSaving}
         isLoadingApprovers={isLoadingApprovers}
         defaultValues={defaultRequestForm}
@@ -168,9 +201,23 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
         departments={departmentOptions}
         folders={FOLDER_OPTIONS}
         approvers={approverUsers}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => navigate(`/tab/${activeTab}`)}
         onSubmit={handleCreateRequest}
       />
     </div>
+  );
+}
+
+export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
+  return (
+    <HashRouter>
+      <Routes>
+        <Route path="/tab/:tabName" element={<PhvbMagInner {...props} />} />
+        <Route path="/tab/:tabName/item/:itemId" element={<PhvbMagInner {...props} />} />
+        <Route path="/tab/:tabName/create" element={<PhvbMagInner {...props} />} />
+        <Route path="*" element={<Navigate to="/tab/ViecCanLam" replace />} />
+      </Routes>
+      <ToastContainer />
+    </HashRouter>
   );
 }

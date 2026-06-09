@@ -33,3 +33,15 @@ filesToCopy.forEach(fileName => {
   fs.copyFileSync(sourcePath, targetPath);
   console.log(`Applied ${selectedEnvironment.toUpperCase()} config: ${fileName}`);
 });
+
+const sourceWebPartManifest = path.join(envConfigDir, 'PhvbMagWebPart.manifest.json');
+const webPartDir = path.join(rootDir, 'src', 'webparts', 'phvbMag');
+const targetWebPartManifest = path.join(webPartDir, 'PhvbMagWebPart.manifest.json');
+
+if (!fs.existsSync(sourceWebPartManifest)) {
+  console.error(`Missing environment web part manifest: ${sourceWebPartManifest}`);
+  process.exit(1);
+}
+
+fs.copyFileSync(sourceWebPartManifest, targetWebPartManifest);
+console.log(`Applied ${selectedEnvironment.toUpperCase()} web part manifest`);
