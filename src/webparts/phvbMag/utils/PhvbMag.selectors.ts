@@ -1,5 +1,69 @@
-import { ALL_FILTER_VALUE } from '../config/PhvbMag.configuration';
+import { ALL_FILTER_VALUE, REQUEST_STATUS } from '../config/PhvbMag.configuration';
 import type { BadgeVariant, IVanBanItem, UniqueItemField } from '../models/PhvbMag.models';
+
+export type RequestStatusFilterKey = 'all' | 'processing' | 'approved' | 'rejected';
+
+export interface IRequestStatusDisplay {
+  filterKey: RequestStatusFilterKey;
+  label: string;
+}
+
+function isRejectedStatus(status: string): boolean {
+  const normalizedStatus = status.toLowerCase();
+  return (
+    normalizedStatus.indexOf('reject') > -1 ||
+    normalizedStatus.indexOf('declin') > -1 ||
+    normalizedStatus.indexOf('từ chối') > -1 ||
+    normalizedStatus.indexOf('tu choi') > -1 ||
+    status === REQUEST_STATUS.THU_HOI
+  );
+}
+
+function isApprovedStatus(status: string): boolean {
+  if (status === 'Approved') {
+    return true;
+  }
+
+  return (
+    status === REQUEST_STATUS.BAN_HANH ||
+    status === REQUEST_STATUS.CHO_BAN_HANH ||
+    status === REQUEST_STATUS.DA_CAP_SO
+  );
+}
+
+export function getRequestStatusDisplay(status?: string): IRequestStatusDisplay {
+  const value = (status || '').trim();
+
+  if (!value || value === 'Pending') {
+    return {
+      filterKey: 'processing',
+      label: 'Chờ xử lý'
+    };
+  }
+
+  if (isRejectedStatus(value)) {
+    return {
+      filterKey: 'rejected',
+      label: value
+    };
+  }
+
+  if (isApprovedStatus(value)) {
+    return {
+      filterKey: 'approved',
+      label: value === 'Approved' ? REQUEST_STATUS.BAN_HANH : value
+    };
+  }
+
+  return {
+    filterKey: 'processing',
+    label: value
+  };
+}
+
+export function getRequestStatusDisplayForItem(item: IVanBanItem): IRequestStatusDisplay {
+  return getRequestStatusDisplay(item.StatusApproved);
+}
 
 export interface IPhvbFilterState {
   searchQuery: string;

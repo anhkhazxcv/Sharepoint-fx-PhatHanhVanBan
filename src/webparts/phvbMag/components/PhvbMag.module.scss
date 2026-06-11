@@ -14,8 +14,11 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
 .phvbContainer {
   display: flex;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  min-height: 0;
   background-color: $bg-content;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   color: $text-main;
@@ -56,6 +59,8 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 // -------------------------------------------------------------
 .sidebar {
   width: 280px;
+  height: 100%;
+  max-height: 100%;
   background-color: $bg-sidebar;
   border-right: 1px solid $border-color;
   padding: 24px 16px;
@@ -63,13 +68,16 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
+  overflow: hidden;
   transition: width 0.2s ease, padding 0.2s ease;
 
   .sidebarTop {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    flex-grow: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .sidebarHeader {
@@ -416,12 +424,23 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   flex: 1 1 auto;
   flex-grow: 1;
   padding: 32px 40px;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 24px;
   min-height: 0;
   min-width: 0;
+
+  > .connectionBanner,
+  > .contentHeader {
+    flex-shrink: 0;
+  }
+
+  > .tableCard,
+  > .requestBoard {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 
   .contentHeader {
     display: flex;
@@ -1170,7 +1189,54 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   animation: fadeIn 0.2s ease-out;
 }
 
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease;
+}
+
+.loadingPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 28px;
+  border-radius: 12px;
+  background-color: #FFFFFF;
+  box-shadow: $shadow-md;
+  border: 1px solid $border-color;
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #E8DDD1;
+  border-top-color: $primary-color;
+  border-radius: 50%;
+  animation: loadingSpin 0.8s linear infinite;
+}
+
+.loadingMessage {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: $primary-color;
+}
+
+@keyframes loadingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .modalContent {
+  position: relative;
   width: 760px;
   max-width: 100%;
   max-height: 94vh;
@@ -1369,6 +1435,11 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
         cursor: pointer;
       }
 
+      .folderInputInvalid {
+        border-color: #D32F2F;
+        background-color: #FFF8F7;
+      }
+
       .btnSelectFolder {
         display: inline-flex;
         align-items: center;
@@ -1473,7 +1544,12 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
       border-style: solid;
       border-color: #E5D6C7;
       background-color: #FAF7F2;
-      cursor: default;
+      cursor: pointer;
+
+      &:hover {
+        border-color: $primary-color;
+        background-color: #FCF9F4;
+      }
     }
 
     .dragDropContent {
@@ -1700,6 +1776,29 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
       }
     }
 
+    .deadlineInputInvalid {
+      border-color: #D32F2F;
+      background-color: #FFF8F7;
+    }
+
+    .deadlineError {
+      margin: 4px 0 0;
+      font-size: 11.5px;
+      line-height: 1.4;
+      color: #D32F2F;
+    }
+
+    .workflowDeadlineNotice {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background-color: #FFF5E8;
+      border: 1px solid #F1DFC2;
+      color: #7B4C2C;
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+
     /* LUỒNG XÉT DUYỆT Section */
     .workflowSection {
       margin-top: 14px;
@@ -1717,6 +1816,18 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
         letter-spacing: 1px;
       }
     }
+  }
+
+  .submitError {
+    margin: 0 28px 16px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background-color: #FFF5F5;
+    border: 1px solid #FFCDD2;
+    color: #C62828;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
   }
 
   .modalFooter {
@@ -1791,6 +1902,13 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
         opacity: 0.7;
         cursor: not-allowed;
       }
+    }
+
+    .submitButtonContent {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
     }
   }
 }
@@ -1901,10 +2019,47 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 .tableCard {
   flex: 1 1 auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: transparent;
   border: none;
   box-shadow: none;
-  overflow: visible;
+  overflow: hidden;
+
+  .metricsGrid,
+  .listSectionHeader,
+  .requestQuickFilters,
+  .requestControls,
+  .requestFooter {
+    flex-shrink: 0;
+  }
+
+  .taskList,
+  .skeletonContainer,
+  .emptyState {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  .taskList {
+    padding-right: 4px;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(139, 90, 57, 0.35);
+      border-radius: 999px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: transparent;
+    }
+  }
 }
 
 .metricsGrid {
@@ -2011,11 +2166,32 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 }
 
 .requestBoard {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background-color: #FFFFFF;
   border: 1px solid #E7DACB;
   border-radius: 18px;
   box-shadow: 0 8px 24px rgba(123, 76, 44, 0.05);
   overflow: hidden;
+
+  .requestBoardHeader,
+  .requestQuickFilters,
+  .requestControls,
+  .requestFooter {
+    flex-shrink: 0;
+  }
+
+  .requestTableWrap,
+  .skeletonContainer,
+  .emptyState {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
 }
 
 .requestBoardHeader {
@@ -2287,7 +2463,7 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 .taskCard {
   position: relative;
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 16px;
   padding: 18px 20px 18px 18px;
@@ -2422,7 +2598,6 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 }
 
 .emptyState {
-  min-height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2439,7 +2614,7 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
 .skeletonRow {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) 96px;
+  grid-template-columns: minmax(0, 1fr) 96px;
   align-items: center;
   gap: 16px;
   padding: 18px;
@@ -2476,8 +2651,11 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
 @media (max-width: 900px) {
   .phvbContainer {
-    min-height: auto;
-    overflow: auto;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow: hidden;
   }
 
   .sidebar {
@@ -2601,6 +2779,437 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 }
 
 // -------------------------------------------------------------
+// FOLDER PICKER & CONFIRM DIALOG
+// -------------------------------------------------------------
+.folderPickerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(44, 37, 32, 0.45);
+  animation: folderPickerOverlayIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  backdrop-filter: blur(2px);
+}
+
+.folderPickerDialog {
+  width: min(960px, calc(100vw - 40px));
+  height: min(70vh, calc(100vh - 48px));
+  min-height: min(70vh, calc(100vh - 48px));
+  max-height: min(70vh, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  box-shadow: $shadow-lg;
+  overflow: hidden;
+  animation: folderPickerDialogIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: center center;
+}
+
+.folderPickerHeader {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 22px;
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .btnClose {
+    border: none;
+    background: transparent;
+    color: #FFFFFF;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+  }
+}
+
+.folderPickerBody {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid $border-color;
+}
+
+.folderTreePane,
+.folderDocPane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.folderTreePane {
+  border-right: 1px solid $border-color;
+  background-color: $bg-folders;
+}
+
+.folderTreeHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: $primary-color;
+  border-bottom: 1px solid $border-color;
+}
+
+.folderTreeScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 8px 0;
+  background-color: #FFFFFF;
+  border: 1px solid #E8DDD1;
+  margin: 12px;
+  border-radius: 8px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(139, 90, 57, 0.35);
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+}
+
+.folderTreeChildren {
+  animation: folderTreeExpand 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+
+.folderTreeNode {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  transition: background-color 0.18s ease;
+}
+
+.folderTreeNodeActive {
+  background-color: #E8F3FF;
+}
+
+.folderTreeChevron {
+  flex: 0 0 24px;
+  border: none;
+  background: transparent;
+  color: #8C827A;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    color: $primary-color;
+  }
+}
+
+.folderTreeChevronExpanded {
+  transform: rotate(0deg);
+}
+
+.folderTreeNodeContent {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 7px 10px 7px 0;
+  cursor: pointer;
+  transition: background-color 0.18s ease, padding-left 0.18s ease;
+
+  &:hover {
+    background-color: rgba(160, 106, 67, 0.08);
+  }
+}
+
+.folderTreeIcon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.folderTreeLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: $text-main;
+}
+
+.folderDocPaneHeader {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: $primary-color;
+  border-bottom: 1px solid $border-color;
+}
+
+.folderDocList {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(139, 90, 57, 0.35);
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+}
+
+.folderDocCard {
+  border: 1px solid #E8DDD1;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background-color: #FFFFFF;
+  box-shadow: $shadow-sm;
+  animation: folderDocCardIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: #D8C8B8;
+    box-shadow: $shadow-md;
+  }
+}
+
+.folderDocCardTitle {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2F78A8;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.folderDocCardBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.folderDocCardIcon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background-color: #F4EEE8;
+  color: $primary-color;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.folderDocCardSummary {
+  flex: 1 1 auto;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #8A7C70;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.folderDocCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 12px;
+  color: #6B5D51;
+}
+
+.folderDocCardMetaLabel {
+  font-weight: 700;
+  color: #8C827A;
+}
+
+.folderPickerStatus,
+.folderPickerError {
+  padding: 14px 16px;
+  font-size: 13px;
+  animation: folderPickerStatusIn 0.24s ease both;
+}
+
+.folderPickerError {
+  color: #B54033;
+}
+
+.folderPickerFooter {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid $border-color;
+  background-color: $bg-folders;
+
+  .btnSecondary,
+  .btnSubmit {
+    min-height: 36px;
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  }
+
+  .btnSecondary {
+    background-color: #FFFFFF;
+    border: 1px solid $border-color;
+    color: $text-main;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: $shadow-sm;
+    }
+  }
+
+  .btnSubmit {
+    border: none;
+    background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+    color: #FFFFFF;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: $shadow-md;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.confirmDialogOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(44, 37, 32, 0.5);
+  animation: fadeIn 0.18s ease;
+}
+
+.confirmDialogContent {
+  width: min(460px, calc(100vw - 40px));
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: $shadow-lg;
+  animation: scaleUp 0.2s ease;
+
+  h4 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    color: $primary-color;
+  }
+
+  p {
+    margin: 0 0 18px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: $text-main;
+  }
+}
+
+.confirmDialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  .btnSecondary,
+  .btnSubmit {
+    min-height: 36px;
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btnSecondary {
+    background-color: #FFFFFF;
+    border: 1px solid $border-color;
+    color: $text-main;
+  }
+
+  .btnSubmit {
+    border: none;
+    background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+    color: #FFFFFF;
+  }
+}
+
+@media (max-width: 900px) {
+  .folderPickerBody {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1.2fr);
+    overflow: hidden;
+  }
+
+  .folderTreePane {
+    border-right: none;
+    border-bottom: 1px solid $border-color;
+    min-height: 0;
+  }
+
+  .folderDocPane {
+    min-height: 0;
+  }
+}
+
+// -------------------------------------------------------------
 // KEYFRAMES ANIMATIONS
 // -------------------------------------------------------------
 @keyframes fadeIn {
@@ -2616,4 +3225,64 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 @keyframes scaleUp {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes folderPickerOverlayIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+
+  to {
+    opacity: 1;
+    backdrop-filter: blur(2px);
+  }
+}
+
+@keyframes folderPickerDialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes folderTreeExpand {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+
+  to {
+    opacity: 1;
+    max-height: 2400px;
+  }
+}
+
+@keyframes folderDocCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes folderPickerStatusIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

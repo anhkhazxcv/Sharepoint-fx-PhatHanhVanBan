@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { IVanBanItem } from '../models/PhvbMag.models';
-import { getBadgeVariant } from '../utils/PhvbMag.selectors';
+import { getBadgeVariant, getRequestStatusDisplayForItem } from '../utils/PhvbMag.selectors';
 import styles from './PhvbMag.module.scss';
 import { CloseIcon } from './PhvbMagIcons';
 
@@ -15,6 +15,14 @@ export function PhvbMagDrawer(props: IPhvbMagDrawerProps): React.ReactElement {
   if (!item) {
     return <></>;
   }
+
+  const statusDisplay = getRequestStatusDisplayForItem(item);
+  const statusClassName =
+    statusDisplay.filterKey === 'approved'
+      ? styles.statusApproved
+      : statusDisplay.filterKey === 'rejected'
+        ? styles.statusPending
+        : styles.statusPending;
 
   return (
     <div className={styles.drawerOverlay} onClick={onClose}>
@@ -34,8 +42,8 @@ export function PhvbMagDrawer(props: IPhvbMagDrawerProps): React.ReactElement {
 
           <div className={styles.statusBanner}>
             <span className={styles.label}>Trạng thái hệ thống:</span>
-            <span className={`${styles.statusPill} ${item.StatusApproved === 'Approved' ? styles.statusApproved : styles.statusPending}`}>
-              {item.StatusApproved === 'Approved' ? 'Đã duyệt' : 'Chờ phê duyệt'}
+            <span className={`${styles.statusPill} ${statusClassName}`}>
+              {statusDisplay.label}
             </span>
           </div>
 
@@ -66,7 +74,7 @@ export function PhvbMagDrawer(props: IPhvbMagDrawerProps): React.ReactElement {
                   <td className={styles.metaValue}>Từ {item.HieuLucTu || '---'} đến {item.HieuLucDen || '---'}</td>
                 </tr>
                 <tr>
-                  <td className={styles.metaLabel}>Thư mục lưu trữ:</td>
+                  <td className={styles.metaLabel}>Thư mục ban hành:</td>
                   <td className={styles.metaValue}>{item.ThuMucBanHanh || 'Chưa lưu thư mục'}</td>
                 </tr>
               </tbody>

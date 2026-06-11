@@ -1,7 +1,9 @@
-import { hasSharePointSiteContext, resolveListTitle } from '../config/PhvbMag.configuration';
+import { hasSharePointSiteContext, REQUEST_STATUS, resolveListTitle } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE, toRuntimeMessage } from './PhvbMag.error';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
-import type { ICreateRequestInput, IPhvbDocumentContext, IPhvbSiteContext, ITabCounts, IVanBanItem, TabType } from '../models/PhvbMag.models';
+import { phvbAttachmentService } from './PhvbMagAttachment.service';
+import { generateRequestReferenceId } from '../utils/PhvbMagRequestId.utils';
+import type { ICreateRequestInput, IPhvbDocumentContext, IPhvbSiteContext, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 
 const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -34,7 +36,8 @@ const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'Date_PheDuyet',
   'IsCreateFolderExpire',
   'ThuMucBanHanh',
-  'LinkToFolderOld'
+  'LinkToFolderOld',
+  'GhiChuChoThamDinh'
 ];
 
 interface ILoadTabItemsOptions extends IPhvbSiteContext {
@@ -44,10 +47,11 @@ interface ILoadTabItemsOptions extends IPhvbSiteContext {
 
 interface ICreateRequestOptions extends IPhvbDocumentContext {
   input: ICreateRequestInput;
+  saveMode: SaveRequestMode;
 }
 
 interface ICreateSharePointPayload {
-  [fieldName: string]: string;
+  [fieldName: string]: string | boolean | number;
   Title: string;
   Tenvanban: string;
   SoVanBan: string;
@@ -73,6 +77,10 @@ interface ICreateSharePointPayload {
   ThamDinh: string;
   Date_ThamDinh: string;
   Date_PheDuyet: string;
+  IsSendMailNotify: boolean;
+  GhiChuChoThamDinh: string;
+  NgayTaoYeuCau: string;
+  IdYeuCau: string;
 }
 
 function escapeODataValue(value: string): string {
@@ -84,9 +92,15 @@ function getUserScopedFilter(tab: TabType, userEmail: string): string | undefine
 
   switch (tab) {
     case 'YeuCauCuaToi':
-      return normalizedEmail ? `EmailNguoiTao eq '${normalizedEmail}'` : 'Id eq 0';
+      return normalizedEmail
+        ? `EmailNguoiTao eq '${normalizedEmail}' and StatusApproved ne '${escapeODataValue(REQUEST_STATUS.BAN_NHAP)}'`
+        : 'Id eq 0';
+    case 'BanNhap':
+      return normalizedEmail
+        ? `StatusApproved eq '${escapeODataValue(REQUEST_STATUS.BAN_NHAP)}' and EmailNguoiTao eq '${normalizedEmail}'`
+        : 'Id eq 0';
     case 'CapSo':
-      return "StatusApproved eq 'Approved' and (SoVanBan eq null or SoVanBan eq '')";
+      return `StatusApproved eq '${escapeODataValue(REQUEST_STATUS.DA_CAP_SO)}' and (SoVanBan eq null or SoVanBan eq '')`;
     default:
       return undefined;
   }
@@ -120,24 +134,31 @@ function formatCurrentDate(): string {
   return new Date().toLocaleDateString('vi-VN');
 }
 
-function mapCreateRequestPayload(options: ICreateRequestOptions): ICreateSharePointPayload {
-  const today = formatCurrentDate();
+function shouldIncludeFolderOldId(requestType: ICreateRequestInput['requestType']): boolean {
+  return requestType === 'Điều chỉnh' || requestType === 'Thu hồi';
+}
 
-  return {
+function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenceId: string): ICreateSharePointPayload {
+  const today = formatCurrentDate();
+  const requestType = options.input.requestType || options.input.type;
+  const statusApproved = options.saveMode === 'draft' ? REQUEST_STATUS.BAN_NHAP : REQUEST_STATUS.DANG_GOP_Y;
+  const payload: ICreateSharePointPayload = {
+    IdYeuCau: requestReferenceId,
     Title: options.input.title,
     Tenvanban: options.input.title,
     SoVanBan: options.input.code || '',
-    LoaiYeuCau: options.input.requestType || options.input.type, // Map LoaiYeuCau to 'Viết mới' / 'Điều chỉnh' / 'Thu hồi'
+    LoaiYeuCau: requestType, // Map LoaiYeuCau to 'Viết mới' / 'Điều chỉnh' / 'Thu hồi'
     KhoaPhongNguoiTao: options.input.department || '',
     PheDuyet: options.input.approvalUsers.join('; '),
     NgayPhatHanh: today,
+    NgayTaoYeuCau: today,
     HieuLucTu: options.input.hieuLucTu || today,
     HieuLucDen: options.input.hieuLucDen || 'Vô thời hạn',
     TomTatNoiDung: options.input.summary,
     NguoiTao: options.userDisplayName || '',
     EmailNguoiTao: options.userEmail || '',
     LienHe: options.input.contact || '',
-    StatusApproved: 'Pending',
+    StatusApproved: statusApproved,
     ThuMucBanHanh: options.input.folderLuuTru || options.input.folder, // Map to new storage folder
     NoiLuuBanCung: options.input.noiLuu || '',
 
@@ -148,8 +169,16 @@ function mapCreateRequestPayload(options: ICreateRequestOptions): ICreateSharePo
     Date_GopY: options.input.deadlineGopY || '',
     ThamDinh: options.input.nguoiThamDinh ? options.input.nguoiThamDinh.join('; ') : '',
     Date_ThamDinh: options.input.deadlineThamDinh || '',
-    Date_PheDuyet: options.input.deadlinePheDuyet || ''
+    Date_PheDuyet: options.input.deadlinePheDuyet || '',
+    IsSendMailNotify: options.input.isSendMailNotify,
+    GhiChuChoThamDinh: options.input.ghiChuThamDinh || ''
   };
+
+  if (shouldIncludeFolderOldId(requestType) && options.input.idFolderOld) {
+    payload.IDFolderOld = options.input.idFolderOld;
+  }
+
+  return payload;
 }
 
 export class PhvbDocumentsService {
@@ -207,15 +236,28 @@ export class PhvbDocumentsService {
     return filterItemsForTab(items, options.tab, options.userEmail);
   }
 
-  public async createRequest(options: ICreateRequestOptions): Promise<void> {
+  public async createRequest(options: ICreateRequestOptions): Promise<string> {
     if (!hasSharePointSiteContext(options)) {
       throw new Error(SITE_CONTEXT_ERROR_MESSAGE);
     }
 
+    const requestReferenceId = generateRequestReferenceId();
+
     await phvbRepository.createItem({
       ...options,
-      payload: mapCreateRequestPayload(options)
+      payload: mapCreateRequestPayload(options, requestReferenceId)
     });
+
+    const hasFilesToUpload = options.input.taiLieuFiles.length > 0 || options.input.bieuMauFiles.length > 0;
+    if (hasFilesToUpload) {
+      await phvbAttachmentService.uploadRequestFiles({
+        ...options,
+        requestReferenceId,
+        input: options.input
+      });
+    }
+
+    return requestReferenceId;
   }
 
   public getRuntimeErrorMessage(error: unknown, listTitle?: string): string {

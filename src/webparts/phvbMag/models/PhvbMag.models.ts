@@ -30,6 +30,14 @@ export interface IVanBanItem {
   IsCreateFolderExpire?: boolean;
   ThuMucBanHanh?: string;
   LinkToFolderOld?: string;
+  GhiChuChoThamDinh?: string;
+}
+
+export type SaveRequestMode = 'submit' | 'draft';
+
+export interface ISaveRequestResult {
+  requestReferenceId: string;
+  mode: SaveRequestMode;
 }
 
 export type TabType = 'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'CapSo' | 'QLVanBan';
@@ -58,8 +66,8 @@ export interface ICreateRequestInput {
   requestType: 'Viết mới' | 'Điều chỉnh' | 'Thu hồi';
   titleEn?: string;
   folderLuuTru: string;
-  taiLieuFile?: File;
-  bieuMauFile?: File;
+  taiLieuFiles: File[];
+  bieuMauFiles: File[];
   folderBieuMauDinhKem?: string;
   loaiSla?: string;
   nguoiGopY: string[];
@@ -68,6 +76,35 @@ export interface ICreateRequestInput {
   deadlineThamDinh?: string;
   deadlinePheDuyet?: string;
   ghiChuThamDinh?: string;
+  isSendMailNotify: boolean;
+  idFolderOld?: number;
+}
+
+export interface IBanHanhLibraryItem {
+  id: number;
+  name: string;
+  fileDirRef: string;
+  fsObjType: number;
+  fileRef: string;
+  tomTatVanban?: string;
+  ngayPhatHanh?: string;
+  hieuLucTu?: string;
+  lienHe?: string;
+  fileUrl: string;
+}
+
+export interface IBanHanhFolderNode {
+  id: number;
+  name: string;
+  serverRelativePath: string;
+  children: IBanHanhFolderNode[];
+}
+
+export interface ISelectedBanHanhFolder {
+  id: number;
+  name: string;
+  serverRelativePath: string;
+  storagePath: string;
 }
 
 export interface IPhvbDirectoryUser {

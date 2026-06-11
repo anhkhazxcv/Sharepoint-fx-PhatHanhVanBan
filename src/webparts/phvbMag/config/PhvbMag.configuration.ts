@@ -1,7 +1,27 @@
 import type { ICreateRequestInput, IPhvbSiteContext, TabType } from '../models/PhvbMag.models';
 
 export const DEFAULT_LIST_TITLE = 'InDoc_Release';
+export const ISSUANCE_LIBRARY_TITLE = 'VanBanBanHanh_Ver02';
+export const ATTACHMENT_LIBRARY_TITLE = 'VanBanGopYThamDinh';
+export const ATTACHMENT_FORM_SUBFOLDER = 'Biểu Mẫu';
+export const DRAFT_DOCUMENT_ACCEPT = '.docx,.pdf,.xlsx,.xls';
+export const FORM_ATTACHMENT_ACCEPT = '.docx,.pdf,.xlsx,.xls';
 export const ALL_FILTER_VALUE = 'All';
+
+export const REQUEST_STATUS = {
+  BAN_HANH: 'Ban hành',
+  CHO_BAN_HANH: 'Chờ ban hành',
+  DA_CAP_SO: 'Đã cấp số',
+  DANG_GOP_Y: 'Đang góp ý',
+  DANG_PHE_DUYET: 'Đang phê duyệt',
+  DANG_THAM_DINH: 'Đang thẩm định',
+  CHO_ADMIN_THU_HOI: 'Chờ admin thu hồi',
+  CHO_SUPER_ADMIN_THU_HOI: 'Chờ supper admin thu hồi',
+  THU_HOI: 'Thu hồi',
+  BAN_NHAP: 'Bản nháp'
+} as const;
+
+export type RequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
 
 export const TAB_LABELS: Record<TabType, string> = {
   ViecCanLam: 'Việc cần làm',
@@ -46,11 +66,32 @@ export const FOLDER_OPTIONS: ReadonlyArray<string> = [
   'Thiết kế'
 ];
 
-export const SLA_OPTIONS: ReadonlyArray<string> = [
-  'SLA 1 - Phê duyệt nhanh (24h)',
-  'SLA 2 - Tiêu chuẩn (3 ngày)',
-  'SLA 3 - Thẩm định chi tiết (5 ngày)',
-  'SLA 4 - Đặc biệt (7 ngày)'
+export interface ISlaOption {
+  value: string;
+  label: string;
+  totalDays: number;
+  description: string;
+}
+
+export const SLA_OPTIONS: ReadonlyArray<ISlaOption> = [
+  {
+    value: 'Văn bản nội khối',
+    label: 'Văn bản nội khối',
+    totalDays: 3,
+    description: 'Thời hạn xử lý là 3 ngày.'
+  },
+  {
+    value: 'Văn bản Liên khối',
+    label: 'Văn bản Liên khối',
+    totalDays: 7,
+    description: 'Thời hạn xử lý là 7 ngày.'
+  },
+  {
+    value: 'SLA ngoại lệ',
+    label: 'SLA ngoại lệ',
+    totalDays: 21,
+    description: 'Thời hạn xử lý là 21 ngày.'
+  }
 ];
 
 export const DEFAULT_REQUEST_FORM: ICreateRequestInput = {
@@ -61,7 +102,7 @@ export const DEFAULT_REQUEST_FORM: ICreateRequestInput = {
   approvalUsers: [],
   summary: '',
   contact: '',
-  folder: '1. Quản trị chung/Tiêu chuẩn',
+  folder: '',
   hieuLucTu: '',
   hieuLucDen: '',
   noiLuu: '',
@@ -69,22 +110,29 @@ export const DEFAULT_REQUEST_FORM: ICreateRequestInput = {
   // New fields default values:
   requestType: 'Viết mới',
   titleEn: '',
-  folderLuuTru: '1. Quản trị chung/Tiêu chuẩn',
-  taiLieuFile: undefined,
-  bieuMauFile: undefined,
+  folderLuuTru: '',
+  taiLieuFiles: [],
+  bieuMauFiles: [],
   folderBieuMauDinhKem: '',
-  loaiSla: 'SLA 2 - Tiêu chuẩn (3 ngày)',
+  loaiSla: 'Văn bản nội khối',
   nguoiGopY: [],
   deadlineGopY: '',
   nguoiThamDinh: [],
   deadlineThamDinh: '',
   deadlinePheDuyet: '',
-  ghiChuThamDinh: ''
+  ghiChuThamDinh: '',
+  isSendMailNotify: true,
+  idFolderOld: undefined
 };
 
 export function cloneDefaultRequestForm(): ICreateRequestInput {
   return {
-    ...DEFAULT_REQUEST_FORM
+    ...DEFAULT_REQUEST_FORM,
+    approvalUsers: [],
+    nguoiGopY: [],
+    nguoiThamDinh: [],
+    taiLieuFiles: [],
+    bieuMauFiles: []
   };
 }
 

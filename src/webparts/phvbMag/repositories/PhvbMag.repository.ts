@@ -11,12 +11,18 @@ export interface IFetchPhvbItemsQuery extends IPhvbSiteContext {
 }
 
 export interface ICreatePhvbItemCommand extends IPhvbSiteContext {
-  payload: Record<string, string>;
+  payload: Record<string, string | boolean | number>;
+}
+
+export interface IUpdatePhvbItemCommand extends IPhvbSiteContext {
+  itemId: number;
+  payload: Record<string, string | boolean | number>;
 }
 
 export interface IPhvbRepository {
   fetchItems(query: IFetchPhvbItemsQuery): Promise<IVanBanItem[]>;
-  createItem(command: ICreatePhvbItemCommand): Promise<void>;
+  createItem(command: ICreatePhvbItemCommand): Promise<number>;
+  updateItem(command: IUpdatePhvbItemCommand): Promise<void>;
 }
 
 function normalizeSiteUrl(value: string): string {
@@ -95,7 +101,7 @@ async function runGetRequest(siteUrl: string, query: IFetchPhvbItemsQuery, selec
   return ensureOk(response, requestUrl);
 }
 
-async function runPostRequest(siteUrl: string, command: ICreatePhvbItemCommand): Promise<SPHttpClientResponse> {
+async function runPostRequest(siteUrl: string, command: ICreatePhvbItemCommand): Promise<number> {
   const requestUrl = getItemsEndpoint(siteUrl, command.listTitle);
   const response = await command.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
     body: JSON.stringify(command.payload),
@@ -106,7 +112,36 @@ async function runPostRequest(siteUrl: string, command: ICreatePhvbItemCommand):
     }
   });
 
-  return ensureOk(response, requestUrl);
+  await ensureOk(response, requestUrl);
+  const data = await response.json() as { Id?: number; ID?: number };
+  const createdId = data.Id || data.ID;
+
+  if (!createdId) {
+    throw new SharePointRequestError(
+      'SharePoint created item but did not return an Id.',
+      response.status,
+      requestUrl,
+      JSON.stringify(data)
+    );
+  }
+
+  return createdId;
+}
+
+async function runPatchRequest(siteUrl: string, command: IUpdatePhvbItemCommand): Promise<void> {
+  const requestUrl = `${getItemsEndpoint(siteUrl, command.listTitle)}(${command.itemId})`;
+  const response = await command.spHttpClient.fetch(requestUrl, SPHttpClient.configurations.v1, {
+    method: 'PATCH',
+    body: JSON.stringify(command.payload),
+    headers: {
+      accept: 'application/json;odata=nometadata',
+      'content-type': 'application/json;odata=nometadata',
+      'odata-version': '',
+      'IF-MATCH': '*'
+    }
+  });
+
+  await ensureOk(response, requestUrl);
 }
 
 async function tryAcrossCandidateSites<T>(
@@ -157,11 +192,12 @@ export class SharePointPhvbRepository implements IPhvbRepository {
     });
   }
 
-  public async createItem(command: ICreatePhvbItemCommand): Promise<void> {
-    await tryAcrossCandidateSites(command, async (siteUrl: string) => {
-      await runPostRequest(siteUrl, command);
-      return undefined;
-    });
+  public async createItem(command: ICreatePhvbItemCommand): Promise<number> {
+    return tryAcrossCandidateSites(command, async (siteUrl: string) => runPostRequest(siteUrl, command));
+  }
+
+  public async updateItem(command: IUpdatePhvbItemCommand): Promise<void> {
+    return tryAcrossCandidateSites(command, async (siteUrl: string) => runPatchRequest(siteUrl, command));
   }
 }
 

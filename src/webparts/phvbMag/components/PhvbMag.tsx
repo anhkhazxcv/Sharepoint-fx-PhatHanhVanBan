@@ -3,10 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS, FOLDER_OPTIONS } from '../config/PhvbMag.configuration';
+import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS } from '../config/PhvbMag.configuration';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
-import type { ICreateRequestInput, IPhvbDirectoryUser, IVanBanItem, TabType } from '../models/PhvbMag.models';
+import type { ICreateRequestInput, IPhvbDirectoryUser, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { selectFilteredItems } from '../utils/PhvbMag.selectors';
+import { ToastService } from '../utils/ToastService';
 import { phvbMagGraphService } from '../services/PhvbMagGraph.service';
 import styles from './PhvbMag.module.scss';
 import type { IPhvbMagProps } from './IPhvbMagProps';
@@ -43,6 +44,14 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     return form;
   }, [userDepartment]);
 
+  const siteContext = useMemo(() => ({
+    spHttpClient,
+    currentWebUrl,
+    siteCollectionUrl,
+    sourceSiteUrl,
+    listTitle
+  }), [spHttpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle]);
+
   const departmentOptions = useMemo(() => {
     const nextDepartments = DEPARTMENT_OPTIONS.slice();
 
@@ -53,7 +62,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     return nextDepartments;
   }, [userDepartment]);
 
-  const { activeTab, counts, items, isLoading, isSaving, errorMessage, setActiveTab, createRequest } = usePhvbDocuments({
+  const { activeTab, counts, items, isLoading, isSaving, errorMessage, setActiveTab, saveRequest } = usePhvbDocuments({
     userDisplayName,
     userEmail,
     spHttpClient,
@@ -136,13 +145,23 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     navigate(`/tab/${tab}`);
   };
 
-  const handleCreateRequest = async (input: ICreateRequestInput): Promise<boolean> => {
-    const isSuccess = await createRequest(input);
-    if (isSuccess) {
-      navigate(`/tab/${activeTab}`);
+  const handleCreateRequest = async (input: ICreateRequestInput, mode: SaveRequestMode): Promise<boolean> => {
+    const result = await saveRequest(input, mode);
+
+    if (!result) {
+      return false;
     }
 
-    return isSuccess;
+    const successMessage = mode === 'draft'
+      ? `Lưu nháp thành công. ID yêu cầu: ${result.requestReferenceId}`
+      : `Gửi yêu cầu thành công. ID yêu cầu: ${result.requestReferenceId}`;
+
+    ToastService.success(successMessage);
+
+    const targetTab = mode === 'draft' ? 'BanNhap' : activeTab;
+    navigate(`/tab/${targetTab}`);
+
+    return true;
   };
 
   return (
@@ -174,9 +193,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
         <PhvbMagToolbar
           activeTab={activeTab}
-          searchQuery={searchQuery}
           canCreate={Boolean(currentWebUrl || siteCollectionUrl || sourceSiteUrl)}
-          onSearchChange={setSearchQuery}
           onOpenCreate={() => navigate(`/tab/${activeTab}/create`)}
         />
 
@@ -186,7 +203,6 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
           isLoading={isLoading}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          onOpenCreate={() => navigate(`/tab/${activeTab}/create`)}
           onSelectItem={(item) => navigate(`/tab/${activeTab}/item/${item.Id}`)}
         />
       </main>
@@ -199,7 +215,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         defaultValues={defaultRequestForm}
         documentTypes={DOCUMENT_TYPE_OPTIONS}
         departments={departmentOptions}
-        folders={FOLDER_OPTIONS}
+        siteContext={siteContext}
         approvers={approverUsers}
         onClose={() => navigate(`/tab/${activeTab}`)}
         onSubmit={handleCreateRequest}

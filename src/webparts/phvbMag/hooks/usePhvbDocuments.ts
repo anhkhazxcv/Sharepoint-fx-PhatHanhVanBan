@@ -3,7 +3,7 @@ import type { SPHttpClient } from '@microsoft/sp-http';
 import { hasSharePointSiteContext, resolveListTitle } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE } from '../services/PhvbMag.error';
 import { phvbDocumentsService } from '../services/PhvbMag.service';
-import type { ICreateRequestInput, ITabCounts, IVanBanItem, TabType } from '../models/PhvbMag.models';
+import type { ICreateRequestInput, ISaveRequestResult, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 
 interface IUsePhvbDocumentsOptions {
@@ -24,7 +24,7 @@ interface IUsePhvbDocumentsResult {
   isSaving: boolean;
   errorMessage?: string;
   setActiveTab: (tab: TabType) => void;
-  createRequest: (input: ICreateRequestInput) => Promise<boolean>;
+  saveRequest: (input: ICreateRequestInput, mode: SaveRequestMode) => Promise<ISaveRequestResult | undefined>;
 }
 
 export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDocumentsResult {
@@ -136,36 +136,44 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     };
   }, [activeTab, hasAnySiteContext, resolvedListTitle, siteContext, userEmail]);
 
-  const createRequest = async (input: ICreateRequestInput): Promise<boolean> => {
+  const saveRequest = async (input: ICreateRequestInput, mode: SaveRequestMode): Promise<ISaveRequestResult | undefined> => {
     if (!hasAnySiteContext) {
       setErrorMessage(SITE_CONTEXT_ERROR_MESSAGE);
-      return false;
+      return undefined;
     }
 
     setIsSaving(true);
 
     try {
-      await phvbDocumentsService.createRequest({
+      const requestReferenceId = await phvbDocumentsService.createRequest({
         ...documentContext,
-        input
+        input,
+        saveMode: mode
       });
+
+      const targetTab: TabType = mode === 'draft' ? 'BanNhap' : activeTab;
 
       const [nextCounts, nextItems] = await Promise.all([
         phvbDocumentsService.loadTabCounts(documentContext),
         phvbDocumentsService.loadTabItems({
           ...siteContext,
           userEmail,
-          tab: activeTab
+          tab: targetTab
         })
       ]);
 
+      setActiveTab(targetTab);
       setCounts(nextCounts);
       setItems(nextItems);
       setErrorMessage(undefined);
-      return true;
+
+      return {
+        requestReferenceId,
+        mode
+      };
     } catch (error) {
       setErrorMessage(phvbDocumentsService.getRuntimeErrorMessage(error, resolvedListTitle));
-      return false;
+      return undefined;
     } finally {
       setIsSaving(false);
     }
@@ -179,6 +187,6 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     isSaving,
     errorMessage,
     setActiveTab,
-    createRequest
+    saveRequest
   };
 }

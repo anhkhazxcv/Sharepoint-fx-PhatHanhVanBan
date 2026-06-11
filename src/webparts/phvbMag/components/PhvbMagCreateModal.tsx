@@ -1,9 +1,32 @@
 import * as React from 'react';
 import { useEffect, useState, useRef } from 'react';
-import type { ICreateRequestInput, IPhvbDirectoryUser } from '../models/PhvbMag.models';
-import { SLA_OPTIONS } from '../config/PhvbMag.configuration';
+import type { ICreateRequestInput, IPhvbDirectoryUser, IPhvbSiteContext, ISelectedBanHanhFolder, SaveRequestMode } from '../models/PhvbMag.models';
+import { DRAFT_DOCUMENT_ACCEPT, FORM_ATTACHMENT_ACCEPT, ISSUANCE_LIBRARY_TITLE, SLA_OPTIONS } from '../config/PhvbMag.configuration';
+import { getParentStoragePathAfterLibrary, getStoragePathAfterLibrary } from '../utils/PhvbMagBanHanh.tree';
+import {
+  calculateWorkflowDeadlines,
+  getSlaMaxDeadline,
+  getTodayInputDate,
+  shiftInputDate,
+  validateWorkflowDeadlines,
+  type IDeadlineValidationResult
+} from '../utils/PhvbMagSla.utils';
 import styles from './PhvbMag.module.scss';
-import { CloseIcon } from './PhvbMagIcons';
+import {
+  CloseIcon,
+  DeleteFileIcon,
+  DocumentFileIcon,
+  FolderAccentIcon,
+  FolderSelectIcon,
+  FormTemplateFileIcon,
+  ModalCreateIcon,
+  RemoveTagIcon,
+  SubmitRequestIcon,
+  UploadDocumentIcon,
+  UploadFormIcon
+} from './PhvbMagIcons';
+import { PhvbMagFolderPickerDialog } from './PhvbMagFolderPickerDialog';
+import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 
 interface IPhvbMagCreateModalProps {
   isOpen: boolean;
@@ -12,10 +35,10 @@ interface IPhvbMagCreateModalProps {
   defaultValues: ICreateRequestInput;
   documentTypes: ReadonlyArray<string>;
   departments: ReadonlyArray<string>;
-  folders: ReadonlyArray<string>;
+  siteContext: IPhvbSiteContext;
   approvers: ReadonlyArray<IPhvbDirectoryUser>;
   onClose: () => void;
-  onSubmit: (input: ICreateRequestInput) => Promise<boolean>;
+  onSubmit: (input: ICreateRequestInput, mode: SaveRequestMode) => Promise<boolean>;
 }
 
 interface IUserPickerProps {
@@ -27,12 +50,28 @@ interface IUserPickerProps {
   placeholder?: string;
   deadlineValue?: string;
   onDeadlineChange?: (date: string) => void;
+  deadlineMin?: string;
+  deadlineMax?: string;
+  deadlineError?: string;
   isLoading?: boolean;
 }
 
 // Highly polished, tag-based autocomplete user picker component
 function UserTagPicker(props: IUserPickerProps): React.ReactElement {
-  const { label, required, selectedEmails, onChange, approvers, placeholder, deadlineValue, onDeadlineChange, isLoading } = props;
+  const {
+    label,
+    required,
+    selectedEmails,
+    onChange,
+    approvers,
+    placeholder,
+    deadlineValue,
+    onDeadlineChange,
+    deadlineMin,
+    deadlineMax,
+    deadlineError,
+    isLoading
+  } = props;
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -75,9 +114,10 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
   };
 
   return (
-    <div className={styles.userPickerContainer} ref={containerRef}>
+    <div className={`${styles.formGroup} ${styles.userPickerContainer}`} ref={containerRef}>
       <label className={styles.fieldLabel}>
-        {label} {required && <span className={styles.required}>*</span>}
+        {label}
+        {required && <span className={styles.required}>*</span>}
       </label>
       
       <div className={styles.userPickerInputWrapper}>
@@ -88,8 +128,8 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
             return (
               <span key={email} className={styles.userTag}>
                 {displayName}
-                <button type="button" className={styles.btnRemoveTag} onClick={() => handleRemove(email)}>
-                  ×
+                <button type="button" className={styles.btnRemoveTag} onClick={() => handleRemove(email)} aria-label="Xóa">
+                  <RemoveTagIcon />
                 </button>
               </span>
             );
@@ -133,14 +173,19 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
       </div>
 
       {onDeadlineChange && (
-        <div className={styles.deadlineRow}>
-          <span className={styles.deadlineLabel}>Deadline:</span>
-          <input
-            type="date"
-            value={deadlineValue || ''}
-            onChange={e => onDeadlineChange(e.target.value)}
-            className={styles.deadlineInput}
-          />
+        <div>
+          <div className={styles.deadlineRow}>
+            <span className={styles.deadlineLabel}>Deadline:</span>
+            <input
+              type="date"
+              value={deadlineValue || ''}
+              min={deadlineMin}
+              max={deadlineMax}
+              onChange={e => onDeadlineChange(e.target.value)}
+              className={`${styles.deadlineInput} ${deadlineError ? styles.deadlineInputInvalid : ''}`}
+            />
+          </div>
+          {deadlineError && <p className={styles.deadlineError}>{deadlineError}</p>}
         </div>
       )}
     </div>
@@ -148,10 +193,13 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
 }
 
 export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.ReactElement {
-  const { isOpen, isSaving, isLoadingApprovers, defaultValues, folders, approvers, onClose, onSubmit } = props;
+  const { isOpen, isSaving, isLoadingApprovers, defaultValues, siteContext, approvers, onClose, onSubmit } = props;
   const [formValues, setFormValues] = useState<ICreateRequestInput>({ ...defaultValues });
-  const [showFolderDropdown, setShowFolderDropdown] = useState(false);
-  const folderRef = useRef<HTMLDivElement>(null);
+  const [showFolderPicker, setShowFolderPicker] = useState(false);
+  const [deadlineErrors, setDeadlineErrors] = useState<IDeadlineValidationResult>({ isValid: true });
+  const [submitError, setSubmitError] = useState<string | undefined>(undefined);
+  const [folderError, setFolderError] = useState<string | undefined>(undefined);
+  const [savingMode, setSavingMode] = useState<SaveRequestMode | undefined>(undefined);
 
   // Refs and Drag-over states for Drag-and-Drop files
   const file1Ref = useRef<HTMLInputElement>(null);
@@ -161,23 +209,22 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
 
   useEffect(() => {
     if (isOpen) {
-      setFormValues({ ...defaultValues });
-      setShowFolderDropdown(false);
+      const deadlines = calculateWorkflowDeadlines(defaultValues.loaiSla);
+      const nextValues = {
+        ...defaultValues,
+        ...deadlines
+      };
+
+      setFormValues(nextValues);
+      setDeadlineErrors(validateWorkflowDeadlines({
+        deadlineGopY: nextValues.deadlineGopY,
+        deadlineThamDinh: nextValues.deadlineThamDinh,
+        deadlinePheDuyet: nextValues.deadlinePheDuyet,
+        loaiSla: nextValues.loaiSla
+      }));
+      setShowFolderPicker(false);
     }
   }, [defaultValues, isOpen]);
-
-  // Click outside listener for folder selection dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent): void => {
-      if (folderRef.current && !folderRef.current.contains(event.target as Node)) {
-        setShowFolderDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   if (!isOpen) {
     return <></>;
@@ -190,33 +237,248 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     }));
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    const isSuccess = await onSubmit(formValues);
-    if (isSuccess) {
-      setFormValues({ ...defaultValues });
+  const normalizeDocumentTitle = (value: string): string => {
+    return value.toLocaleUpperCase('vi-VN');
+  };
+
+  const handleTitleChange = (value: string): void => {
+    updateField('title', normalizeDocumentTitle(value));
+  };
+
+  const appendFiles = (existingFiles: File[], incomingFiles: FileList | File[]): File[] => {
+    const nextFiles = existingFiles.slice();
+    const filesToAdd = Array.prototype.slice.call(incomingFiles) as File[];
+
+    filesToAdd.forEach(file => {
+      const isDuplicate = nextFiles.some(
+        existingFile =>
+          existingFile.name === file.name &&
+          existingFile.size === file.size &&
+          existingFile.lastModified === file.lastModified
+      );
+
+      if (!isDuplicate) {
+        nextFiles.push(file);
+      }
+    });
+
+    return nextFiles;
+  };
+
+  const openFilePicker = (inputRef: React.RefObject<HTMLInputElement>): void => {
+    if (inputRef.current) {
+      inputRef.current.click();
     }
   };
+
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    field: 'taiLieuFiles' | 'bieuMauFiles'
+  ): void => {
+    if (event.target.files && event.target.files.length > 0) {
+      const currentFiles = field === 'taiLieuFiles' ? formValues.taiLieuFiles : formValues.bieuMauFiles;
+      updateField(field, appendFiles(currentFiles, event.target.files));
+    }
+
+    event.target.value = '';
+  };
+
+  const handleDropFiles = (
+    event: React.DragEvent<HTMLDivElement>,
+    field: 'taiLieuFiles' | 'bieuMauFiles'
+  ): void => {
+    event.preventDefault();
+
+    if (field === 'taiLieuFiles') {
+      setIsDragging1(false);
+    } else {
+      setIsDragging2(false);
+    }
+
+    if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      const currentFiles = field === 'taiLieuFiles' ? formValues.taiLieuFiles : formValues.bieuMauFiles;
+      updateField(field, appendFiles(currentFiles, event.dataTransfer.files));
+    }
+  };
+
+  const handleRemoveFile = (
+    field: 'taiLieuFiles' | 'bieuMauFiles',
+    fileIndex: number,
+    event: React.MouseEvent<HTMLButtonElement>
+  ): void => {
+    event.stopPropagation();
+    const currentFiles = field === 'taiLieuFiles' ? formValues.taiLieuFiles : formValues.bieuMauFiles;
+    updateField(
+      field,
+      currentFiles.filter((_, index) => index !== fileIndex)
+    );
+  };
+
+  const formatFileSize = (sizeInBytes: number): string => {
+    return `${(sizeInBytes / 1024 / 1024).toFixed(2)} MB`;
+  };
+
+  const runDeadlineValidation = (values: ICreateRequestInput): IDeadlineValidationResult => {
+    return validateWorkflowDeadlines({
+      deadlineGopY: values.deadlineGopY,
+      deadlineThamDinh: values.deadlineThamDinh,
+      deadlinePheDuyet: values.deadlinePheDuyet,
+      loaiSla: values.loaiSla
+    });
+  };
+
+  const handleDeadlineChange = (
+    field: 'deadlineGopY' | 'deadlineThamDinh' | 'deadlinePheDuyet',
+    date: string
+  ): void => {
+    const nextState = {
+      ...formValues,
+      [field]: date
+    };
+    setFormValues(nextState);
+    setDeadlineErrors(runDeadlineValidation(nextState));
+  };
+
+  const handleSlaChange = (loaiSla: string): void => {
+    const deadlines = calculateWorkflowDeadlines(loaiSla);
+    const nextState = {
+      ...formValues,
+      loaiSla,
+      ...deadlines
+    };
+    setFormValues(nextState);
+    setDeadlineErrors(runDeadlineValidation(nextState));
+  };
+
+  const slaMaxDeadline = getSlaMaxDeadline(formValues.loaiSla);
+  const todayInputDate = getTodayInputDate();
+  const gopYMaxDate = shiftInputDate(formValues.deadlineThamDinh || '', -1) || slaMaxDeadline;
+  const thamDinhMinDate = shiftInputDate(formValues.deadlineGopY || '', 1) || todayInputDate;
+  const thamDinhMaxDate = shiftInputDate(formValues.deadlinePheDuyet || '', -1) || slaMaxDeadline;
+  const pheDuyetMinDate = shiftInputDate(formValues.deadlineThamDinh || '', 1) || todayInputDate;
+
+  const handleRequestTypeChange = (type: ICreateRequestInput['requestType']): void => {
+    setFolderError(undefined);
+    setFormValues(previousState => {
+      if (previousState.requestType === type) {
+        return previousState;
+      }
+
+      return {
+        ...previousState,
+        requestType: type,
+        title: '',
+        folderLuuTru: '',
+        folder: '',
+        idFolderOld: undefined,
+        isSendMailNotify: true
+      };
+    });
+  };
+
+  const isAdjustOrRevokeRequest = formValues.requestType === 'Điều chỉnh' || formValues.requestType === 'Thu hồi';
+
+  const validateIssuanceFolder = (): boolean => {
+    if (!formValues.folderLuuTru.trim()) {
+      setFolderError('Vui lòng chọn thư mục ban hành.');
+      return false;
+    }
+
+    setFolderError(undefined);
+    return true;
+  };
+
+  const handleFolderConfirm = (folder: ISelectedBanHanhFolder): void => {
+    const storagePath = isAdjustOrRevokeRequest
+      ? getParentStoragePathAfterLibrary(folder.serverRelativePath, ISSUANCE_LIBRARY_TITLE)
+      : folder.storagePath || getStoragePathAfterLibrary(folder.serverRelativePath, ISSUANCE_LIBRARY_TITLE);
+
+    setFolderError(undefined);
+    setFormValues(previousState => ({
+      ...previousState,
+      folderLuuTru: storagePath,
+      folder: storagePath,
+      title: isAdjustOrRevokeRequest ? normalizeDocumentTitle(folder.name) : previousState.title,
+      idFolderOld: isAdjustOrRevokeRequest ? folder.id : undefined
+    }));
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    setSubmitError(undefined);
+
+    if (!validateIssuanceFolder()) {
+      return;
+    }
+
+    if (!formValues.taiLieuFiles || formValues.taiLieuFiles.length === 0) {
+      setSubmitError('Vui lòng đính kèm ít nhất một tài liệu soạn thảo trước khi gửi yêu cầu.');
+      return;
+    }
+
+    const validation = runDeadlineValidation(formValues);
+    setDeadlineErrors(validation);
+
+    if (!validation.isValid) {
+      return;
+    }
+
+    setSavingMode('submit');
+    try {
+      const isSuccess = await onSubmit(formValues, 'submit');
+      if (isSuccess) {
+        setFormValues({ ...defaultValues });
+        setSubmitError(undefined);
+      }
+    } finally {
+      setSavingMode(undefined);
+    }
+  };
+
+  const handleSaveDraft = async (): Promise<void> => {
+    setSubmitError(undefined);
+    setDeadlineErrors({ isValid: true });
+
+    if (!validateIssuanceFolder()) {
+      return;
+    }
+
+    setSavingMode('draft');
+    try {
+      const isSuccess = await onSubmit(formValues, 'draft');
+      if (isSuccess) {
+        setFormValues({ ...defaultValues });
+      }
+    } finally {
+      setSavingMode(undefined);
+    }
+  };
+
+  const savingMessage = savingMode === 'draft'
+    ? 'Đang lưu nháp...'
+    : savingMode === 'submit'
+      ? 'Đang gửi yêu cầu...'
+      : 'Đang xử lý...';
 
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalContent}>
         <div className={styles.modalHeader}>
           <div className={styles.modalHeaderTitleArea}>
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="#7B4C2C">
-              <path d="M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" />
-            </svg>
+            <ModalCreateIcon />
             <h3>Tạo yêu cầu phát hành văn bản</h3>
           </div>
-          <button type="button" className={styles.btnClose} onClick={onClose}>
+          <button type="button" className={styles.btnClose} onClick={onClose} disabled={isSaving}>
             <CloseIcon />
           </button>
         </div>
 
+        <PhvbMagLoadingOverlay isOpen={isSaving} message={savingMessage} />
+
         <form onSubmit={handleSubmit} className={styles.formContainer}>
           <div className={styles.modalBody}>
-            {/* LOẠI YÊU CẦU */}
-            <div className={styles.formRow}>
+            {/* LOẠI YÊU CẦU + THÔNG BÁO EMAIL */}
+            <div className={styles.formRowTwoCol}>
               <div className={styles.formGroup}>
                 <label className={styles.fieldLabel}>LOẠI YÊU CẦU</label>
                 <div className={styles.requestTypeGroup}>
@@ -225,12 +487,60 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                       key={type}
                       type="button"
                       className={`${styles.requestTypeBtn} ${formValues.requestType === type ? styles.requestTypeBtnActive : ''}`}
-                      onClick={() => updateField('requestType', type)}
+                      onClick={() => handleRequestTypeChange(type)}
                     >
                       {type}
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.fieldLabel}>THÔNG BÁO EMAIL</label>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', minHeight: '36px' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formValues.isSendMailNotify)}
+                    onChange={event => updateField('isSendMailNotify', event.target.checked)}
+                    disabled={formValues.requestType !== 'Thu hồi'}
+                  />
+                  <span style={{ color: formValues.requestType !== 'Thu hồi' ? '#8C827A' : undefined }}>Gửi thông báo email</span>
+                </label>
+              </div>
+            </div>
+
+            {/* THƯ MỤC BAN HÀNH */}
+            <div className={styles.formRow}>
+              <div className={styles.formGroup}>
+                <label className={styles.fieldLabel}>
+                  THƯ MỤC BAN HÀNH <span className={styles.required}>*</span>
+                </label>
+                <div className={styles.folderInputWrapper}>
+                  <div className={`${styles.folderInputLeft} ${folderError ? styles.folderInputInvalid : ''}`}>
+                    <FolderAccentIcon />
+                    <input
+                      type="text"
+                      readOnly
+                      placeholder="Chọn thư mục ban hành..."
+                      value={formValues.folderLuuTru}
+                      className={styles.folderInputText}
+                      onClick={() => setShowFolderPicker(true)}
+                      aria-invalid={Boolean(folderError)}
+                      aria-describedby={folderError ? 'folderLuuTruError' : undefined}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.btnSelectFolder}
+                    onClick={() => setShowFolderPicker(true)}
+                  >
+                    <FolderSelectIcon />
+                    Chọn
+                  </button>
+                </div>
+                {folderError && (
+                  <p id="folderLuuTruError" className={styles.deadlineError}>{folderError}</p>
+                )}
               </div>
             </div>
 
@@ -242,9 +552,11 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 </label>
                 <input
                   type="text"
-                  placeholder="Nhập tên đầy đủ..."
+                  placeholder={isAdjustOrRevokeRequest ? 'Chọn thư mục ban hành để tự điền...' : 'Nhập tên đầy đủ...'}
                   value={formValues.title}
-                  onChange={event => updateField('title', event.target.value)}
+                  onChange={event => handleTitleChange(event.target.value)}
+                  readOnly={isAdjustOrRevokeRequest}
+                  disabled={isAdjustOrRevokeRequest}
                   required
                   className={styles.formInput}
                 />
@@ -265,63 +577,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
               </div>
             </div>
 
-            {/* THƯ MỤC LƯU TRỮ */}
-            <div className={styles.formRow} ref={folderRef}>
-              <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>
-                  THƯ MỤC LƯU TRỮ <span className={styles.required}>*</span>
-                </label>
-                <div className={styles.folderInputWrapper}>
-                  <div className={styles.folderInputLeft}>
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="#F4B400">
-                      <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-                    </svg>
-                    <input
-                      type="text"
-                      readOnly
-                      placeholder="Chọn thư mục..."
-                      value={formValues.folderLuuTru}
-                      className={styles.folderInputText}
-                      onClick={() => setShowFolderDropdown(!showFolderDropdown)}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.btnSelectFolder}
-                    onClick={() => setShowFolderDropdown(!showFolderDropdown)}
-                  >
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                      <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10H6v-2h8v2zm4-4H6v-2h12v2z" />
-                    </svg>
-                    Chọn
-                  </button>
-
-                  {showFolderDropdown && (
-                    <div className={styles.folderDropdownMenu}>
-                      <div className={styles.folderDropdownHeader}>Chọn thư mục lưu trữ</div>
-                      <div className={styles.folderDropdownList}>
-                        {folders.map(option => (
-                          <div
-                            key={option}
-                            className={`${styles.folderDropdownItem} ${formValues.folderLuuTru === option ? styles.folderItemActive : ''}`}
-                            onClick={() => {
-                              updateField('folderLuuTru', option);
-                              updateField('folder', option); // Sync old property
-                              setShowFolderDropdown(false);
-                            }}
-                          >
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="#F4B400">
-                              <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-                            </svg>
-                            <span>{option}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            
 
             {/* NGÀY HIỆU LỰC & NGÀY HẾT HIỆU LỰC */}
             <div className={styles.formRowTwoCol}>
@@ -372,66 +628,52 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 <label className={styles.fieldLabel}>
                   TÀI LIỆU SOẠN THẢO <span className={styles.required}>*</span>
                 </label>
-                <span className={styles.fieldSubtitle}>File văn bản chính cần phát hành (.docx hoặc .pdf)</span>
+                <span className={styles.fieldSubtitle}>File văn bản chính cần phát hành (.docx, .pdf, .xlsx, .xls)</span>
                 
                 <div
-                  className={`${styles.dragDropZone} ${isDragging1 ? styles.dragDropActive : ''} ${formValues.taiLieuFile ? styles.dragDropHasFile : ''}`}
+                  className={`${styles.dragDropZone} ${isDragging1 ? styles.dragDropActive : ''} ${formValues.taiLieuFiles.length > 0 ? styles.dragDropHasFile : ''}`}
                   onDragOver={(e) => { e.preventDefault(); setIsDragging1(true); }}
                   onDragLeave={() => setIsDragging1(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragging1(false);
-                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      updateField('taiLieuFile', e.dataTransfer.files[0]);
-                    }
-                  }}
-                  onClick={() => {
-                    if (!formValues.taiLieuFile && file1Ref.current) {
-                      file1Ref.current.click();
-                    }
-                  }}
+                  onDrop={event => handleDropFiles(event, 'taiLieuFiles')}
+                  onClick={() => openFilePicker(file1Ref)}
                 >
                   <input
                     type="file"
                     ref={file1Ref}
-                    accept=".docx,.pdf"
+                    accept={DRAFT_DOCUMENT_ACCEPT}
+                    multiple
                     style={{ display: 'none' }}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        updateField('taiLieuFile', e.target.files[0]);
-                      }
-                    }}
+                    onChange={event => handleFileInputChange(event, 'taiLieuFiles')}
                   />
                   
-                  {formValues.taiLieuFile ? (
-                    <div className={styles.fileCard}>
-                      <div className={styles.fileIconArea}>
-                        <svg viewBox="0 0 24 24" width="32" height="32" fill="#7B4C2C">
-                          <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
-                        </svg>
-                      </div>
-                      <div className={styles.fileMetaArea}>
-                        <div className={styles.fileName}>{formValues.taiLieuFile.name}</div>
-                        <div className={styles.fileSize}>{(formValues.taiLieuFile.size / 1024 / 1024).toFixed(2)} MB</div>
-                      </div>
-                      <button
-                        type="button"
-                        className={styles.btnTrash}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateField('taiLieuFile', undefined);
-                        }}
-                      >
-                        ×
-                      </button>
+                  {formValues.taiLieuFiles.length > 0 ? (
+                    <div className={styles.dragDropContent} style={{ width: '100%', gap: 8 }}>
+                      {formValues.taiLieuFiles.map((file, fileIndex) => (
+                        <div key={`${file.name}-${file.lastModified}-${fileIndex}`} className={styles.fileCard}>
+                          <div className={styles.fileIconArea}>
+                            <DocumentFileIcon />
+                          </div>
+                          <div className={styles.fileMetaArea}>
+                            <div className={styles.fileName}>{file.name}</div>
+                            <div className={styles.fileSize}>{formatFileSize(file.size)}</div>
+                          </div>
+                          <button
+                            type="button"
+                            className={styles.btnTrash}
+                            onClick={event => handleRemoveFile('taiLieuFiles', fileIndex, event)}
+                            aria-label={`Xóa tài liệu ${file.name}`}
+                          >
+                            <DeleteFileIcon />
+                          </button>
+                        </div>
+                      ))}
+                      <div className={styles.dragDropFormat}>Click hoặc kéo thả để thêm file</div>
                     </div>
                   ) : (
                     <div className={styles.dragDropContent}>
-                      <svg viewBox="0 0 24 24" width="38" height="38" fill="#8C827A">
-                        <path d="M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" />
-                      </svg>
+                      <UploadDocumentIcon />
                       <div className={styles.dragDropTitle}>Kéo thả hoặc click để đính kèm</div>
-                      <div className={styles.dragDropFormat}>.docx, .pdf - Tối đa 50MB</div>
+                      <div className={styles.dragDropFormat}>.docx, .pdf, .xlsx, .xls - Tối đa 50MB/file</div>
                     </div>
                   )}
                 </div>
@@ -447,88 +689,52 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 </span>
 
                 <div
-                  className={`${styles.dragDropZone} ${isDragging2 ? styles.dragDropActive : ''} ${formValues.bieuMauFile ? styles.dragDropHasFile : ''}`}
+                  className={`${styles.dragDropZone} ${isDragging2 ? styles.dragDropActive : ''} ${formValues.bieuMauFiles.length > 0 ? styles.dragDropHasFile : ''}`}
                   onDragOver={(e) => { e.preventDefault(); setIsDragging2(true); }}
                   onDragLeave={() => setIsDragging2(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragging2(false);
-                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      updateField('bieuMauFile', e.dataTransfer.files[0]);
-                    }
-                  }}
-                  onClick={() => {
-                    if (!formValues.bieuMauFile && file2Ref.current) {
-                      file2Ref.current.click();
-                    }
-                  }}
+                  onDrop={event => handleDropFiles(event, 'bieuMauFiles')}
+                  onClick={() => openFilePicker(file2Ref)}
                 >
                   <input
                     type="file"
                     ref={file2Ref}
-                    accept=".docx,.xlsx,.pdf"
+                    accept={FORM_ATTACHMENT_ACCEPT}
+                    multiple
                     style={{ display: 'none' }}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        updateField('bieuMauFile', e.target.files[0]);
-                      }
-                    }}
+                    onChange={event => handleFileInputChange(event, 'bieuMauFiles')}
                   />
 
-                  {formValues.bieuMauFile ? (
-                    <div className={styles.fileCard}>
-                      <div className={styles.fileIconArea}>
-                        <svg viewBox="0 0 24 24" width="32" height="32" fill="#7B4C2C">
-                          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H6v-2h6v2zm4-4H6v-2h10v2zm0-4H6V7h10v2z" />
-                        </svg>
-                      </div>
-                      <div className={styles.fileMetaArea}>
-                        <div className={styles.fileName}>{formValues.bieuMauFile.name}</div>
-                        <div className={styles.fileSize}>{(formValues.bieuMauFile.size / 1024 / 1024).toFixed(2)} MB</div>
-                      </div>
-                      <button
-                        type="button"
-                        className={styles.btnTrash}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateField('bieuMauFile', undefined);
-                        }}
-                      >
-                        ×
-                      </button>
+                  {formValues.bieuMauFiles.length > 0 ? (
+                    <div className={styles.dragDropContent} style={{ width: '100%', gap: 8 }}>
+                      {formValues.bieuMauFiles.map((file, fileIndex) => (
+                        <div key={`${file.name}-${file.lastModified}-${fileIndex}`} className={styles.fileCard}>
+                          <div className={styles.fileIconArea}>
+                            <FormTemplateFileIcon />
+                          </div>
+                          <div className={styles.fileMetaArea}>
+                            <div className={styles.fileName}>{file.name}</div>
+                            <div className={styles.fileSize}>{formatFileSize(file.size)}</div>
+                          </div>
+                          <button
+                            type="button"
+                            className={styles.btnTrash}
+                            onClick={event => handleRemoveFile('bieuMauFiles', fileIndex, event)}
+                            aria-label={`Xóa biểu mẫu ${file.name}`}
+                          >
+                            <DeleteFileIcon />
+                          </button>
+                        </div>
+                      ))}
+                      <div className={styles.dragDropFormat}>Click hoặc kéo thả để thêm file</div>
                     </div>
                   ) : (
                     <div className={styles.dragDropContent}>
-                      <svg viewBox="0 0 24 24" width="38" height="38" fill="#8C827A">
-                        <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
-                      </svg>
+                      <UploadFormIcon />
                       <div className={styles.dragDropTitle}>Thêm biểu mẫu (nếu có)</div>
-                      <div className={styles.dragDropFormat}>.docx, .xlsx, .pdf - Không bắt buộc</div>
+                      <div className={styles.dragDropFormat}>.docx, .pdf, .xlsx, .xls - Không bắt buộc</div>
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* THƯ MỤC LƯU TRỮ BIỂU MẪU ĐÍNH KÈM */}
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>
-                  THƯ MỤC LƯU TRỮ BIỂU MẪU ĐÍNH KÈM <span className={styles.required}>*</span>
-                </label>
-                <select
-                  value={formValues.folderBieuMauDinhKem}
-                  onChange={event => updateField('folderBieuMauDinhKem', event.target.value)}
-                  required
-                  className={styles.formSelect}
-                >
-                  <option value="">Chọn thư mục...</option>
-                  {folders.map(option => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
 
@@ -540,14 +746,14 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 </label>
                 <select
                   value={formValues.loaiSla}
-                  onChange={event => updateField('loaiSla', event.target.value)}
+                  onChange={event => handleSlaChange(event.target.value)}
                   required
                   className={styles.formSelect}
                 >
                   <option value="">Chọn loại SLA...</option>
                   {SLA_OPTIONS.map(option => (
-                    <option key={option} value={option}>
-                      {option}
+                    <option key={option.value} value={option.value} title={option.description}>
+                      {option.label}: {option.description}
                     </option>
                   ))}
                 </select>
@@ -558,6 +764,10 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
             <div className={styles.workflowSection}>
               <h4 className={styles.workflowSectionTitle}>LUỒNG XÉT DUYỆT</h4>
 
+              {!deadlineErrors.isValid && deadlineErrors.message && (
+                <p className={styles.deadlineError}>{deadlineErrors.message}</p>
+              )}
+
               <div className={styles.formRowTwoCol}>
                 {/* NGƯỜI GÓP Ý */}
                 <UserTagPicker
@@ -567,7 +777,10 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   onChange={emails => updateField('nguoiGopY', emails)}
                   approvers={approvers}
                   deadlineValue={formValues.deadlineGopY}
-                  onDeadlineChange={date => updateField('deadlineGopY', date)}
+                  onDeadlineChange={date => handleDeadlineChange('deadlineGopY', date)}
+                  deadlineMin={todayInputDate}
+                  deadlineMax={gopYMaxDate}
+                  deadlineError={deadlineErrors.deadlineGopY}
                   placeholder="+ Thêm người góp ý..."
                   isLoading={isLoadingApprovers}
                 />
@@ -580,7 +793,10 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   onChange={emails => updateField('nguoiThamDinh', emails)}
                   approvers={approvers}
                   deadlineValue={formValues.deadlineThamDinh}
-                  onDeadlineChange={date => updateField('deadlineThamDinh', date)}
+                  onDeadlineChange={date => handleDeadlineChange('deadlineThamDinh', date)}
+                  deadlineMin={thamDinhMinDate}
+                  deadlineMax={thamDinhMaxDate}
+                  deadlineError={deadlineErrors.deadlineThamDinh}
                   placeholder="Nhập tên hoặc email..."
                   isLoading={isLoadingApprovers}
                 />
@@ -595,7 +811,10 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   onChange={emails => updateField('approvalUsers', emails)}
                   approvers={approvers}
                   deadlineValue={formValues.deadlinePheDuyet}
-                  onDeadlineChange={date => updateField('deadlinePheDuyet', date)}
+                  onDeadlineChange={date => handleDeadlineChange('deadlinePheDuyet', date)}
+                  deadlineMin={pheDuyetMinDate}
+                  deadlineMax={slaMaxDeadline}
+                  deadlineError={deadlineErrors.deadlinePheDuyet}
                   placeholder="Nhập tên hoặc email..."
                   isLoading={isLoadingApprovers}
                 />
@@ -615,6 +834,10 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
             </div>
           </div>
 
+          {submitError && (
+            <p className={styles.submitError} role="alert">{submitError}</p>
+          )}
+
           <div className={styles.modalFooter}>
             <button
               type="button"
@@ -628,10 +851,10 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
             <button
               type="button"
               className={styles.btnDraft}
-              onClick={onClose}
+              onClick={handleSaveDraft}
               disabled={isSaving}
             >
-              Lưu nháp
+              {isSaving ? 'Đang lưu...' : 'Lưu nháp'}
             </button>
             
             <button
@@ -639,11 +862,26 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
               className={styles.btnSubmit}
               disabled={isSaving}
             >
-              {isSaving ? 'Đang gửi...' : 'Gửi yêu cầu ↓'}
+              {isSaving ? (
+                'Đang gửi...'
+              ) : (
+                <span className={styles.submitButtonContent}>
+                  Gửi yêu cầu
+                  <SubmitRequestIcon />
+                </span>
+              )}
             </button>
           </div>
         </form>
       </div>
+
+      <PhvbMagFolderPickerDialog
+        isOpen={showFolderPicker}
+        requestType={formValues.requestType}
+        siteContext={siteContext}
+        onClose={() => setShowFolderPicker(false)}
+        onConfirm={handleFolderConfirm}
+      />
     </div>
   );
 }
