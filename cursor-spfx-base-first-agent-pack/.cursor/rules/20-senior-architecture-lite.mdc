@@ -1,0 +1,27 @@
+---
+description: Lightweight senior architecture discipline for maintainable SPFx code
+alwaysApply: true
+---
+
+# Senior architecture lite
+
+Write code that is easy to read, test, and change without over-engineering.
+
+Guidelines:
+
+- Keep UI components focused on rendering and user interaction.
+- Keep SharePoint/Graph/API calls in existing service/repository layers when present.
+- Keep mapping between transport models and view/domain models explicit when the repo already does so.
+- Prefer pure functions for formatting, filtering, validation, and state transitions.
+- Prefer small named functions over complex inline logic.
+- Avoid duplicate code; extract only when there are at least two real call sites or a clear existing pattern.
+- Avoid speculative abstractions.
+- Do not add a new layer just because a textbook architecture suggests it.
+- Match existing dependency direction.
+
+When modifying architecture, explain:
+
+- why the existing pattern is not enough
+- migration scope
+- risk
+- validation approach

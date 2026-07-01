@@ -1,5 +1,6 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { ATTACHMENT_FORM_SUBFOLDER, ATTACHMENT_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
+import { escapeODataValue, getCandidateSiteUrls, getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { SharePointRequestError } from './PhvbMag.error';
 import type { IAttachmentLibraryItem, ICreateRequestInput, IPhvbSiteContext } from '../models/PhvbMag.models';
 
@@ -13,33 +14,10 @@ interface IListFormValue {
   FieldValue: string;
 }
 
-function normalizeSiteUrl(value: string): string {
-  return value.replace(/\/$/, '');
-}
-
-function escapeODataValue(value: string): string {
-  return value.replace(/'/g, "''");
-}
-
 function buildODataParameterQuery(parameters: Record<string, string>): string {
   return Object.keys(parameters)
     .map(key => `${key}='${escapeODataValue(parameters[key])}'`)
     .join('&');
-}
-
-function getCandidateSiteUrls(options: IPhvbSiteContext): string[] {
-  const candidates = [options.sourceSiteUrl, options.currentWebUrl, options.siteCollectionUrl]
-    .filter((value): value is string => Boolean(value && value.trim()))
-    .map(normalizeSiteUrl);
-
-  const unique: string[] = [];
-  candidates.forEach(candidate => {
-    if (unique.indexOf(candidate) === -1) {
-      unique.push(candidate);
-    }
-  });
-
-  return unique;
 }
 
 function normalizeServerRelativePath(value: string): string {
@@ -58,14 +36,6 @@ function splitRelativePath(value: string): string[] {
     .split('/')
     .map(segment => segment.trim())
     .filter(segment => Boolean(segment));
-}
-
-function getSiteOrigin(siteUrl: string): string {
-  try {
-    return new URL(siteUrl).origin;
-  } catch {
-    return siteUrl.split('/sites/')[0] || siteUrl;
-  }
 }
 
 interface ISharePointAttachmentItem {
@@ -117,9 +87,9 @@ function mapAttachmentItem(item: ISharePointAttachmentItem, siteUrl: string): IA
   };
 }
 
-function resolveDocumentFolderName(input: ICreateRequestInput, requestReferenceId: string): string {
-  const sanitizedTitle = sanitizeSharePointFolderName(input.title || '');
-  return sanitizedTitle || requestReferenceId;
+function resolveDocumentFolderName(requestReferenceId: string): string {
+  const normalizedId = sanitizeSharePointFolderName(requestReferenceId.trim());
+  return normalizedId || requestReferenceId.trim();
 }
 
 async function ensureOk(response: SPHttpClientResponse, requestUrl: string): Promise<SPHttpClientResponse> {
@@ -355,7 +325,7 @@ export class PhvbAttachmentService {
       const siteUrl = candidates[index];
 
       try {
-        const documentFolderName = resolveDocumentFolderName(input, requestReferenceId);
+        const documentFolderName = resolveDocumentFolderName(requestReferenceId);
         const libraryRootPath = await this.getLibraryRootFolder(siteUrl, options);
         const documentFolderPath = await this.ensureFolderPath(
           siteUrl,

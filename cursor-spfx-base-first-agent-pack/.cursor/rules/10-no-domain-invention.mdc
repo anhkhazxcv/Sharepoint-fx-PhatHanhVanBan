@@ -1,0 +1,37 @@
+---
+description: Prevent invention of business rules, workflows, permissions, and SharePoint data model
+alwaysApply: true
+---
+
+# No domain invention
+
+The user owns business rules and data model decisions.
+
+Do not invent:
+
+- business workflow states
+- approval routes
+- document numbering rules
+- SharePoint list names
+- SharePoint field internal names
+- content types
+- role names
+- permissions
+- API endpoints
+- payload contracts
+- validation rules
+- retention/audit rules
+
+Allowed sources for domain/data facts:
+
+1. Existing code in the repository.
+2. PROJECT_CONTEXT.md if factual.
+3. Explicit user instruction in the current chat.
+4. Existing tests or fixtures.
+
+When missing information blocks implementation:
+
+- create a typed interface boundary only if the repo uses this pattern
+- use TODO comments that clearly name the missing user decision
+- return a question in the plan instead of guessing
+- never fake SharePoint fields or business statuses

@@ -3,7 +3,9 @@ import type { ICreateRequestInput, IPhvbSiteContext, TabType } from '../models/P
 export const DEFAULT_LIST_TITLE = 'InDoc_Release';
 export const ISSUANCE_LIBRARY_TITLE = 'VanBanBanHanh_Ver02';
 export const ATTACHMENT_LIBRARY_TITLE = 'VanBanGopYThamDinh';
+export const COMMENT_ATTACHMENT_LIBRARY_TITLE = 'CommentAttach';
 export const HISTORY_LIST_TITLE = 'LichSuThucHien';
+export const COMMENT_HISTORY_STATUS = 'Bình luận';
 export const ALL_USER_GOPY_LIST_TITLE = 'AllUser_GopY';
 export const ALL_USER_THAMDINH_LIST_TITLE = 'AllUser_ThamDinh';
 export const ALL_USER_PHEDUYET_LIST_TITLE = 'AllUser_PheDuyet';
@@ -25,7 +27,9 @@ export const REQUEST_STATUS = {
   CHO_ADMIN_THU_HOI: 'Chờ admin thu hồi',
   CHO_SUPER_ADMIN_THU_HOI: 'Chờ supper admin thu hồi',
   THU_HOI: 'Thu hồi',
-  BAN_NHAP: 'Bản nháp'
+  BAN_NHAP: 'Bản nháp',
+  TU_CHOI: 'Từ chối',
+  YEU_CAU_CHINH_SUA: 'Yêu cầu chỉnh sửa'
 } as const;
 
 export type RequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
@@ -34,7 +38,11 @@ export const EXECUTION_HISTORY_STATUS = {
   TAO_BAN_NHAP: 'Tạo bản nháp',
   TAO_YEU_CAU: 'Tạo yêu cầu',
   XAC_NHAN_GOP_Y: 'Xác nhận góp ý',
-  DONG_Y_GOP_Y: 'Đồng ý góp ý'
+  DONG_Y_GOP_Y: 'Đồng ý góp ý',
+  XAC_NHAN_THAM_DINH: 'Xác nhận thẩm định',
+  PHE_DUYET: 'Phê duyệt',
+  TU_CHOI: 'Từ chối',
+  YEU_CAU_CHINH_SUA: 'Yêu cầu chỉnh sửa'
 } as const;
 
 export type ExecutionHistoryStatus = typeof EXECUTION_HISTORY_STATUS[keyof typeof EXECUTION_HISTORY_STATUS];
@@ -43,7 +51,11 @@ export const EXECUTION_HISTORY_STATUS_LIST: ReadonlyArray<ExecutionHistoryStatus
   EXECUTION_HISTORY_STATUS.TAO_BAN_NHAP,
   EXECUTION_HISTORY_STATUS.TAO_YEU_CAU,
   EXECUTION_HISTORY_STATUS.XAC_NHAN_GOP_Y,
-  EXECUTION_HISTORY_STATUS.DONG_Y_GOP_Y
+  EXECUTION_HISTORY_STATUS.DONG_Y_GOP_Y,
+  EXECUTION_HISTORY_STATUS.XAC_NHAN_THAM_DINH,
+  EXECUTION_HISTORY_STATUS.PHE_DUYET,
+  EXECUTION_HISTORY_STATUS.TU_CHOI,
+  EXECUTION_HISTORY_STATUS.YEU_CAU_CHINH_SUA
 ];
 
 export const WORKFLOW_PARTICIPANT_STATUS = {
@@ -201,6 +213,10 @@ export function getWorkflowStepFromStatus(statusApproved?: string): number {
   switch (status) {
     case REQUEST_STATUS.BAN_NHAP:
       return 1;
+    case REQUEST_STATUS.YEU_CAU_CHINH_SUA:
+      return 1;
+    case REQUEST_STATUS.TU_CHOI:
+      return 1;
     case REQUEST_STATUS.DANG_GOP_Y:
       return 2;
     case REQUEST_STATUS.DANG_THAM_DINH:
@@ -208,6 +224,9 @@ export function getWorkflowStepFromStatus(statusApproved?: string): number {
     case REQUEST_STATUS.DANG_PHE_DUYET:
       return 4;
     case REQUEST_STATUS.DA_CAP_SO:
+      return 5;
+    case REQUEST_STATUS.CHO_ADMIN_THU_HOI:
+    case REQUEST_STATUS.CHO_SUPER_ADMIN_THU_HOI:
       return 5;
     case REQUEST_STATUS.CHO_BAN_HANH:
     case REQUEST_STATUS.BAN_HANH:

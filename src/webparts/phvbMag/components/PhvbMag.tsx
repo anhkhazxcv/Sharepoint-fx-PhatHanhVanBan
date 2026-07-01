@@ -4,10 +4,15 @@ import { HashRouter, Routes, Route, Navigate, useParams, useNavigate, useLocatio
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS } from '../config/PhvbMag.configuration';
+import { usePhvbCapSo } from '../hooks/usePhvbCapSo';
+import { usePhvbComments } from '../hooks/usePhvbComments';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
 import { usePhvbDraftEdit } from '../hooks/usePhvbDraftEdit';
 import { usePhvbRequestDetail } from '../hooks/usePhvbRequestDetail';
+import { usePhvbWorkflowActions } from '../hooks/usePhvbWorkflowActions';
+import { usePhvbWorkflowParticipants } from '../hooks/usePhvbWorkflowParticipants';
 import type { ICreateRequestInput, IPhvbDirectoryUser, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
+import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
 import { selectFilteredItems } from '../utils/PhvbMag.selectors';
 import { isDraftStatus } from '../utils/PhvbMagDraftEdit.utils';
 import { ToastService } from '../utils/ToastService';
@@ -20,6 +25,7 @@ import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import { PhvbMagSidebar } from './PhvbMagSidebar';
 import { PhvbMagTable } from './PhvbMagTable';
 import { PhvbMagToolbar } from './PhvbMagToolbar';
+import { PhvbMagWorkflowParticipantModal } from './PhvbMagWorkflowParticipantModal';
 
 function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle } = props;
@@ -38,6 +44,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const [approverUsers, setApproverUsers] = useState<IPhvbDirectoryUser[]>([]);
   const [isLoadingApprovers, setIsLoadingApprovers] = useState<boolean>(true);
   const [graphErrorMessage, setGraphErrorMessage] = useState<string | undefined>(undefined);
+  const [isParticipantModalOpen, setIsParticipantModalOpen] = useState<boolean>(false);
 
   const defaultRequestForm = useMemo(() => {
     const form = cloneDefaultRequestForm();
@@ -77,11 +84,116 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     listTitle
   });
 
+  const documentContext = useMemo(() => ({
+    ...siteContext,
+    userDisplayName,
+    userEmail
+  }), [siteContext, userDisplayName, userEmail]);
+
   const {
     data: detailData,
     isLoading: isDetailLoading,
-    errorMessage: detailErrorMessage
+    errorMessage: detailErrorMessage,
+    refetch: refetchDetail
   } = usePhvbRequestDetail(siteContext, idYeuCau);
+
+  const {
+    actionContext,
+    isProcessing: isWorkflowProcessing,
+    errorMessage: workflowErrorMessage,
+    runAction: runWorkflowAction
+  } = usePhvbWorkflowActions({
+    documentContext,
+    detail: detailData,
+    onCompleted: () => {
+      refetchDetail();
+    }
+  });
+
+  const {
+    selectedFiles: commentSelectedFiles,
+    isSaving: isCommentSaving,
+    errorMessage: commentErrorMessage,
+    addFiles: addCommentFiles,
+    removeFile: removeCommentFile,
+    submitComment
+  } = usePhvbComments({
+    documentContext,
+    idYeuCau,
+    onCompleted: () => {
+      refetchDetail();
+    }
+  });
+
+  const handleSubmitComment = async (text: string): Promise<boolean> => {
+    const succeeded = await submitComment(text);
+
+    if (succeeded) {
+      ToastService.success('Đã gửi bình luận thành công.');
+    }
+
+    return succeeded;
+  };
+
+  const {
+    canAssign: canAssignDocumentNumber,
+    isSaving: isCapSoSaving,
+    errorMessage: capSoErrorMessage,
+    assignNumber
+  } = usePhvbCapSo({
+    documentContext,
+    detail: detailData,
+    onCompleted: () => {
+      refetchDetail();
+    }
+  });
+
+  const handleAssignDocumentNumber = async (soVanBan: string): Promise<boolean> => {
+    const succeeded = await assignNumber(soVanBan);
+
+    if (succeeded) {
+      ToastService.success('Đã cấp số văn bản thành công.');
+    }
+
+    return succeeded;
+  };
+
+  const {
+    canOpen: canOpenParticipantModal,
+    isSaving: isParticipantSaving,
+    errorMessage: participantErrorMessage,
+    saveChanges: saveParticipantChanges
+  } = usePhvbWorkflowParticipants({
+    documentContext: siteContext,
+    detail: detailData,
+    directoryUsers: approverUsers,
+    onCompleted: () => {
+      refetchDetail();
+    }
+  });
+
+  const handleSaveParticipants = async (
+    initialDraft: Parameters<typeof saveParticipantChanges>[0],
+    currentDraft: Parameters<typeof saveParticipantChanges>[1]
+  ): Promise<boolean> => {
+    const succeeded = await saveParticipantChanges(initialDraft, currentDraft);
+
+    if (succeeded) {
+      ToastService.success('Đã cập nhật người tham gia quy trình thành công.');
+    }
+
+    return succeeded;
+  };
+
+  const handleWorkflowAction = async (action: WorkflowActionKey, comment?: string): Promise<boolean> => {
+    const succeeded = await runWorkflowAction(action, comment);
+
+    if (succeeded) {
+      ToastService.success('Đã cập nhật trạng thái yêu cầu thành công.');
+    }
+
+    return succeeded;
+  };
 
   const {
     draftEdit,
@@ -246,8 +358,37 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
               </div>
             )}
             {!isDetailLoading && detailData && (
-              <PhvbMagDetail tabName={resolvedTabName} data={detailData} />
+              <PhvbMagDetail
+                tabName={resolvedTabName}
+                data={detailData}
+                approveLabel={actionContext?.approveLabel}
+                availableActions={actionContext?.availableActions}
+                isWorkflowProcessing={isWorkflowProcessing}
+                workflowErrorMessage={workflowErrorMessage}
+                onRunWorkflowAction={handleWorkflowAction}
+                commentSelectedFiles={commentSelectedFiles}
+                isCommentSaving={isCommentSaving}
+                commentErrorMessage={commentErrorMessage}
+                onCommentAddFiles={addCommentFiles}
+                onCommentRemoveFile={removeCommentFile}
+                onSubmitComment={handleSubmitComment}
+                canAssignDocumentNumber={canAssignDocumentNumber}
+                isCapSoSaving={isCapSoSaving}
+                capSoErrorMessage={capSoErrorMessage}
+                onAssignDocumentNumber={handleAssignDocumentNumber}
+                canOpenParticipantModal={canOpenParticipantModal}
+                onOpenParticipantModal={() => setIsParticipantModalOpen(true)}
+              />
             )}
+            <PhvbMagWorkflowParticipantModal
+              isOpen={isParticipantModalOpen}
+              detail={detailData}
+              directoryUsers={approverUsers}
+              isSaving={isParticipantSaving}
+              errorMessage={participantErrorMessage}
+              onClose={() => setIsParticipantModalOpen(false)}
+              onSave={handleSaveParticipants}
+            />
           </>
         ) : (
           <>

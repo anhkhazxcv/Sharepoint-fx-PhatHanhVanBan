@@ -1,0 +1,28 @@
+---
+description: Base-first coding rules for an existing SPFx repository
+alwaysApply: true
+---
+
+# Base-first rule
+
+Before changing code, inspect the existing base.
+
+Required checks:
+
+- package.json scripts and dependencies
+- SPFx config under config/
+- tsconfig and eslint/prettier setup if present
+- src folder structure
+- nearby files implementing similar features
+- existing naming, error handling, logging, mapping, and service patterns
+
+Never assume a clean architecture that is not present in the repo.
+Prefer consistency with existing code over theoretical purity.
+
+When asked to code:
+
+- touch the fewest files necessary
+- keep public APIs stable unless the user asks to change them
+- avoid broad refactors mixed into feature work
+- do not change package versions unless the user asks
+- do not add dependencies without explicit approval

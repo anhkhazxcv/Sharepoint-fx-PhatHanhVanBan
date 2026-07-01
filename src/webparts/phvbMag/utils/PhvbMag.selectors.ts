@@ -15,7 +15,8 @@ function isRejectedStatus(status: string): boolean {
     normalizedStatus.indexOf('declin') > -1 ||
     normalizedStatus.indexOf('từ chối') > -1 ||
     normalizedStatus.indexOf('tu choi') > -1 ||
-    status === REQUEST_STATUS.THU_HOI
+    status === REQUEST_STATUS.THU_HOI ||
+    status === REQUEST_STATUS.TU_CHOI
   );
 }
 

@@ -1,0 +1,34 @@
+---
+description: SPFx TypeScript React coding discipline
+alwaysApply: true
+globs: ["src/**/*.ts", "src/**/*.tsx"]
+---
+
+# SPFx TypeScript React
+
+Follow the repo's SPFx, React, Fluent UI, and TypeScript versions.
+Do not assume latest React or latest SPFx APIs.
+
+TypeScript:
+
+- use existing types before creating new ones
+- avoid `any`; use `unknown` plus narrowing when needed
+- avoid non-null assertions unless proven safe
+- type async results and error paths
+- keep SharePoint field/internal-name strings centralized if the repo already does this
+
+React:
+
+- follow existing component style: class/function, hooks, props naming, styling
+- avoid direct DOM manipulation unless SPFx or existing code requires it
+- handle loading, empty, error, and forbidden states when relevant
+- avoid setting state after unmount in async flows
+- memoize only for measured or obvious expensive work
+
+SPFx:
+
+- use the existing context passing pattern
+- avoid hard-coded tenant/site URLs
+- avoid using page globals when SPFx context provides the data
+- do not request new Graph/API permissions without explicit approval
+- do not bypass SharePoint permissions in client-side logic

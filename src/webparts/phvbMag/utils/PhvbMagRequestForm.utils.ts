@@ -28,6 +28,11 @@ const STANDARD_FORM_RULES: IRequestTypeFormRules = {
   includeAttachmentsOnSave: true
 };
 
+const ADJUST_FORM_RULES: IRequestTypeFormRules = {
+  ...STANDARD_FORM_RULES,
+  requireTaiLieuSoanThao: false
+};
+
 const REVOKE_FORM_RULES: IRequestTypeFormRules = {
   showNguoiGopY: false,
   showNguoiThamDinh: false,
@@ -42,7 +47,15 @@ const REVOKE_FORM_RULES: IRequestTypeFormRules = {
 };
 
 export function getRequestTypeFormRules(requestType: RequestTypeValue): IRequestTypeFormRules {
-  return requestType === 'Thu hồi' ? REVOKE_FORM_RULES : STANDARD_FORM_RULES;
+  if (requestType === 'Thu hồi') {
+    return REVOKE_FORM_RULES;
+  }
+
+  if (requestType === 'Điều chỉnh') {
+    return ADJUST_FORM_RULES;
+  }
+
+  return STANDARD_FORM_RULES;
 }
 
 export function isRevokeRequestType(requestType: RequestTypeValue): boolean {

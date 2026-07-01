@@ -9,9 +9,12 @@ import {
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { toRuntimeMessage } from './PhvbMag.error';
 import { phvbAttachmentService } from './PhvbMagAttachment.service';
+import { phvbCommentAttachmentService } from './PhvbMagCommentAttachment.service';
 import { RELEASE_SELECT_FIELDS } from './PhvbMag.service';
+import { groupCommentAttachmentsByCommentId } from '../utils/PhvbMagCommentAttachment.utils';
 import type {
   IAllUserWorkflowItem,
+  ICommentWithAttachments,
   ILichSuThucHienItem,
   IPhvbSiteContext,
   IRequestDetailData,
@@ -184,6 +187,24 @@ async function fetchReleaseItem(context: IPhvbSiteContext, idYeuCau: string): Pr
   return items.length > 0 ? items[0] : undefined;
 }
 
+async function enrichCommentsWithAttachments(
+  context: IPhvbSiteContext,
+  comments: ILichSuThucHienItem[]
+): Promise<ICommentWithAttachments[]> {
+  if (comments.length === 0) {
+    return [];
+  }
+
+  const commentIds = comments.map(comment => comment.Id);
+  const attachments = await phvbCommentAttachmentService.listFilesForComments(context, commentIds).catch(() => []);
+  const grouped = groupCommentAttachmentsByCommentId(attachments);
+
+  return comments.map(comment => ({
+    ...comment,
+    attachments: grouped[comment.Id] || []
+  }));
+}
+
 export class PhvbDetailService {
   public async loadRequestDetail(context: IPhvbSiteContext, idYeuCau: string): Promise<IRequestDetailData | undefined> {
     if (!hasSharePointSiteContext(context) || !idYeuCau.trim()) {
@@ -212,7 +233,8 @@ export class PhvbDetailService {
       return undefined;
     }
 
-    const { history, comments } = splitHistoryAndComments(historyItems);
+    const { history, comments: rawComments } = splitHistoryAndComments(historyItems);
+    const comments = await enrichCommentsWithAttachments(context, rawComments);
     const workflowParticipants = mergeWorkflowParticipants(gopYUsers, thamDinhUsers, pheDuyetUsers);
 
     return {

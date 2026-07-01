@@ -20,7 +20,7 @@ interface ICreateWorkflowRecordsOptions extends IPhvbSiteContext {
   saveMode: SaveRequestMode;
 }
 
-interface IResolvedDirectoryUser {
+export interface IResolvedDirectoryUser {
   displayName: string;
   email: string;
   department: string;
@@ -30,7 +30,7 @@ function formatCurrentDate(): string {
   return formatCurrentExecutionDateTime();
 }
 
-function buildDirectoryUserMap(directoryUsers: ReadonlyArray<IPhvbDirectoryUser>): Record<string, IResolvedDirectoryUser> {
+export function buildDirectoryUserMap(directoryUsers: ReadonlyArray<IPhvbDirectoryUser>): Record<string, IResolvedDirectoryUser> {
   const map: Record<string, IResolvedDirectoryUser> = {};
 
   directoryUsers.forEach(user => {
@@ -49,7 +49,7 @@ function buildDirectoryUserMap(directoryUsers: ReadonlyArray<IPhvbDirectoryUser>
   return map;
 }
 
-function resolveDirectoryUser(email: string, directoryMap: Record<string, IResolvedDirectoryUser>): IResolvedDirectoryUser {
+export function resolveDirectoryUser(email: string, directoryMap: Record<string, IResolvedDirectoryUser>): IResolvedDirectoryUser {
   const normalizedEmail = email.trim().toLowerCase();
   const matchedUser = directoryMap[normalizedEmail];
 
@@ -64,7 +64,7 @@ function resolveDirectoryUser(email: string, directoryMap: Record<string, IResol
   };
 }
 
-function buildAllUserPayload(
+export function buildAllUserPayload(
   requestReferenceId: string,
   user: IResolvedDirectoryUser,
   performedAt: string

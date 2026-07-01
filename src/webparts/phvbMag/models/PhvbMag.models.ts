@@ -77,11 +77,23 @@ export interface IAttachmentLibraryItem {
   isFormAttachment?: boolean;
 }
 
+export interface ICommentAttachmentItem {
+  id: number;
+  commentId: number;
+  name: string;
+  fileUrl: string;
+  modified?: string;
+}
+
+export interface ICommentWithAttachments extends ILichSuThucHienItem {
+  attachments: ICommentAttachmentItem[];
+}
+
 export interface IRequestDetailData {
   release: IVanBanItem;
   attachments: IAttachmentLibraryItem[];
   history: ILichSuThucHienItem[];
-  comments: ILichSuThucHienItem[];
+  comments: ICommentWithAttachments[];
   workflowParticipants: IWorkflowParticipantItem[];
 }
 

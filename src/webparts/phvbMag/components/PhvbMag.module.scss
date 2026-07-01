@@ -3283,6 +3283,47 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   }
 }
 
+.workflowActionDialogComment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+
+  label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: #8A7C70;
+  }
+}
+
+.workflowActionDialogRequired {
+  color: #D32F2F;
+}
+
+.workflowActionDialogTextarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid #E7DACB;
+  border-radius: 8px;
+  font-family: $font-family-base;
+  font-size: $font-size-base2;
+  color: $text-main;
+  resize: vertical;
+  background-color: #FAFAF8;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.workflowActionDialogError {
+  margin: 0 0 14px;
+  font-size: $font-size-sm;
+  color: #C14D56;
+}
+
 .confirmDialogActions {
   display: flex;
   justify-content: flex-end;
@@ -3308,6 +3349,196 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     border: none;
     background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
     color: #FFFFFF;
+  }
+}
+
+.workflowParticipantModalContent {
+  width: min(640px, calc(100vw - 40px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: $shadow-lg;
+  animation: scaleUp 0.2s ease;
+
+  h4 {
+    margin: 0;
+    font-size: 16px;
+    color: $primary-color;
+  }
+}
+
+.workflowParticipantModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.workflowParticipantModalClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: $text-muted;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(139, 90, 57, 0.08);
+    color: $primary-color;
+  }
+}
+
+.workflowParticipantModalBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.workflowParticipantSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.workflowParticipantSectionTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: $text-main;
+}
+
+.workflowParticipantSearchRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workflowParticipantSearchInput {
+  flex: 1;
+  min-height: 38px;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: $text-main;
+  background-color: #FFFFFF;
+
+  &:focus {
+    outline: none;
+    border-color: rgba(139, 90, 57, 0.55);
+    box-shadow: 0 0 0 3px rgba(139, 90, 57, 0.12);
+  }
+}
+
+.workflowParticipantList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.workflowParticipantEmpty {
+  margin: 0;
+  font-size: 13px;
+  color: $text-muted;
+}
+
+.workflowParticipantRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(139, 90, 57, 0.12);
+  border-radius: 10px;
+  background-color: #FAF8F6;
+
+  .btnTrash {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: #8C827A;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+
+    &:hover {
+      color: #B54033;
+      background-color: #FBEBE9;
+    }
+  }
+}
+
+.workflowParticipantAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #C89A72 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.workflowParticipantInfo {
+  min-width: 0;
+}
+
+.workflowParticipantName {
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-main;
+}
+
+.workflowParticipantRole {
+  font-size: 12px;
+  color: $text-muted;
+}
+
+.workflowParticipantJobTitle {
+  font-size: 12px;
+  color: $text-main;
+  text-align: right;
+}
+
+.workflowParticipantError {
+  margin: 0 0 14px;
+  font-size: $font-size-sm;
+  color: #C14D56;
+}
+
+.detailWorkflowManageParticipantsBtn {
+  width: 100%;
+  margin-top: 10px;
+  min-height: 36px;
+  border: 1px solid rgba(139, 90, 57, 0.28);
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  color: $primary-color;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(139, 90, 57, 0.06);
   }
 }
 
@@ -3441,6 +3672,99 @@ $detail-activity-item-height: 100px;
   flex-wrap: wrap;
 }
 
+.detailHeaderActionsArea {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 280px;
+}
+
+.detailCommentBox {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: #8A7C70;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 56px;
+    padding: 8px 10px;
+    border: 1px solid #E7DACB;
+    border-radius: 8px;
+    font-size: $font-size-base2;
+    color: $text-main;
+    resize: vertical;
+    background-color: #FFFFFF;
+  }
+}
+
+.detailCapSoBox {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: #8A7C70;
+  }
+}
+
+.detailCapSoRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid #E7DACB;
+    border-radius: 8px;
+    font-size: $font-size-base2;
+    color: $text-main;
+    background-color: #FFFFFF;
+
+    &:disabled {
+      opacity: 0.7;
+    }
+  }
+}
+
+.detailActionCapSo {
+  min-height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  background: linear-gradient(135deg, #5C7A99 0%, #4A6680 100%);
+  color: #FFFFFF;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+  }
+}
+
+.detailActionError {
+  margin: 0;
+  font-size: $font-size-sm;
+  color: #C14D56;
+  text-align: right;
+}
+
 .detailActionApprove,
 .detailActionEdit,
 .detailActionReject {
@@ -3449,8 +3773,13 @@ $detail-activity-item-height: 100px;
   border-radius: 8px;
   font-size: $font-size-base2;
   font-weight: $font-weight-bold;
-  cursor: not-allowed;
-  opacity: 0.72;
+  cursor: pointer;
+  opacity: 1;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+  }
 }
 
 .detailActionApprove {
@@ -4325,24 +4654,148 @@ $detail-activity-item-height: 100px;
     font-family: $font-family-base;
     font-size: $font-size-base;
     background-color: #FAFAF8;
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
   }
+}
+
+.detailCommentFilePicker {
+  display: flex;
+  align-items: center;
+}
+
+.detailCommentFileInput {
+  display: none;
+}
+
+.detailCommentAttachBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #E0D2C3;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.detailCommentFileList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detailCommentFileChip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #E8E2D9;
+  border-radius: 8px;
+  background-color: #FAFAF8;
+}
+
+.detailCommentFileName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: $font-size-sm;
+  color: $text-ink2;
+}
+
+.detailCommentFileRemoveBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #8B5A39;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+}
+
+.detailCommentError {
+  margin: 0;
+  font-size: $font-size-sm;
+  color: #B42318;
 }
 
 .detailCommentActions {
   display: flex;
   justify-content: flex-end;
+}
 
-  button {
-    min-height: 32px;
-    padding: 0 14px;
-    border: none;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
-    color: #FFFFFF;
-    font-weight: $font-weight-bold;
-    cursor: not-allowed;
-    opacity: 0.65;
-  }
+.detailCommentSubmitBtn,
+.detailCommentSubmitBtnDisabled {
+  min-height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: $font-weight-bold;
+}
+
+.detailCommentSubmitBtn {
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  cursor: pointer;
+}
+
+.detailCommentSubmitBtnDisabled {
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.detailCommentAttachmentList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detailCommentAttachmentLink {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: $font-size-sm;
+  color: #8B5A39;
+  text-decoration: underline;
 }
 
 .detailEmptyState,

@@ -1,5 +1,6 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { resolveListTitle } from '../config/PhvbMag.configuration';
+import { DEFAULT_LIST_PAGE_SIZE, escapeODataValue, getCandidateSiteUrls, MAX_LIST_FETCH_TOP, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { SharePointRequestError } from '../services/PhvbMag.error';
 import type { IPhvbSiteContext, IVanBanItem } from '../models/PhvbMag.models';
 
@@ -7,7 +8,14 @@ export interface IFetchPhvbItemsQuery extends IPhvbSiteContext {
   selectFields: ReadonlyArray<string>;
   filter?: string;
   top?: number;
+  skip?: number;
   orderBy?: string;
+}
+
+export interface IFetchPhvbItemsPageResult {
+  items: IVanBanItem[];
+  hasMore: boolean;
+  nextSkip: number;
 }
 
 export interface ICreatePhvbItemCommand extends IPhvbSiteContext {
@@ -19,37 +27,21 @@ export interface IUpdatePhvbItemCommand extends IPhvbSiteContext {
   payload: Record<string, string | boolean | number>;
 }
 
+export interface IDeletePhvbItemCommand extends IPhvbSiteContext {
+  listTitle: string;
+  itemId: number;
+}
+
 export interface IPhvbRepository {
   fetchItems(query: IFetchPhvbItemsQuery): Promise<IVanBanItem[]>;
+  fetchItemsPage(query: IFetchPhvbItemsQuery): Promise<IFetchPhvbItemsPageResult>;
   createItem(command: ICreatePhvbItemCommand): Promise<number>;
   updateItem(command: IUpdatePhvbItemCommand): Promise<void>;
-}
-
-function normalizeSiteUrl(value: string): string {
-  return value.replace(/\/$/, '');
-}
-
-function escapeODataValue(value: string): string {
-  return value.replace(/'/g, "''");
+  deleteItem(command: IDeletePhvbItemCommand): Promise<void>;
 }
 
 function getItemsEndpoint(siteUrl: string, listTitle?: string): string {
   return `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(resolveListTitle(listTitle))}')/items`;
-}
-
-function getCandidateSiteUrls(options: IPhvbSiteContext): string[] {
-  const candidates = [options.sourceSiteUrl, options.currentWebUrl, options.siteCollectionUrl]
-    .filter((value): value is string => Boolean(value && value.trim()))
-    .map(normalizeSiteUrl);
-
-  const unique: string[] = [];
-  candidates.forEach(candidate => {
-    if (unique.indexOf(candidate) === -1) {
-      unique.push(candidate);
-    }
-  });
-
-  return unique;
 }
 
 function buildQueryString(query: IFetchPhvbItemsQuery, selectFields: string[]): string {
@@ -59,7 +51,12 @@ function buildQueryString(query: IFetchPhvbItemsQuery, selectFields: string[]): 
     queryParts.push(`$filter=${query.filter}`);
   }
 
-  queryParts.push(`$top=${query.top || 5000}`);
+  const top = query.top || MAX_LIST_FETCH_TOP;
+  queryParts.push(`$top=${top}`);
+
+  if (typeof query.skip === 'number' && query.skip > 0) {
+    queryParts.push(`$skip=${query.skip}`);
+  }
 
   if (query.orderBy) {
     queryParts.push(`$orderby=${query.orderBy}`);
@@ -208,6 +205,21 @@ async function runPatchRequest(siteUrl: string, command: IUpdatePhvbItemCommand)
   await ensureOk(response, requestUrl);
 }
 
+async function runDeleteRequest(siteUrl: string, command: IDeletePhvbItemCommand): Promise<void> {
+  const requestUrl = `${getItemsEndpoint(siteUrl, command.listTitle)}(${command.itemId})`;
+  const response = await command.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
+    headers: {
+      accept: 'application/json;odata=nometadata',
+      'content-type': 'application/json;odata=nometadata',
+      'odata-version': '',
+      'IF-MATCH': '*',
+      'X-HTTP-Method': 'DELETE'
+    }
+  });
+
+  await ensureOk(response, requestUrl);
+}
+
 async function tryAcrossCandidateSites<T>(
   context: IPhvbSiteContext,
   runner: (siteUrl: string) => Promise<T>
@@ -234,10 +246,14 @@ export class SharePointPhvbRepository implements IPhvbRepository {
   public async fetchItems(query: IFetchPhvbItemsQuery): Promise<IVanBanItem[]> {
     return tryAcrossCandidateSites(query, async (siteUrl: string) => {
       let selectFields = query.selectFields.slice();
+      const listQuery: IFetchPhvbItemsQuery = {
+        ...query,
+        top: query.top || MAX_LIST_FETCH_TOP
+      };
 
       while (selectFields.length > 0) {
         try {
-          const response = await runGetRequest(siteUrl, query, selectFields);
+          const response = await runGetRequest(siteUrl, listQuery, selectFields);
           const data = await readJson<{ value?: IVanBanItem[] }>(response);
           return data.value || [];
         } catch (error) {
@@ -256,12 +272,61 @@ export class SharePointPhvbRepository implements IPhvbRepository {
     });
   }
 
+  public async fetchItemsPage(query: IFetchPhvbItemsQuery): Promise<IFetchPhvbItemsPageResult> {
+    const pageSize = query.top || DEFAULT_LIST_PAGE_SIZE;
+    const skip = query.skip || 0;
+
+    return tryAcrossCandidateSites(query, async (siteUrl: string) => {
+      let selectFields = query.selectFields.slice();
+
+      while (selectFields.length > 0) {
+        try {
+          const pagedQuery: IFetchPhvbItemsQuery = {
+            ...query,
+            top: pageSize + 1,
+            skip
+          };
+          const response = await runGetRequest(siteUrl, pagedQuery, selectFields);
+          const data = await readJson<{ value?: IVanBanItem[] }>(response);
+          const rawItems = data.value || [];
+          const hasMore = rawItems.length > pageSize;
+          const items = hasMore ? rawItems.slice(0, pageSize) : rawItems;
+
+          return {
+            items,
+            hasMore,
+            nextSkip: skip + items.length
+          };
+        } catch (error) {
+          const missingFieldName = extractMissingFieldName(error);
+
+          if (missingFieldName && selectFields.indexOf(missingFieldName) > -1) {
+            selectFields = selectFields.filter(fieldName => fieldName !== missingFieldName);
+            continue;
+          }
+
+          throw error;
+        }
+      }
+
+      return {
+        items: [],
+        hasMore: false,
+        nextSkip: skip
+      };
+    });
+  }
+
   public async createItem(command: ICreatePhvbItemCommand): Promise<number> {
     return tryAcrossCandidateSites(command, async (siteUrl: string) => runPostRequestWithFallback(siteUrl, command));
   }
 
   public async updateItem(command: IUpdatePhvbItemCommand): Promise<void> {
     return tryAcrossCandidateSites(command, async (siteUrl: string) => runPatchRequestWithFallback(siteUrl, command));
+  }
+
+  public async deleteItem(command: IDeletePhvbItemCommand): Promise<void> {
+    return tryAcrossCandidateSites(command, async (siteUrl: string) => runDeleteRequest(siteUrl, command));
   }
 }
 

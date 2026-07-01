@@ -9,6 +9,7 @@ import {
   getWorkflowTimelineWindow,
   type IWorkflowTimelineStep
 } from '../utils/PhvbMagWorkflowTimeline.utils';
+import { canOpenWorkflowParticipantModal } from '../utils/PhvbMagWorkflowParticipant.utils';
 import { PhvbMagSidebarAccordion } from './PhvbMagSidebarAccordion';
 import styles from './PhvbMag.module.scss';
 
@@ -17,6 +18,8 @@ interface IPhvbMagDetailWorkflowSidebarProps {
   workflowParticipants: IWorkflowParticipantItem[];
   isExpanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
+  canOpenParticipantModal?: boolean;
+  onOpenParticipantModal?: () => void;
 }
 
 function renderTimelineStep(
@@ -68,7 +71,14 @@ function renderTimelineStep(
 }
 
 export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSidebarProps): React.ReactElement {
-  const { release, workflowParticipants, isExpanded, onExpandedChange } = props;
+  const {
+    release,
+    workflowParticipants,
+    isExpanded,
+    onExpandedChange,
+    canOpenParticipantModal,
+    onOpenParticipantModal
+  } = props;
 
   const allSteps = useMemo(
     () => buildWorkflowTimelineSteps(release, workflowParticipants),
@@ -82,6 +92,7 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
 
   const currentStepIndex = findCurrentWorkflowStepIndex(allSteps);
   const canExpand = allSteps.length > DETAIL_PANEL_COLLAPSED_VISIBLE_COUNT;
+  const showParticipantButton = (canOpenParticipantModal ?? canOpenWorkflowParticipantModal(release)) && Boolean(onOpenParticipantModal);
 
   const handleToggleExpand = (): void => {
     onExpandedChange(!isExpanded);
@@ -144,6 +155,16 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
             onClick={handleToggleExpand}
           >
             {isExpanded ? 'Thu gọn quy trình' : 'Xem toàn bộ quy trình'}
+          </button>
+        ) : null}
+
+        {showParticipantButton ? (
+          <button
+            type="button"
+            className={styles.detailWorkflowManageParticipantsBtn}
+            onClick={onOpenParticipantModal}
+          >
+            Thêm người tham gia
           </button>
         ) : null}
       </div>

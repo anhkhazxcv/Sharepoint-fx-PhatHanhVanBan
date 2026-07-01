@@ -1,0 +1,21 @@
+---
+description: Validation and review checklist for code changes
+alwaysApply: true
+---
+
+# Validation and review
+
+Before finalizing changes:
+
+- run the smallest relevant package.json script, such as lint, test, build, or typecheck
+- for SPFx, respect whether the repo is gulp-based or heft-based
+- never invent a command that is not in package.json unless it is a standard package manager command and clearly safe
+- include changed files and rationale
+- include validation result or exact reason validation was not run
+- call out risks, assumptions, and missing user-provided business/data decisions
+
+Review severity:
+
+- Blocker: compile failure, runtime failure, security issue, data loss, permission leak
+- Major: incorrect architecture boundary, unhandled edge case, inconsistent pattern, test gap
+- Minor: naming, cleanup, small readability issue

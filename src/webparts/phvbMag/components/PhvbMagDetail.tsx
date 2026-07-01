@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { useState } from 'react';
 import type { IRequestDetailData, TabType } from '../models/PhvbMag.models';
+import type { IWorkflowActionAvailability } from '../utils/PhvbMagWorkflowPermission.utils';
+import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
 import styles from './PhvbMag.module.scss';
 import { PhvbMagDetailActivityFeed } from './PhvbMagDetailActivityFeed';
 import { PhvbMagDetailDocumentsTab } from './PhvbMagDetailDocumentsTab';
@@ -15,6 +17,23 @@ type DetailTabKey = 'info' | 'documents' | 'history';
 interface IPhvbMagDetailProps {
   tabName: TabType;
   data: IRequestDetailData;
+  approveLabel?: string;
+  availableActions?: IWorkflowActionAvailability;
+  isWorkflowProcessing?: boolean;
+  workflowErrorMessage?: string;
+  onRunWorkflowAction?: (action: WorkflowActionKey, comment?: string) => Promise<boolean>;
+  commentSelectedFiles?: File[];
+  isCommentSaving?: boolean;
+  commentErrorMessage?: string;
+  onCommentAddFiles?: (files: FileList | File[]) => string | undefined;
+  onCommentRemoveFile?: (fileIndex: number) => void;
+  onSubmitComment?: (text: string) => Promise<boolean>;
+  canAssignDocumentNumber?: boolean;
+  isCapSoSaving?: boolean;
+  capSoErrorMessage?: string;
+  onAssignDocumentNumber?: (soVanBan: string) => Promise<boolean>;
+  canOpenParticipantModal?: boolean;
+  onOpenParticipantModal?: () => void;
 }
 
 const DETAIL_TABS: ReadonlyArray<{ key: DetailTabKey; label: string }> = [
@@ -24,7 +43,27 @@ const DETAIL_TABS: ReadonlyArray<{ key: DetailTabKey; label: string }> = [
 ];
 
 export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
-  const { tabName, data } = props;
+  const {
+    tabName,
+    data,
+    approveLabel,
+    availableActions,
+    isWorkflowProcessing,
+    workflowErrorMessage,
+    onRunWorkflowAction,
+    commentSelectedFiles,
+    isCommentSaving,
+    commentErrorMessage,
+    onCommentAddFiles,
+    onCommentRemoveFile,
+    onSubmitComment,
+    canAssignDocumentNumber,
+    isCapSoSaving,
+    capSoErrorMessage,
+    onAssignDocumentNumber,
+    canOpenParticipantModal,
+    onOpenParticipantModal
+  } = props;
   const [activeTab, setActiveTab] = useState<DetailTabKey>('info');
   const [isWorkflowExpanded, setIsWorkflowExpanded] = useState(false);
   const [isActivityExpanded, setIsActivityExpanded] = useState(false);
@@ -47,6 +86,15 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
         className={styles.detailHeaderArea}
         tabName={tabName}
         title={title}
+        approveLabel={approveLabel}
+        availableActions={availableActions}
+        isProcessing={isWorkflowProcessing}
+        errorMessage={workflowErrorMessage}
+        onRunAction={onRunWorkflowAction}
+        canAssignDocumentNumber={canAssignDocumentNumber}
+        isCapSoSaving={isCapSoSaving}
+        capSoErrorMessage={capSoErrorMessage}
+        onAssignDocumentNumber={onAssignDocumentNumber}
       />
 
       <div className={styles.detailBodySplit}>
@@ -86,6 +134,8 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
               workflowParticipants={data.workflowParticipants}
               isExpanded={isWorkflowExpanded}
               onExpandedChange={setIsWorkflowExpanded}
+              canOpenParticipantModal={canOpenParticipantModal}
+              onOpenParticipantModal={onOpenParticipantModal}
             />
           </div>
           <div className={styles.detailActivitySlot}>
@@ -93,6 +143,12 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
               comments={data.comments}
               isExpanded={isActivityExpanded}
               onExpandedChange={setIsActivityExpanded}
+              selectedFiles={commentSelectedFiles || []}
+              isSaving={isCommentSaving}
+              errorMessage={commentErrorMessage}
+              onAddFiles={onCommentAddFiles || (() => undefined)}
+              onRemoveFile={onCommentRemoveFile || (() => undefined)}
+              onSubmitComment={onSubmitComment || (async () => false)}
             />
           </div>
         </div>
