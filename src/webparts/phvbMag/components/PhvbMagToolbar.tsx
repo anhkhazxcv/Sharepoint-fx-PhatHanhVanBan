@@ -13,7 +13,7 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
   const { activeTab, canCreate, onOpenCreate } = props;
 
   return (
-    <header className={styles.contentHeader}>
+    <header className={[styles.contentHeader, activeTab === 'ViecCanLam' ? styles.contentHeaderTask : ''].filter(Boolean).join(' ')}>
       <div className={styles.pageHeading}>
         <span className={styles.pageEyebrow}>Văn bản nội bộ</span>
         <h2>{TAB_LABELS[activeTab]}</h2>

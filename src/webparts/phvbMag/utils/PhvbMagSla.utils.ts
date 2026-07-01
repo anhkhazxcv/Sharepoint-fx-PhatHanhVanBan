@@ -131,16 +131,20 @@ export function validateWorkflowDeadlines(options: {
   deadlineThamDinh?: string;
   deadlinePheDuyet?: string;
   loaiSla?: string;
+  skipGopY?: boolean;
+  skipThamDinh?: boolean;
 }): IDeadlineValidationResult {
   const result: IDeadlineValidationResult = { isValid: true };
   const today = startOfToday();
+  const skipGopY = options.skipGopY === true;
+  const skipThamDinh = options.skipThamDinh === true;
 
-  if (!options.deadlineGopY) {
+  if (!skipGopY && !options.deadlineGopY) {
     result.isValid = false;
     result.deadlineGopY = 'Vui lòng chọn deadline người góp ý.';
   }
 
-  if (!options.deadlineThamDinh) {
+  if (!skipThamDinh && !options.deadlineThamDinh) {
     result.isValid = false;
     result.deadlineThamDinh = 'Vui lòng chọn deadline người thẩm định.';
   }
@@ -150,16 +154,16 @@ export function validateWorkflowDeadlines(options: {
     result.deadlinePheDuyet = 'Vui lòng chọn deadline người phê duyệt.';
   }
 
-  const gopYDate = parseInputDate(options.deadlineGopY);
-  const thamDinhDate = parseInputDate(options.deadlineThamDinh);
+  const gopYDate = skipGopY ? undefined : parseInputDate(options.deadlineGopY);
+  const thamDinhDate = skipThamDinh ? undefined : parseInputDate(options.deadlineThamDinh);
   const pheDuyetDate = parseInputDate(options.deadlinePheDuyet);
 
-  if (options.deadlineGopY && !gopYDate) {
+  if (!skipGopY && options.deadlineGopY && !gopYDate) {
     result.isValid = false;
     result.deadlineGopY = 'Deadline người góp ý không hợp lệ.';
   }
 
-  if (options.deadlineThamDinh && !thamDinhDate) {
+  if (!skipThamDinh && options.deadlineThamDinh && !thamDinhDate) {
     result.isValid = false;
     result.deadlineThamDinh = 'Deadline người thẩm định không hợp lệ.';
   }
@@ -169,32 +173,32 @@ export function validateWorkflowDeadlines(options: {
     result.deadlinePheDuyet = 'Deadline người phê duyệt không hợp lệ.';
   }
 
-  if (!gopYDate || !thamDinhDate || !pheDuyetDate) {
+  if ((!skipGopY && !gopYDate) || (!skipThamDinh && !thamDinhDate) || !pheDuyetDate) {
     return result;
   }
 
-  if (gopYDate.getTime() < today.getTime()) {
+  if (!skipGopY && gopYDate && gopYDate.getTime() < today.getTime()) {
     result.isValid = false;
     result.deadlineGopY = 'Deadline người góp ý không được nhỏ hơn ngày hiện tại.';
   }
 
-  if (thamDinhDate.getTime() < today.getTime()) {
+  if (!skipThamDinh && thamDinhDate && thamDinhDate.getTime() < today.getTime()) {
     result.isValid = false;
     result.deadlineThamDinh = 'Deadline người thẩm định không được nhỏ hơn ngày hiện tại.';
   }
 
-  if (pheDuyetDate.getTime() < today.getTime()) {
+  if (pheDuyetDate && pheDuyetDate.getTime() < today.getTime()) {
     result.isValid = false;
     result.deadlinePheDuyet = 'Deadline người phê duyệt không được nhỏ hơn ngày hiện tại.';
   }
 
-  if (gopYDate.getTime() >= thamDinhDate.getTime()) {
+  if (!skipGopY && !skipThamDinh && gopYDate && thamDinhDate && gopYDate.getTime() >= thamDinhDate.getTime()) {
     result.isValid = false;
     result.deadlineGopY = result.deadlineGopY || 'Deadline người góp ý phải trước deadline người thẩm định.';
     result.deadlineThamDinh = result.deadlineThamDinh || 'Deadline người thẩm định phải sau deadline người góp ý.';
   }
 
-  if (thamDinhDate.getTime() >= pheDuyetDate.getTime()) {
+  if (!skipThamDinh && thamDinhDate && pheDuyetDate && thamDinhDate.getTime() >= pheDuyetDate.getTime()) {
     result.isValid = false;
     result.deadlineThamDinh = result.deadlineThamDinh || 'Deadline người thẩm định phải trước deadline người phê duyệt.';
     result.deadlinePheDuyet = result.deadlinePheDuyet || 'Deadline người phê duyệt phải sau deadline người thẩm định.';
@@ -203,37 +207,41 @@ export function validateWorkflowDeadlines(options: {
   const slaMaxDeadline = getSlaMaxDeadline(options.loaiSla);
   const slaMaxDate = parseInputDate(slaMaxDeadline);
 
-  if (slaMaxDate && pheDuyetDate.getTime() > slaMaxDate.getTime()) {
+  if (slaMaxDate && pheDuyetDate && pheDuyetDate.getTime() > slaMaxDate.getTime()) {
     result.isValid = false;
     result.deadlinePheDuyet = `Deadline người phê duyệt không được vượt quá thời hạn SLA (${slaMaxDeadline}).`;
   }
 
-  if (slaMaxDate && gopYDate.getTime() > slaMaxDate.getTime()) {
+  if (!skipGopY && slaMaxDate && gopYDate && gopYDate.getTime() > slaMaxDate.getTime()) {
     result.isValid = false;
     result.deadlineGopY = result.deadlineGopY || `Deadline người góp ý không được vượt quá thời hạn SLA (${slaMaxDeadline}).`;
   }
 
-  if (slaMaxDate && thamDinhDate.getTime() > slaMaxDate.getTime()) {
+  if (!skipThamDinh && slaMaxDate && thamDinhDate && thamDinhDate.getTime() > slaMaxDate.getTime()) {
     result.isValid = false;
     result.deadlineThamDinh = result.deadlineThamDinh || `Deadline người thẩm định không được vượt quá thời hạn SLA (${slaMaxDeadline}).`;
   }
 
-  const minGapDays = 1;
-  const minThamDinhDate = parseInputDate(shiftInputDate(options.deadlineGopY || '', minGapDays) || '');
-  const minPheDuyetDate = parseInputDate(shiftInputDate(options.deadlineThamDinh || '', minGapDays) || '');
+  if (!skipGopY && !skipThamDinh) {
+    const minGapDays = 1;
+    const minThamDinhDate = parseInputDate(shiftInputDate(options.deadlineGopY || '', minGapDays) || '');
+    const minPheDuyetDate = parseInputDate(shiftInputDate(options.deadlineThamDinh || '', minGapDays) || '');
 
-  if (minThamDinhDate && thamDinhDate.getTime() < minThamDinhDate.getTime()) {
-    result.isValid = false;
-    result.deadlineThamDinh = result.deadlineThamDinh || 'Deadline người thẩm định phải cách deadline người góp ý ít nhất 1 ngày.';
-  }
+    if (minThamDinhDate && thamDinhDate && thamDinhDate.getTime() < minThamDinhDate.getTime()) {
+      result.isValid = false;
+      result.deadlineThamDinh = result.deadlineThamDinh || 'Deadline người thẩm định phải cách deadline người góp ý ít nhất 1 ngày.';
+    }
 
-  if (minPheDuyetDate && pheDuyetDate.getTime() < minPheDuyetDate.getTime()) {
-    result.isValid = false;
-    result.deadlinePheDuyet = result.deadlinePheDuyet || 'Deadline người phê duyệt phải cách deadline người thẩm định ít nhất 1 ngày.';
+    if (minPheDuyetDate && pheDuyetDate && pheDuyetDate.getTime() < minPheDuyetDate.getTime()) {
+      result.isValid = false;
+      result.deadlinePheDuyet = result.deadlinePheDuyet || 'Deadline người phê duyệt phải cách deadline người thẩm định ít nhất 1 ngày.';
+    }
   }
 
   if (!result.isValid && !result.message) {
-    result.message = 'Deadline luồng xét duyệt phải theo thứ tự: Người góp ý < Người thẩm định < Người phê duyệt.';
+    result.message = skipGopY || skipThamDinh
+      ? 'Vui lòng kiểm tra deadline người phê duyệt.'
+      : 'Deadline luồng xét duyệt phải theo thứ tự: Người góp ý < Người thẩm định < Người phê duyệt.';
   }
 
   return result;

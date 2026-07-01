@@ -1,7 +1,7 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { ATTACHMENT_FORM_SUBFOLDER, ATTACHMENT_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
 import { SharePointRequestError } from './PhvbMag.error';
-import type { ICreateRequestInput, IPhvbSiteContext } from '../models/PhvbMag.models';
+import type { IAttachmentLibraryItem, ICreateRequestInput, IPhvbSiteContext } from '../models/PhvbMag.models';
 
 interface IUploadRequestFilesOptions extends IPhvbSiteContext {
   requestReferenceId: string;
@@ -60,6 +60,32 @@ function splitRelativePath(value: string): string[] {
     .filter(segment => Boolean(segment));
 }
 
+function getSiteOrigin(siteUrl: string): string {
+  try {
+    return new URL(siteUrl).origin;
+  } catch {
+    return siteUrl.split('/sites/')[0] || siteUrl;
+  }
+}
+
+interface ISharePointAttachmentItem {
+  Id: number;
+  FileLeafRef?: string;
+  FileRef?: string;
+  FileDirRef?: string;
+  Modified?: string;
+  FSObjType?: number;
+}
+
+const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
+  'Id',
+  'FileLeafRef',
+  'FileRef',
+  'FileDirRef',
+  'Modified',
+  'FSObjType'
+];
+
 function buildRequestIdFormValue(requestReferenceId: string): IListFormValue {
   return {
     FieldName: 'IDYeuCau',
@@ -74,6 +100,21 @@ function sanitizeSharePointFolderName(value: string): string {
     .replace(/\s+/g, ' ')
     .replace(/\.+$/, '')
     .trim();
+}
+
+function mapAttachmentItem(item: ISharePointAttachmentItem, siteUrl: string): IAttachmentLibraryItem {
+  const fileRef = item.FileRef || '';
+  const fileDirRef = item.FileDirRef || '';
+  const origin = getSiteOrigin(siteUrl);
+
+  return {
+    id: item.Id,
+    name: item.FileLeafRef || '',
+    fileUrl: fileRef ? `${origin}${fileRef}` : '',
+    modified: item.Modified,
+    folderPath: fileDirRef,
+    isFormAttachment: fileDirRef.indexOf(`/${ATTACHMENT_FORM_SUBFOLDER}`) > -1
+  };
 }
 
 function resolveDocumentFolderName(input: ICreateRequestInput, requestReferenceId: string): string {
@@ -361,6 +402,84 @@ export class PhvbAttachmentService {
     }
 
     throw lastError || new Error('Unable to upload attachment files.');
+  }
+
+  public async listRequestFiles(context: IPhvbSiteContext, requestReferenceId: string): Promise<IAttachmentLibraryItem[]> {
+    if (!requestReferenceId.trim()) {
+      return [];
+    }
+
+    const candidates = getCandidateSiteUrls(context);
+    let lastError: unknown = null;
+
+    if (candidates.length === 0) {
+      throw new Error('Missing SharePoint site context.');
+    }
+
+    const filterValue = escapeODataValue(requestReferenceId);
+    const filter = `IDYeuCau eq '${filterValue}' and FSObjType eq 0`;
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const siteUrl = candidates[index];
+
+      try {
+        const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items?$select=${ATTACHMENT_SELECT_FIELDS.join(',')}&$filter=${filter}&$top=500&$orderby=Modified desc`;
+        const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
+        await ensureOk(response, requestUrl);
+        const data = await response.json() as { value?: ISharePointAttachmentItem[] };
+        const items = data.value || [];
+
+        return items.map(item => mapAttachmentItem(item, siteUrl));
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error('Unable to load attachment files.');
+  }
+
+  public async deleteRequestFiles(context: IPhvbSiteContext, itemIds: number[]): Promise<void> {
+    const uniqueIds = itemIds.filter((id, index, array) => array.indexOf(id) === index && id > 0);
+
+    if (uniqueIds.length === 0) {
+      return;
+    }
+
+    const candidates = getCandidateSiteUrls(context);
+
+    if (candidates.length === 0) {
+      throw new Error('Missing SharePoint site context.');
+    }
+
+    let lastError: unknown = null;
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const siteUrl = candidates[index];
+
+      try {
+        for (let idIndex = 0; idIndex < uniqueIds.length; idIndex += 1) {
+          const itemId = uniqueIds[idIndex];
+          const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items(${itemId})`;
+          const response = await context.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
+            headers: {
+              accept: 'application/json;odata=nometadata',
+              'content-type': 'application/json;odata=nometadata',
+              'odata-version': '',
+              'IF-MATCH': '*',
+              'X-HTTP-Method': 'DELETE'
+            }
+          });
+
+          await ensureOk(response, requestUrl);
+        }
+
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error('Unable to delete attachment files.');
   }
 }
 

@@ -2,8 +2,10 @@ import { hasSharePointSiteContext, REQUEST_STATUS, resolveListTitle } from '../c
 import { SITE_CONTEXT_ERROR_MESSAGE, toRuntimeMessage } from './PhvbMag.error';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { phvbAttachmentService } from './PhvbMagAttachment.service';
+import { phvbWorkflowWriteService } from './PhvbMagWorkflowWrite.service';
 import { generateRequestReferenceId } from '../utils/PhvbMagRequestId.utils';
-import type { ICreateRequestInput, IPhvbDocumentContext, IPhvbSiteContext, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
+import { sanitizeRequestInputForSave } from '../utils/PhvbMagRequestForm.utils';
+import type { ICreateRequestInput, IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbSiteContext, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 
 const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -37,8 +39,11 @@ const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'IsCreateFolderExpire',
   'ThuMucBanHanh',
   'LinkToFolderOld',
-  'GhiChuChoThamDinh'
+  'GhiChuChoThamDinh',
+  'IsSendMailNotify'
 ];
+
+export const RELEASE_SELECT_FIELDS = DOCUMENT_SELECT_FIELDS;
 
 interface ILoadTabItemsOptions extends IPhvbSiteContext {
   userEmail: string;
@@ -48,6 +53,12 @@ interface ILoadTabItemsOptions extends IPhvbSiteContext {
 interface ICreateRequestOptions extends IPhvbDocumentContext {
   input: ICreateRequestInput;
   saveMode: SaveRequestMode;
+  directoryUsers?: ReadonlyArray<IPhvbDirectoryUser>;
+}
+
+interface IUpdateRequestOptions extends ICreateRequestOptions {
+  itemId: number;
+  existingIdYeuCau: string;
 }
 
 interface ICreateSharePointPayload {
@@ -139,43 +150,44 @@ function shouldIncludeFolderOldId(requestType: ICreateRequestInput['requestType'
 }
 
 function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenceId: string): ICreateSharePointPayload {
+  const input = sanitizeRequestInputForSave(options.input);
   const today = formatCurrentDate();
-  const requestType = options.input.requestType || options.input.type;
+  const requestType = input.requestType || input.type;
   const statusApproved = options.saveMode === 'draft' ? REQUEST_STATUS.BAN_NHAP : REQUEST_STATUS.DANG_GOP_Y;
   const payload: ICreateSharePointPayload = {
     IdYeuCau: requestReferenceId,
-    Title: options.input.title,
-    Tenvanban: options.input.title,
-    SoVanBan: options.input.code || '',
+    Title: input.title,
+    Tenvanban: input.title,
+    SoVanBan: input.code || '',
     LoaiYeuCau: requestType, // Map LoaiYeuCau to 'Viết mới' / 'Điều chỉnh' / 'Thu hồi'
-    KhoaPhongNguoiTao: options.input.department || '',
-    PheDuyet: options.input.approvalUsers.join('; '),
+    KhoaPhongNguoiTao: input.department || '',
+    PheDuyet: input.approvalUsers.join('; '),
     NgayPhatHanh: today,
     NgayTaoYeuCau: today,
-    HieuLucTu: options.input.hieuLucTu || today,
-    HieuLucDen: options.input.hieuLucDen || 'Vô thời hạn',
-    TomTatNoiDung: options.input.summary,
+    HieuLucTu: input.hieuLucTu || today,
+    HieuLucDen: input.hieuLucDen || 'Vô thời hạn',
+    TomTatNoiDung: input.summary,
     NguoiTao: options.userDisplayName || '',
     EmailNguoiTao: options.userEmail || '',
-    LienHe: options.input.contact || '',
+    LienHe: input.contact || '',
     StatusApproved: statusApproved,
-    ThuMucBanHanh: options.input.folderLuuTru || options.input.folder, // Map to new storage folder
-    NoiLuuBanCung: options.input.noiLuu || '',
+    ThuMucBanHanh: input.folderLuuTru || input.folder, // Map to new storage folder
+    NoiLuuBanCung: input.noiLuu || '',
 
     // Redesigned form columns mapping:
-    TenVanBan_ENG: options.input.titleEn || '',
-    Loai_SLA: options.input.loaiSla || '',
-    NguoiGopY: options.input.nguoiGopY ? options.input.nguoiGopY.join('; ') : '',
-    Date_GopY: options.input.deadlineGopY || '',
-    ThamDinh: options.input.nguoiThamDinh ? options.input.nguoiThamDinh.join('; ') : '',
-    Date_ThamDinh: options.input.deadlineThamDinh || '',
-    Date_PheDuyet: options.input.deadlinePheDuyet || '',
-    IsSendMailNotify: options.input.isSendMailNotify,
-    GhiChuChoThamDinh: options.input.ghiChuThamDinh || ''
+    TenVanBan_ENG: input.titleEn || '',
+    Loai_SLA: input.loaiSla || '',
+    NguoiGopY: input.nguoiGopY ? input.nguoiGopY.join('; ') : '',
+    Date_GopY: input.deadlineGopY || '',
+    ThamDinh: input.nguoiThamDinh ? input.nguoiThamDinh.join('; ') : '',
+    Date_ThamDinh: input.deadlineThamDinh || '',
+    Date_PheDuyet: input.deadlinePheDuyet || '',
+    IsSendMailNotify: input.isSendMailNotify,
+    GhiChuChoThamDinh: input.ghiChuThamDinh || ''
   };
 
-  if (shouldIncludeFolderOldId(requestType) && options.input.idFolderOld) {
-    payload.IDFolderOld = options.input.idFolderOld;
+  if (shouldIncludeFolderOldId(requestType) && input.idFolderOld) {
+    payload.IDFolderOld = input.idFolderOld;
   }
 
   return payload;
@@ -187,7 +199,7 @@ export class PhvbDocumentsService {
       return DEFAULT_TAB_COUNTS;
     }
 
-    const [todoItems, myRequestItems, adminItems, capSoItems] = await Promise.all([
+    const [todoItems, myRequestItems, banNhapItems, qlVanBanItems, capSoItems] = await Promise.all([
       phvbRepository.fetchItems({
         ...options,
         selectFields: ['Id', 'PheDuyet', 'NguoiGopY', 'ThamDinh'],
@@ -197,6 +209,12 @@ export class PhvbDocumentsService {
         ...options,
         selectFields: ['Id'],
         filter: getUserScopedFilter('YeuCauCuaToi', options.userEmail),
+        top: 5000
+      }),
+      phvbRepository.fetchItems({
+        ...options,
+        selectFields: ['Id'],
+        filter: getUserScopedFilter('BanNhap', options.userEmail),
         top: 5000
       }),
       phvbRepository.fetchItems({
@@ -215,8 +233,10 @@ export class PhvbDocumentsService {
     return {
       viecCanLam: filterItemsForTab(todoItems, 'ViecCanLam', options.userEmail).length,
       yeuCauCuaToi: myRequestItems.length,
-      admin: adminItems.length,
-      capSo: capSoItems.length
+      banNhap: banNhapItems.length,
+      capSo: capSoItems.length,
+      qlVanBan: qlVanBanItems.length,
+      admin: qlVanBanItems.length
     };
   }
 
@@ -248,16 +268,79 @@ export class PhvbDocumentsService {
       payload: mapCreateRequestPayload(options, requestReferenceId)
     });
 
-    const hasFilesToUpload = options.input.taiLieuFiles.length > 0 || options.input.bieuMauFiles.length > 0;
-    if (hasFilesToUpload) {
+    await this.writeWorkflowAndAttachments(options, requestReferenceId);
+
+    return requestReferenceId;
+  }
+
+  public async updateRequest(options: IUpdateRequestOptions): Promise<string> {
+    if (!hasSharePointSiteContext(options)) {
+      throw new Error(SITE_CONTEXT_ERROR_MESSAGE);
+    }
+
+    const fullPayload = mapCreateRequestPayload(options, options.existingIdYeuCau);
+    const updatePayload: Record<string, string | boolean | number> = { ...fullPayload };
+    delete updatePayload.NgayTaoYeuCau;
+    delete updatePayload.NgayPhatHanh;
+    delete updatePayload.NguoiTao;
+    delete updatePayload.EmailNguoiTao;
+
+    await phvbRepository.updateItem({
+      ...options,
+      itemId: options.itemId,
+      payload: updatePayload
+    });
+
+    await this.writeWorkflowAndAttachments(options, options.existingIdYeuCau);
+
+    return options.existingIdYeuCau;
+  }
+
+  private async syncAttachments(
+    options: ICreateRequestOptions,
+    requestReferenceId: string
+  ): Promise<void> {
+    const input = sanitizeRequestInputForSave(options.input);
+    const removedIds = input.removedAttachmentIds || [];
+
+    if (removedIds.length > 0) {
+      await phvbAttachmentService.deleteRequestFiles(options, removedIds);
+    }
+
+    const hasNewFiles = input.taiLieuFiles.length > 0 || input.bieuMauFiles.length > 0;
+    if (hasNewFiles) {
       await phvbAttachmentService.uploadRequestFiles({
         ...options,
         requestReferenceId,
-        input: options.input
+        input
       });
     }
+  }
 
-    return requestReferenceId;
+  private async writeWorkflowAndAttachments(
+    options: ICreateRequestOptions,
+    requestReferenceId: string
+  ): Promise<void> {
+    const input = sanitizeRequestInputForSave(options.input);
+    const normalizedOptions = { ...options, input };
+
+    await phvbWorkflowWriteService.createWorkflowRecords({
+      ...normalizedOptions,
+      requestReferenceId,
+      creatorDisplayName: options.userDisplayName,
+      creatorEmail: options.userEmail,
+      directoryUsers: options.directoryUsers || [],
+      saveMode: options.saveMode
+    });
+
+    const hasAttachmentChanges =
+      (input.removedAttachmentIds || []).length > 0 ||
+      input.taiLieuFiles.length > 0 ||
+      input.bieuMauFiles.length > 0;
+
+    if (hasAttachmentChanges) {
+      await this.syncAttachments(normalizedOptions, requestReferenceId);
+    }
   }
 
   public getRuntimeErrorMessage(error: unknown, listTitle?: string): string {

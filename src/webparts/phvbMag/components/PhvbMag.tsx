@@ -5,30 +5,35 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS } from '../config/PhvbMag.configuration';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
+import { usePhvbDraftEdit } from '../hooks/usePhvbDraftEdit';
+import { usePhvbRequestDetail } from '../hooks/usePhvbRequestDetail';
 import type { ICreateRequestInput, IPhvbDirectoryUser, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { selectFilteredItems } from '../utils/PhvbMag.selectors';
+import { isDraftStatus } from '../utils/PhvbMagDraftEdit.utils';
 import { ToastService } from '../utils/ToastService';
 import { phvbMagGraphService } from '../services/PhvbMagGraph.service';
 import styles from './PhvbMag.module.scss';
 import type { IPhvbMagProps } from './IPhvbMagProps';
 import { PhvbMagCreateModal } from './PhvbMagCreateModal';
-import { PhvbMagDrawer } from './PhvbMagDrawer';
+import { PhvbMagDetail } from './PhvbMagDetail';
+import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import { PhvbMagSidebar } from './PhvbMagSidebar';
 import { PhvbMagTable } from './PhvbMagTable';
 import { PhvbMagToolbar } from './PhvbMagToolbar';
 
 function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle } = props;
-  
-  const { tabName, itemId } = useParams<{ tabName: string; itemId?: string }>();
+
+  const { tabName, idYeuCau, editIdYeuCau } = useParams<{ tabName: string; idYeuCau?: string; editIdYeuCau?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
 
   const isCreateRoute = /\/create$/.test(location.pathname);
+  const isEditRoute = Boolean(editIdYeuCau);
+  const isDetailRoute = Boolean(idYeuCau);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-  const [selectedItem, setSelectedItem] = useState<IVanBanItem | undefined>(undefined);
   const [userDepartment, setUserDepartment] = useState<string>('');
   const [approverUsers, setApproverUsers] = useState<IPhvbDirectoryUser[]>([]);
   const [isLoadingApprovers, setIsLoadingApprovers] = useState<boolean>(true);
@@ -72,28 +77,23 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     listTitle
   });
 
-  // Sync activeTab with tabName from URL
+  const {
+    data: detailData,
+    isLoading: isDetailLoading,
+    errorMessage: detailErrorMessage
+  } = usePhvbRequestDetail(siteContext, idYeuCau);
+
+  const {
+    draftEdit,
+    isLoading: isDraftLoading,
+    errorMessage: draftEditErrorMessage
+  } = usePhvbDraftEdit(siteContext, editIdYeuCau, approverUsers);
+
   useEffect(() => {
     if (tabName && tabName !== activeTab) {
       setActiveTab(tabName as TabType);
     }
   }, [tabName, activeTab, setActiveTab]);
-
-  // Sync selectedItem with itemId from URL
-  useEffect(() => {
-    if (itemId && items.length > 0) {
-      let foundItem: IVanBanItem | undefined;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].Id.toString() === itemId) {
-          foundItem = items[i];
-          break;
-        }
-      }
-      setSelectedItem(foundItem);
-    } else {
-      setSelectedItem(undefined);
-    }
-  }, [itemId, items]);
 
   const processedItems = useMemo(() => selectFilteredItems(items, {
     searchQuery,
@@ -145,16 +145,40 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     navigate(`/tab/${tab}`);
   };
 
-  const handleCreateRequest = async (input: ICreateRequestInput, mode: SaveRequestMode): Promise<boolean> => {
-    const result = await saveRequest(input, mode);
+  const handleSelectItem = (item: IVanBanItem): void => {
+    if (!item.IdYeuCau || !item.IdYeuCau.trim()) {
+      ToastService.error('Yêu cầu chưa có mã IdYeuCau.');
+      return;
+    }
+
+    const normalizedId = encodeURIComponent(item.IdYeuCau.trim());
+
+    if (isDraftStatus(item.StatusApproved)) {
+      navigate(`/tab/${activeTab}/edit/${normalizedId}`);
+      return;
+    }
+
+    navigate(`/tab/${activeTab}/detail/${normalizedId}`);
+  };
+
+  const handleSaveRequest = async (input: ICreateRequestInput, mode: SaveRequestMode): Promise<boolean> => {
+    const editContext = draftEdit
+      ? { itemId: draftEdit.itemId, idYeuCau: draftEdit.idYeuCau }
+      : undefined;
+
+    const result = await saveRequest(input, mode, approverUsers, editContext);
 
     if (!result) {
       return false;
     }
 
     const successMessage = mode === 'draft'
-      ? `Lưu nháp thành công. ID yêu cầu: ${result.requestReferenceId}`
-      : `Gửi yêu cầu thành công. ID yêu cầu: ${result.requestReferenceId}`;
+      ? editContext
+        ? `Cập nhật bản nháp thành công. ID yêu cầu: ${result.requestReferenceId}`
+        : `Lưu nháp thành công. ID yêu cầu: ${result.requestReferenceId}`
+      : editContext
+        ? `Gửi yêu cầu thành công. ID yêu cầu: ${result.requestReferenceId}`
+        : `Gửi yêu cầu thành công. ID yêu cầu: ${result.requestReferenceId}`;
 
     ToastService.success(successMessage);
 
@@ -164,19 +188,31 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     return true;
   };
 
-  return (
-    <div className={styles.phvbContainer}>
-      <PhvbMagSidebar
-        activeTab={activeTab}
-        counts={counts}
-        isCollapsed={isSidebarCollapsed}
-        onSelectTab={handleSelectTab}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        userDisplayName={userDisplayName}
-        userDepartment={userDepartment}
-      />
+  const resolvedTabName = (tabName as TabType) || activeTab;
+  const modalDefaultValues = isEditRoute && draftEdit ? draftEdit.form : defaultRequestForm;
+  const isModalOpen = isCreateRoute || (isEditRoute && Boolean(draftEdit));
 
-      <main className={styles.contentPane}>
+  return (
+    <div className={[styles.phvbContainer, isDetailRoute ? styles.phvbContainerDetail : ''].filter(Boolean).join(' ')}>
+      {!isDetailRoute && (
+        <PhvbMagSidebar
+          activeTab={activeTab}
+          counts={counts}
+          isCollapsed={isSidebarCollapsed}
+          onSelectTab={handleSelectTab}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          userDisplayName={userDisplayName}
+          userDepartment={userDepartment}
+        />
+      )}
+
+      <main
+        className={[
+          styles.contentPane,
+          activeTab === 'ViecCanLam' && !isDetailRoute ? styles.contentPaneTask : '',
+          isDetailRoute ? styles.contentPaneDetail : ''
+        ].filter(Boolean).join(' ')}
+      >
         {errorMessage && (
           <div className={styles.connectionBanner}>
             <strong>Kết nối dữ liệu:</strong>
@@ -191,34 +227,64 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
           </div>
         )}
 
-        <PhvbMagToolbar
-          activeTab={activeTab}
-          canCreate={Boolean(currentWebUrl || siteCollectionUrl || sourceSiteUrl)}
-          onOpenCreate={() => navigate(`/tab/${activeTab}/create`)}
-        />
+        {isEditRoute && draftEditErrorMessage && !isDraftLoading && (
+          <div className={styles.connectionBanner}>
+            <strong>Chỉnh sửa bản nháp:</strong>
+            <span>{draftEditErrorMessage}</span>
+          </div>
+        )}
 
-        <PhvbMagTable
-          activeTab={activeTab}
-          items={processedItems}
-          isLoading={isLoading}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onSelectItem={(item) => navigate(`/tab/${activeTab}/item/${item.Id}`)}
-        />
+        {isDetailRoute ? (
+          <>
+            <PhvbMagLoadingOverlay isOpen={isDetailLoading} message="Đang tải chi tiết yêu cầu..." />
+            {!isDetailLoading && detailErrorMessage && (
+              <div className={styles.detailErrorState}>
+                <p>{detailErrorMessage}</p>
+                <button type="button" className={styles.btnSecondary} onClick={() => navigate(`/tab/${activeTab}`)}>
+                  Quay lại danh sách
+                </button>
+              </div>
+            )}
+            {!isDetailLoading && detailData && (
+              <PhvbMagDetail tabName={resolvedTabName} data={detailData} />
+            )}
+          </>
+        ) : (
+          <>
+            <PhvbMagToolbar
+              activeTab={activeTab}
+              canCreate={Boolean(currentWebUrl || siteCollectionUrl || sourceSiteUrl)}
+              onOpenCreate={() => navigate(`/tab/${activeTab}/create`)}
+            />
+
+            <PhvbMagTable
+              activeTab={activeTab}
+              items={processedItems}
+              isLoading={isLoading}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onSelectItem={handleSelectItem}
+            />
+          </>
+        )}
       </main>
 
-      <PhvbMagDrawer item={selectedItem} onClose={() => navigate(`/tab/${activeTab}`)} />
+      <PhvbMagLoadingOverlay isOpen={isEditRoute && isDraftLoading} message="Đang tải bản nháp..." />
+
       <PhvbMagCreateModal
-        isOpen={isCreateRoute}
+        isOpen={isModalOpen}
         isSaving={isSaving}
         isLoadingApprovers={isLoadingApprovers}
-        defaultValues={defaultRequestForm}
+        isEditMode={isEditRoute}
+        initialExistingTaiLieu={draftEdit?.existingTaiLieuAttachments}
+        initialExistingBieuMau={draftEdit?.existingBieuMauAttachments}
+        defaultValues={modalDefaultValues}
         documentTypes={DOCUMENT_TYPE_OPTIONS}
         departments={departmentOptions}
         siteContext={siteContext}
         approvers={approverUsers}
         onClose={() => navigate(`/tab/${activeTab}`)}
-        onSubmit={handleCreateRequest}
+        onSubmit={handleSaveRequest}
       />
     </div>
   );
@@ -229,8 +295,10 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
     <HashRouter>
       <Routes>
         <Route path="/tab/:tabName" element={<PhvbMagInner {...props} />} />
-        <Route path="/tab/:tabName/item/:itemId" element={<PhvbMagInner {...props} />} />
+        <Route path="/tab/:tabName/detail/:idYeuCau" element={<PhvbMagInner {...props} />} />
+        <Route path="/tab/:tabName/edit/:editIdYeuCau" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/create" element={<PhvbMagInner {...props} />} />
+        <Route path="/tab/:tabName/item/:itemId" element={<Navigate to="../" replace />} />
         <Route path="*" element={<Navigate to="/tab/ViecCanLam" replace />} />
       </Routes>
       <ToastContainer />

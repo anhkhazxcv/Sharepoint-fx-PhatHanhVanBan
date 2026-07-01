@@ -31,6 +31,58 @@ export interface IVanBanItem {
   ThuMucBanHanh?: string;
   LinkToFolderOld?: string;
   GhiChuChoThamDinh?: string;
+  IsSendMailNotify?: boolean;
+}
+
+export interface ILichSuThucHienItem {
+  Id: number;
+  IDYeuCau?: string;
+  User_ThucHien?: string;
+  Email_ThucHien?: string;
+  PhongBan_ThucHien?: string;
+  Ngay_ThucHien?: string;
+  TrangThai_ThucHien?: string;
+  NoiDung?: string;
+  /** Thời điểm tạo item trên SharePoint (list LichSuThucHien) */
+  Created?: string;
+  /** Chỉ có trên list LichSuThucHien */
+  IsComment?: boolean;
+}
+
+export interface IAllUserWorkflowItem {
+  Id: number;
+  IDYeuCau?: string;
+  User_ThucHien?: string;
+  Email_ThucHien?: string;
+  PhongBan_ThucHien?: string;
+  Ngay_ThucHien?: string;
+  TrangThai_ThucHien?: string;
+  NoiDung?: string;
+  Modified?: string;
+}
+
+export type WorkflowStage = 'gopy' | 'thamdinh' | 'pheduyet';
+
+export interface IWorkflowParticipantItem extends IAllUserWorkflowItem {
+  workflowStage: WorkflowStage;
+  workflowStageLabel: string;
+}
+
+export interface IAttachmentLibraryItem {
+  id: number;
+  name: string;
+  fileUrl: string;
+  modified?: string;
+  folderPath?: string;
+  isFormAttachment?: boolean;
+}
+
+export interface IRequestDetailData {
+  release: IVanBanItem;
+  attachments: IAttachmentLibraryItem[];
+  history: ILichSuThucHienItem[];
+  comments: ILichSuThucHienItem[];
+  workflowParticipants: IWorkflowParticipantItem[];
 }
 
 export type SaveRequestMode = 'submit' | 'draft';
@@ -40,13 +92,20 @@ export interface ISaveRequestResult {
   mode: SaveRequestMode;
 }
 
+export interface IEditRequestContext {
+  itemId: number;
+  idYeuCau: string;
+}
+
 export type TabType = 'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'CapSo' | 'QLVanBan';
 
 export interface ITabCounts {
   viecCanLam: number;
   yeuCauCuaToi: number;
-  admin: number;
+  banNhap: number;
   capSo: number;
+  qlVanBan: number;
+  admin: number;
 }
 
 export interface ICreateRequestInput {
@@ -68,6 +127,11 @@ export interface ICreateRequestInput {
   folderLuuTru: string;
   taiLieuFiles: File[];
   bieuMauFiles: File[];
+  /** File đã lưu trên SharePoint (chỉ dùng khi chỉnh sửa bản nháp) */
+  existingTaiLieuAttachments: IAttachmentLibraryItem[];
+  existingBieuMauAttachments: IAttachmentLibraryItem[];
+  /** Id file SharePoint đánh dấu xóa — chỉ gọi API khi lưu/gửi */
+  removedAttachmentIds: number[];
   folderBieuMauDinhKem?: string;
   loaiSla?: string;
   nguoiGopY: string[];
@@ -143,6 +207,8 @@ export type UniqueItemField = 'LoaiYeuCau' | 'KhoaPhongNguoiTao';
 export const DEFAULT_TAB_COUNTS: ITabCounts = {
   viecCanLam: 0,
   yeuCauCuaToi: 0,
-  admin: 0,
-  capSo: 0
+  banNhap: 0,
+  capSo: 0,
+  qlVanBan: 0,
+  admin: 0
 };

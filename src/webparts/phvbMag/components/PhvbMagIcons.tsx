@@ -16,12 +16,12 @@ import {
   Document24Regular,
   Edit24Regular,
   Filter20Regular,
+  DocumentMultiple20Regular,
   Folder20Regular,
   FolderOpen20Regular,
-  NumberSymbol20Regular,
   Person20Regular,
   Search16Regular,
-  Shield20Regular
+  TextNumberListLtr20Regular
 } from '@fluentui/react-icons';
 
 interface IIconProps {
@@ -38,7 +38,7 @@ export function SidebarMyRequestsIcon(props: IIconProps): React.ReactElement {
 }
 
 export function SidebarAdminIcon(props: IIconProps): React.ReactElement {
-  return <Shield20Regular className={props.className} />;
+  return <DocumentMultiple20Regular className={props.className} />;
 }
 
 export function SidebarDraftIcon(props: IIconProps): React.ReactElement {
@@ -54,7 +54,7 @@ export function SidebarReleaseIcon(props: IIconProps): React.ReactElement {
 }
 
 export function SidebarNumberingIcon(props: IIconProps): React.ReactElement {
-  return <NumberSymbol20Regular className={props.className} />;
+  return <TextNumberListLtr20Regular className={props.className} />;
 }
 
 export function SidebarCollapseIcon(props: IIconProps): React.ReactElement {

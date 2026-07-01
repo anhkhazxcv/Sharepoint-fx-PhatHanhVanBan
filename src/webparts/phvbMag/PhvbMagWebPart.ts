@@ -38,7 +38,24 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
       //this.properties.sourceSiteUrl = 'https://masterisegroup.sharepoint.com';
     }
 
+    this.ensureTypographyFontLoaded();
+
     return super.onInit();
+  }
+
+  private ensureTypographyFontLoaded(): void {
+    const fontHref = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap';
+    const existingLink = document.querySelector(`link[data-phvb-font="plus-jakarta-sans"]`);
+
+    if (existingLink) {
+      return;
+    }
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = fontHref;
+    link.setAttribute('data-phvb-font', 'plus-jakarta-sans');
+    document.head.appendChild(link);
   }
 
   public render(): void {

@@ -73,8 +73,72 @@ function extractMissingFieldName(error: unknown): string | undefined {
     return undefined;
   }
 
-  const match = /field or property '([^']+)' does not exist/i.exec(error.details);
-  return match ? match[1] : undefined;
+  const patterns: RegExp[] = [
+    /field or property '([^']+)' does not exist/i,
+    /The property '([^']+)' does not exist/i,
+    /property '([^']+)' does not exist/i
+  ];
+
+  for (let index = 0; index < patterns.length; index += 1) {
+    const match = patterns[index].exec(error.details);
+    if (match) {
+      return match[1];
+    }
+  }
+
+  return undefined;
+}
+
+function omitPayloadField(
+  payload: Record<string, string | boolean | number>,
+  fieldName: string
+): Record<string, string | boolean | number> {
+  const nextPayload: Record<string, string | boolean | number> = { ...payload };
+  delete nextPayload[fieldName];
+  return nextPayload;
+}
+
+async function runPostRequestWithFallback(siteUrl: string, command: ICreatePhvbItemCommand): Promise<number> {
+  let payload = { ...command.payload };
+
+  while (Object.keys(payload).length > 0) {
+    try {
+      return await runPostRequest(siteUrl, { ...command, payload });
+    } catch (error) {
+      const missingFieldName = extractMissingFieldName(error);
+
+      if (missingFieldName && Object.prototype.hasOwnProperty.call(payload, missingFieldName)) {
+        payload = omitPayloadField(payload, missingFieldName);
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error('SharePoint create payload is empty after removing unsupported fields.');
+}
+
+async function runPatchRequestWithFallback(siteUrl: string, command: IUpdatePhvbItemCommand): Promise<void> {
+  let payload = { ...command.payload };
+
+  while (Object.keys(payload).length > 0) {
+    try {
+      await runPatchRequest(siteUrl, { ...command, payload });
+      return;
+    } catch (error) {
+      const missingFieldName = extractMissingFieldName(error);
+
+      if (missingFieldName && Object.prototype.hasOwnProperty.call(payload, missingFieldName)) {
+        payload = omitPayloadField(payload, missingFieldName);
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error('SharePoint update payload is empty after removing unsupported fields.');
 }
 
 async function readJson<T>(response: SPHttpClientResponse): Promise<T> {
@@ -193,11 +257,11 @@ export class SharePointPhvbRepository implements IPhvbRepository {
   }
 
   public async createItem(command: ICreatePhvbItemCommand): Promise<number> {
-    return tryAcrossCandidateSites(command, async (siteUrl: string) => runPostRequest(siteUrl, command));
+    return tryAcrossCandidateSites(command, async (siteUrl: string) => runPostRequestWithFallback(siteUrl, command));
   }
 
   public async updateItem(command: IUpdatePhvbItemCommand): Promise<void> {
-    return tryAcrossCandidateSites(command, async (siteUrl: string) => runPatchRequest(siteUrl, command));
+    return tryAcrossCandidateSites(command, async (siteUrl: string) => runPatchRequestWithFallback(siteUrl, command));
   }
 }
 

@@ -1,3 +1,5 @@
+@import './PhvbMag.typography';
+
 // Sophisticated Warm-Cream & Golden-Bronze Color Palette
 $primary-color: #7B4C2C;       // Warm deep bronze/gold
 $primary-hover: #5C3D2E;       // Darker bronze
@@ -13,6 +15,7 @@ $shadow-md: 0 8px 24px rgba(123, 76, 44, 0.05);
 $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
 .phvbContainer {
+  @include phvb-typography-vars;
   display: flex;
   height: 100vh;
   height: 100dvh;
@@ -20,13 +23,23 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   max-height: 100dvh;
   min-height: 0;
   background-color: $bg-content;
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-  color: $text-main;
+  font-family: $font-family-base;
+  font-size: $font-size-body;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-body;
+  color: $text-ink;
   overflow: hidden;
   box-sizing: border-box;
 
   * {
     box-sizing: border-box;
+  }
+}
+
+.phvbContainerDetail {
+  .contentPaneDetail {
+    width: 100%;
+    max-width: 100%;
   }
 }
 
@@ -45,8 +58,9 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   background-color: #FFF5E8;
   border: 1px solid #F1DFC2;
   border-radius: 12px;
-  color: $text-main;
-  font-size: 13px;
+  color: $text-ink;
+  font-size: $font-size-body;
+  line-height: $line-height-body;
   padding: 12px 16px;
 
   strong {
@@ -126,9 +140,10 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
       .logoM {
         color: #FFFFFF;
-        font-weight: 800;
-        font-size: 20px;
-        font-family: Georgia, serif;
+        font-weight: $font-weight-extrabold;
+        font-size: $font-size-lg;
+        font-family: $font-family-base;
+        letter-spacing: $letter-spacing-tight;
       }
     }
 
@@ -137,16 +152,18 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
       h3 {
         margin: 0;
-        font-size: 16px;
-        font-weight: 700;
-        color: $text-main;
+        font-size: $font-size-body;
+        font-weight: $font-weight-bold;
+        line-height: $line-height-snug;
+        color: $text-ink;
       }
       p {
-        margin: 2px 0 0 0;
-        font-size: 11px;
-        color: $text-muted;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        margin: 1px 0 0 0;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-regular;
+        color: $text-ink3;
+        text-transform: none;
+        letter-spacing: normal;
       }
     }
   }
@@ -158,25 +175,24 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     gap: 4px;
 
     .navGroupLabel {
-      font-size: 11px;
-      font-weight: 700;
-      color: $text-muted;
-      margin: 20px 0 8px 12px;
-      letter-spacing: 1px;
+      @include ty-label-upper-wide;
+      margin: 8px 8px 4px 12px;
+      letter-spacing: $letter-spacing-group;
     }
 
     .navItem {
       display: flex;
       align-items: center;
-      padding: 12px 14px;
+      padding: 7px 10px;
       width: 100%;
       border: none;
       background: transparent;
-      border-radius: 10px;
+      border-radius: 7px;
       cursor: pointer;
-      color: $text-main;
-      font-size: 14px;
-      font-weight: 600;
+      color: $text-ink2;
+      font-family: $font-family-base;
+      font-size: $font-size-base2;
+      font-weight: $font-weight-medium;
       transition: all 0.2s ease;
       gap: 12px;
       position: relative;
@@ -203,31 +219,22 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
           position: absolute;
           top: 4px;
           right: 4px;
+          margin-left: 0;
           min-width: 18px;
           padding: 1px 5px;
         }
       }
 
       .countBadge {
-        background-color: #D37A3F; // Muted orange badge
+        margin-left: auto;
+        background-color: #8B5E3C;
         color: #FFFFFF;
-        font-size: 11px;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 20px;
-        min-width: 22px;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-extrabold;
+        padding: 1px 6px;
+        border-radius: 10px;
+        min-width: 18px;
         text-align: center;
-        box-shadow: 0 2px 6px rgba(211, 122, 63, 0.2);
-
-        &.blueBadge {
-          background-color: #4A89A4; // Sophisticated teal
-          box-shadow: 0 2px 6px rgba(74, 137, 164, 0.2);
-        }
-
-        &.goldBadge {
-          background-color: $primary-color;
-          box-shadow: 0 2px 6px rgba(123, 76, 44, 0.2);
-        }
       }
 
       &:hover {
@@ -240,6 +247,7 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
       &.active {
         background-color: $primary-light;
         color: $primary-color;
+        font-weight: $font-weight-bold;
 
         .iconWrapper {
           color: $primary-color;
@@ -268,33 +276,34 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     margin-top: 24px;
 
     .userAvatar {
-      width: 36px;
-      height: 36px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
-      background-color: $primary-light;
+      background-color: $primary-color;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
-      color: $primary-color;
-      font-size: 13px;
-      border: 1.5px solid rgba(123, 76, 44, 0.15);
+      font-weight: $font-weight-extrabold;
+      color: #FFFFFF;
+      font-size: $font-size-sm;
+      border: none;
     }
 
     .userInfo {
       overflow: hidden;
       h4 {
         margin: 0;
-        font-size: 13.5px;
-        font-weight: 700;
-        color: $text-main;
+        font-size: $font-size-base;
+        font-weight: $font-weight-bold;
+        color: $text-ink;
         white-space: nowrap;
         text-overflow: ellipsis;
       }
       p {
-        margin: 2px 0 0 0;
-        font-size: 11px;
-        color: $text-muted;
+        margin: 1px 0 0 0;
+        font-size: $font-size-md2;
+        font-weight: $font-weight-regular;
+        color: $text-ink3;
         white-space: nowrap;
         text-overflow: ellipsis;
       }
@@ -451,9 +460,8 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
     h2 {
       margin: 0;
-      font-size: 24px;
-      font-weight: 700;
-      color: $text-main;
+      @include ty-section-title;
+      color: $text-ink;
     }
 
     .headerActions {
@@ -824,9 +832,8 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 // BADGE STYLING FOR LOAI
 // -------------------------------------------------------------
 .badge {
-  font-size: 11.5px;
-  font-weight: 700;
-  padding: 4px 12px;
+  @include ty-badge;
+  padding: 2px 8px;
   border-radius: 20px;
   display: inline-block;
   text-align: center;
@@ -933,9 +940,8 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
     h3 {
       margin: 0;
-      font-size: 18px;
-      font-weight: 700;
-      color: $text-main;
+      @include ty-detail-title;
+      color: $text-ink;
     }
 
     .btnClose {
@@ -944,7 +950,7 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
       justify-content: center;
       background: transparent;
       border: none;
-      font-size: 24px;
+      font-size: $font-size-lg;
       color: $text-muted;
       cursor: pointer;
       line-height: 1;
@@ -977,18 +983,17 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     .drawerMainTitle {
       h4 {
         margin: 0;
-        font-size: 18px;
-        font-weight: 800;
-        color: $text-main;
-        line-height: 1.4;
+        @include ty-detail-title;
+        color: $text-ink;
       }
 
       .engTitle {
         margin: 6px 0 0 0;
-        font-size: 13.5px;
-        color: $text-muted;
+        font-size: $font-size-md2;
+        font-weight: $font-weight-regular;
+        color: $text-ink2;
         font-style: italic;
-        line-height: 1.4;
+        line-height: $line-height-loose;
       }
     }
 
@@ -1263,16 +1268,15 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
       h3 {
         margin: 0;
-        font-size: 17px;
-        font-weight: 700;
-        color: $text-main;
+        @include ty-modal-title;
+        color: $text-ink;
       }
     }
 
     .btnClose {
       background: transparent;
       border: none;
-      font-size: 26px;
+      font-size: $font-size-lg;
       color: $text-muted;
       cursor: pointer;
       line-height: 1;
@@ -1325,19 +1329,17 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
       gap: 6px;
 
       .fieldLabel {
-        font-size: 11px;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        font-weight: 700;
-        color: #7B4C2C;
+        @include ty-form-label;
+        color: $text-ink2;
       }
 
       .fieldSubtitle {
-        font-size: 11px;
-        color: $text-muted;
+        font-size: $font-size-sm2;
+        font-weight: $font-weight-regular;
+        color: $text-ink3;
         margin-top: -2px;
         margin-bottom: 6px;
-        line-height: 1.4;
+        line-height: $line-height-loose;
       }
 
       .required {
@@ -1353,12 +1355,13 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
       .requestTypeBtn {
         background-color: #FFFFFF;
-        border: 1px solid #E5D6C7;
-        border-radius: 8px;
-        padding: 8px 18px;
-        font-size: 13px;
-        font-weight: 600;
-        color: $text-main;
+        border: 1.5px solid #E8E2D9;
+        border-radius: 6px;
+        padding: 5px 12px;
+        font-family: $font-family-base;
+        font-size: $font-size-base;
+        font-weight: $font-weight-bold;
+        color: $text-ink2;
         cursor: pointer;
         transition: all 0.2s ease;
 
@@ -1376,13 +1379,13 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
     /* Modern Text Inputs and Textareas */
     .formInput, .formSelect, .formTextArea, .formTextAreaSmall {
-      padding: 10px 14px;
-      border: 1px solid #E5D6C7;
-      border-radius: 8px;
-      font-size: 13.5px;
+      padding: 8px 11px;
+      border: 1.5px solid #E8E2D9;
+      border-radius: 7px;
+      @include ty-input;
       outline: none;
       background-color: #FFFFFF;
-      color: $text-main;
+      color: $text-ink;
       transition: all 0.2s ease;
       width: 100%;
 
@@ -1841,11 +1844,11 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     .btnSecondary {
       background-color: #FFFFFF;
       border: 1px solid $border-color;
-      border-radius: 8px;
-      padding: 10px 22px;
-      font-size: 13.5px;
-      font-weight: 600;
-      color: $text-main;
+      border-radius: 7px;
+      padding: 6px 14px;
+      @include ty-button;
+      font-weight: $font-weight-bold;
+      color: $text-ink2;
       cursor: pointer;
       transition: all 0.15s ease;
 
@@ -1862,10 +1865,9 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     .btnDraft {
       background-color: #FFFFFF;
       border: 1px solid #C0B2A3;
-      border-radius: 8px;
-      padding: 10px 22px;
-      font-size: 13.5px;
-      font-weight: 600;
+      border-radius: 7px;
+      padding: 6px 14px;
+      @include ty-button;
       color: $primary-color;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -1884,10 +1886,9 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     .btnSubmit {
       background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
       border: none;
-      border-radius: 8px;
-      padding: 10px 24px;
-      font-size: 13.5px;
-      font-weight: 700;
+      border-radius: 7px;
+      padding: 6px 14px;
+      @include ty-button;
       color: #FFFFFF;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -1933,16 +1934,13 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
       gap: 4px;
 
       .pageEyebrow {
-        font-size: 12px;
-        color: $text-muted;
-        font-weight: 600;
+        @include ty-page-eyebrow;
       }
 
       h2 {
         margin: 0;
-        font-size: 28px;
-        font-weight: 700;
-        color: $text-main;
+        @include ty-section-title;
+        color: $text-ink;
       }
     }
 
@@ -1987,11 +1985,10 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
       .btnTemplate,
       .btnCreate {
-        min-height: 42px;
-        border-radius: 12px;
-        padding: 0 16px;
-        font-size: 13px;
-        font-weight: 700;
+        min-height: auto;
+        border-radius: 7px;
+        padding: 6px 14px;
+        @include ty-button;
       }
 
       .btnTemplate {
@@ -2016,6 +2013,81 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   }
 }
 
+.contentPaneTask {
+  padding: 12px 24px 16px;
+  gap: 10px;
+}
+
+.contentHeaderTask {
+  padding-bottom: 0;
+  gap: 10px;
+}
+
+.tableCardCompact {
+  .metricsGrid {
+    gap: 8px;
+  }
+
+  .metricCard {
+    padding: 10px 12px;
+    border-radius: 10px;
+    gap: 2px;
+  }
+
+  .listSectionHeader {
+    margin: 6px 0 4px;
+
+    .titleArea {
+      gap: 8px;
+    }
+  }
+
+  .requestToolBar {
+    padding: 0 0 8px;
+    gap: 8px;
+  }
+
+  .requestQuickFilters {
+    gap: 6px;
+  }
+
+  .taskList {
+    gap: 6px;
+  }
+
+  .taskCard {
+    padding: 10px 12px 10px 10px;
+    gap: 10px;
+    border-radius: 10px;
+  }
+
+  .taskCardBody {
+    gap: 4px;
+  }
+
+  .taskCardTitleRow {
+    gap: 10px;
+  }
+
+  .taskTagRow {
+    gap: 6px;
+  }
+
+  .skeletonRow {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .skeletonBlock {
+    gap: 6px;
+  }
+
+  .emptyState {
+    border-radius: 10px;
+    font-size: 12px;
+  }
+}
+
 .tableCard {
   flex: 1 1 auto;
   min-height: 0;
@@ -2028,6 +2100,7 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
   .metricsGrid,
   .listSectionHeader,
+  .requestToolBar,
   .requestQuickFilters,
   .requestControls,
   .requestFooter {
@@ -2097,22 +2170,20 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 }
 
 .metricValue {
-  font-size: 38px;
-  line-height: 1;
-  font-weight: 800;
+  @include ty-stat-value;
+  margin-bottom: 4px;
 }
 
 .metricLabel {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.9px;
-  text-transform: uppercase;
-  color: $text-main;
+  @include ty-stat-label;
 }
 
 .metricHint {
-  font-size: 13px;
-  color: $text-muted;
+  font-size: $font-size-md;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-body;
+  color: $text-ink3;
+  margin-top: 2px;
 }
 
 .metricDanger .metricValue,
@@ -2152,17 +2223,19 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
     h3 {
       margin: 0;
-      font-size: 24px;
-      font-weight: 700;
-      color: $text-main;
+      @include ty-section-title;
+      color: $text-ink;
     }
   }
 }
 
 .countText {
-  color: #6F6257;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $primary-color;
+  background-color: #F5EDE4;
+  border-radius: 20px;
+  padding: 2px 8px;
 }
 
 .requestBoard {
@@ -2177,6 +2250,7 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   overflow: hidden;
 
   .requestBoardHeader,
+  .requestToolBar,
   .requestQuickFilters,
   .requestControls,
   .requestFooter {
@@ -2209,18 +2283,17 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
   h3 {
     margin: 0;
-    font-size: 16px;
-    font-weight: 800;
-    color: $text-main;
+    @include ty-section-title;
+    color: $text-ink;
   }
 
   span {
-    color: #B48A52;
-    font-size: 12px;
-    font-weight: 700;
-    background-color: #FBF1E3;
-    border-radius: 999px;
-    padding: 4px 8px;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $primary-color;
+    background-color: #F5EDE4;
+    border-radius: 20px;
+    padding: 2px 8px;
   }
 }
 
@@ -2237,6 +2310,32 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   box-shadow: 0 6px 14px rgba(123, 76, 44, 0.14);
 }
 
+.requestToolBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 18px 10px;
+  flex-wrap: wrap;
+
+  .requestQuickFilters {
+    padding: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .requestControls {
+    padding: 0;
+    margin-left: auto;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+}
+
+.requestToolBarSearchOnly {
+  justify-content: flex-end;
+}
+
 .requestQuickFilters {
   display: flex;
   align-items: center;
@@ -2246,14 +2345,14 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 }
 
 .requestQuickFilter {
-  border: 1px solid #E9DECF;
+  border: 1.5px solid #E8E2D9;
   background-color: #FFFFFF;
-  color: #77695E;
-  min-height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
+  color: $text-ink2;
+  min-height: auto;
+  padding: 3px 10px;
+  border-radius: 20px;
+  @include ty-chip;
+  font-family: $font-family-base;
   cursor: pointer;
 }
 
@@ -2277,9 +2376,10 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 .requestPageSizeLabel select,
 .requestReloadButton,
 .requestPageButton {
-  min-height: 34px;
-  border-radius: 10px;
-  font-size: 12px;
+  min-height: auto;
+  border-radius: 7px;
+  font-family: $font-family-base;
+  font-size: $font-size-base2;
 }
 
 .requestStatusSelect,
@@ -2313,7 +2413,29 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   }
 }
 
-.requestSearchButton,
+.requestSearchButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 6px 14px;
+  border: 1px solid #E8E2D9;
+  border-radius: 7px;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+
+  &:hover {
+    background-color: #F0EBE4;
+    color: $text-ink;
+  }
+}
+
 .requestReloadButton,
 .requestPageButton {
   border: 1px solid #E7DACB;
@@ -2322,10 +2444,6 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   padding: 0 12px;
   font-weight: 700;
   cursor: pointer;
-}
-
-.requestSearchButton {
-  min-width: 84px;
 }
 
 .requestTableWrap {
@@ -2338,20 +2456,17 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
   th {
     text-align: left;
-    padding: 11px 18px;
-    font-size: 10.5px;
-    font-weight: 800;
-    color: #B7AA9A;
-    letter-spacing: 0.6px;
-    border-bottom: 1px solid #EFE5DA;
-    background-color: #FFFDFC;
+    padding: 8px 13px;
+    @include ty-table-head;
+    border-bottom: 1px solid #F0EBE4;
+    background-color: #FAFAF8;
   }
 
   td {
-    padding: 12px 18px;
-    border-bottom: 1px solid #F3EADF;
-    font-size: 12.5px;
-    color: #705F52;
+    padding: 10px 13px;
+    border-bottom: 1px solid #F0EBE4;
+    @include ty-table-cell;
+    color: $text-ink2;
     vertical-align: middle;
   }
 }
@@ -2370,17 +2485,18 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 }
 
 .requestTitle {
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.45;
-  color: #2F2621;
-  text-transform: uppercase;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-normal;
+  color: $text-ink;
+  text-transform: none;
 }
 
 .requestSummaryCell {
   width: 41%;
-  line-height: 1.5;
-  color: #8A7C70;
+  font-size: $font-size-md;
+  line-height: $line-height-loose;
+  color: $text-ink3;
 }
 
 .requestFolderCell {
@@ -2390,12 +2506,11 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 .requestStatusBadge {
   display: inline-flex;
   align-items: center;
-  min-height: 24px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
+  min-height: auto;
+  padding: 2px 8px;
+  border-radius: 20px;
+  @include ty-badge;
+  line-height: $line-height-tight;
 }
 
 .requestStatusPending {
@@ -2543,24 +2658,21 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
 .taskCardTitle {
   margin: 0;
-  font-size: 18px;
-  line-height: 1.35;
-  font-weight: 700;
-  color: $text-main;
+  @include ty-inbox-title;
+  color: $text-ink;
 }
 
 .taskDeadline {
   flex-shrink: 0;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
+  padding-top: 1px;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
 }
 
 .taskCardDescription {
   margin: 0;
-  font-size: 13px;
-  color: #8A7B70;
+  @include ty-inbox-sub;
 }
 
 .taskTagRow {
@@ -2574,11 +2686,11 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 .deptPill {
   display: inline-flex;
   align-items: center;
-  min-height: 26px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
+  min-height: auto;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-semibold;
 }
 
 .taskMetaPill {
@@ -2592,9 +2704,10 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 }
 
 .taskCardMeta {
-  font-size: 13px;
-  color: #6B5D51;
-  line-height: 1.5;
+  font-size: $font-size-md;
+  font-weight: $font-weight-regular;
+  color: $text-ink3;
+  line-height: $line-height-loose;
 }
 
 .emptyState {
@@ -2634,9 +2747,9 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .requestControls {
-    justify-content: flex-start;
-    flex-wrap: wrap;
+  .requestToolBar .requestControls {
+    margin-left: auto;
+    justify-content: flex-end;
   }
 
   .contentPane .contentHeader {
@@ -2754,10 +2867,19 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   }
 
   .requestBoardHeader,
-  .requestFooter,
-  .requestControls {
+  .requestFooter {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .requestToolBar {
+    flex-direction: column;
+    align-items: stretch;
+
+    .requestControls {
+      margin-left: 0;
+      justify-content: flex-end;
+    }
   }
 
   .requestPager {
@@ -2820,15 +2942,14 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
   h3 {
     margin: 0;
-    font-size: 16px;
-    font-weight: 700;
+    @include ty-modal-title;
   }
 
   .btnClose {
     border: none;
     background: transparent;
     color: #FFFFFF;
-    font-size: 24px;
+    font-size: $font-size-lg;
     line-height: 1;
     cursor: pointer;
     padding: 0 4px;
@@ -2864,8 +2985,7 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  font-size: 13px;
-  font-weight: 700;
+  @include ty-form-label;
   color: $primary-color;
   border-bottom: 1px solid $border-color;
 }
@@ -2960,14 +3080,14 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
-  color: $text-main;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-regular;
+  color: $text-ink2;
 }
 
 .folderDocPaneHeader {
   padding: 12px 16px;
-  font-size: 13px;
-  font-weight: 700;
+  @include ty-form-label;
   color: $primary-color;
   border-bottom: 1px solid $border-color;
 }
@@ -3016,8 +3136,8 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 .folderDocCardTitle {
   display: inline-block;
   margin-bottom: 8px;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
   color: #2F78A8;
   text-decoration: none;
 
@@ -3206,6 +3326,1171 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
   .folderDocPane {
     min-height: 0;
+  }
+}
+
+// -------------------------------------------------------------
+// DETAIL PAGE
+// -------------------------------------------------------------
+$detail-stepper-height: 72px;
+$detail-page-gap: 18px;
+$detail-workflow-item-height: 88px;
+$detail-activity-item-height: 100px;
+
+.contentPaneDetail {
+  padding: 20px 24px 28px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.detailPage {
+  flex: 0 0 auto;
+  min-height: min-content;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $detail-page-gap;
+}
+
+.detailHeaderArea {
+  flex-shrink: 0;
+}
+
+.detailBodySplit {
+  flex: 0 0 auto;
+  min-height: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 400px);
+  gap: $detail-page-gap;
+  align-items: start;
+}
+
+.detailLeftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: $detail-page-gap;
+  min-width: 0;
+  overflow: visible;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.detailHeaderMain {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.detailBreadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: $font-size-md;
+  color: $text-ink3;
+}
+
+.detailBreadcrumbLink {
+  color: $text-ink2;
+  text-decoration: none;
+
+  &:hover {
+    color: $primary-color;
+    text-decoration: underline;
+  }
+}
+
+.detailBreadcrumbSep {
+  color: $text-ink3;
+}
+
+.detailBreadcrumbCurrent {
+  color: $text-ink2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 420px;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-extrabold;
+  line-height: $line-height-snug;
+  color: $text-ink;
+}
+
+.detailActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detailActionApprove,
+.detailActionEdit,
+.detailActionReject {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.detailActionApprove {
+  border: none;
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+}
+
+.detailActionEdit {
+  border: 1px solid #C5D9EF;
+  background-color: #EAF3FC;
+  color: #2F78A8;
+}
+
+.detailActionReject {
+  border: 1px solid #F0C8C8;
+  background-color: #FCEAEA;
+  color: #C14D56;
+}
+
+.detailStepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 12px 10px;
+  background-color: #FFFFFF;
+  border: 1px solid #E7DACB;
+  border-radius: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #D8CEC3;
+    border-radius: 999px;
+  }
+}
+
+.detailStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 0;
+  min-width: 0;
+  scroll-snap-align: center;
+  padding: 0 2px;
+}
+
+.detailStepCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  flex-shrink: 0;
+}
+
+.detailStepLabel {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $text-ink2;
+  text-align: center;
+  line-height: 1.25;
+  word-break: break-word;
+  max-width: 100%;
+  padding: 0 2px;
+}
+
+.detailStepCompleted .detailStepCircle {
+  background-color: #2E8D61;
+  color: #FFFFFF;
+}
+
+.detailStepActive .detailStepCircle {
+  background-color: #2E8D61;
+  color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(46, 141, 97, 0.18);
+}
+
+.detailStepPending .detailStepCircle {
+  background-color: #EDE7E0;
+  color: #9A8A7C;
+}
+
+.detailStepConnector {
+  flex: 1 1 0;
+  min-width: 8px;
+  height: 2px;
+  align-self: flex-start;
+  margin: 14px 2px 0;
+  background-color: #E0D6CB;
+}
+
+.detailStepConnectorCompleted {
+  background-color: #2E8D61;
+}
+
+.detailStepperArea {
+  flex-shrink: 0;
+  height: $detail-stepper-height;
+  min-width: 0;
+  display: flex;
+
+  .detailStepper {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    overflow-x: visible;
+    padding: 8px 12px;
+  }
+
+  .detailStep {
+    gap: 4px;
+  }
+
+  .detailStepCircle {
+    width: 24px;
+    height: 24px;
+    font-size: $font-size-sm;
+  }
+
+  .detailStepLabel {
+    font-size: $font-size-sm;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .detailStepConnector {
+    margin-top: 12px;
+  }
+}
+
+.detailRightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  overflow: visible;
+}
+
+.detailWorkflowSlot,
+.detailActivitySlot {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-width: 0;
+
+  > .detailSidebarAccordion {
+    width: 100%;
+  }
+}
+
+.detailMain {
+  flex: 0 0 auto;
+  background-color: #FFFFFF;
+  border: 1px solid #E7DACB;
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.detailTabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #EFE5DA;
+  padding: 0 18px;
+}
+
+.detailTab {
+  border: none;
+  background: transparent;
+  padding: 14px 16px;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  color: $text-ink2;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.detailTabActive {
+  color: $primary-color;
+  border-bottom-color: $primary-color;
+}
+
+.detailTabPanel {
+  padding: 18px 20px 22px;
+  overflow: visible;
+}
+
+.detailInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.detailField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detailFieldFull {
+  grid-column: 1 / -1;
+}
+
+.detailFieldLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label;
+  color: $text-ink3;
+  text-transform: uppercase;
+}
+
+.detailFieldValue {
+  font-size: $font-size-base2;
+  line-height: $line-height-relaxed;
+  color: $text-ink;
+}
+
+.detailPlaceholder {
+  color: $text-ink3;
+  font-style: italic;
+}
+
+.detailCheckboxReadonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: $text-ink2;
+}
+
+.detailDocuments {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.detailDocSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.detailDocSectionTitle {
+  margin: 0 0 10px;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-extrabold;
+  color: $primary-color;
+}
+
+.detailDocEmpty {
+  margin: 0;
+  color: $text-ink3;
+  font-size: $font-size-base;
+}
+
+.detailDocTable {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #F0EBE4;
+    text-align: left;
+    font-size: $font-size-base;
+  }
+
+  th {
+    color: $text-ink3;
+    font-weight: $font-weight-bold;
+    background-color: #FAFAF8;
+  }
+}
+
+.detailDocFolder {
+  color: $text-ink3;
+  font-size: $font-size-md;
+}
+
+.detailDocLink {
+  color: #2F78A8;
+  font-weight: $font-weight-bold;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.detailHistoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailHistoryItem {
+  padding: 12px 14px;
+  border: 1px solid #EFE5DA;
+  border-radius: 10px;
+  background-color: #FFFCF8;
+}
+
+.detailHistoryHeader {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.detailHistoryDept {
+  color: $text-ink3;
+  font-size: $font-size-md;
+}
+
+.detailHistoryDate {
+  margin-left: auto;
+  color: $text-ink3;
+  font-size: $font-size-md;
+}
+
+.detailHistoryStatus {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background-color: #F5EDE4;
+  color: $primary-color;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+}
+
+.detailHistoryContent {
+  margin: 8px 0 0;
+  color: $text-ink2;
+  font-size: $font-size-base;
+  line-height: $line-height-relaxed;
+}
+
+.detailSidebarAccordionFill {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .detailSidebarAccordionBody {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .detailActivityPanel,
+  .detailWorkflowPanel {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detailActivityFeed,
+  .detailWorkflowTimeline {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+.detailSidebarAccordionCompact {
+  flex: 0 0 auto;
+}
+
+.detailSidebarAccordionFooter {
+  flex-shrink: 0;
+  padding: 0 16px 16px;
+  background-color: #FFFFFF;
+}
+
+.detailSidebarAccordion {
+  background-color: #FFFFFF;
+  border: 1px solid #E7DACB;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(74, 52, 34, 0.04);
+  flex-shrink: 0;
+}
+
+.detailSidebarAccordionHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: none;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FBF8F4 100%);
+  cursor: pointer;
+  text-align: left;
+}
+
+.detailSidebarAccordionTitleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.detailSidebarAccordionTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label-wide;
+  color: $primary-color;
+  text-transform: uppercase;
+}
+
+.detailSidebarAccordionBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background-color: #F5EDE4;
+  color: $primary-color;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+}
+
+.detailSidebarAccordionChevron {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #8B7C70;
+  border-bottom: 2px solid #8B7C70;
+  transform: rotate(45deg);
+  transition: transform 0.18s ease;
+  flex-shrink: 0;
+  margin-top: -3px;
+}
+
+.detailSidebarAccordionChevronOpen {
+  transform: rotate(-135deg);
+  margin-top: 3px;
+}
+
+.detailSidebarAccordionBody {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 16px 16px;
+}
+
+.detailSidebarExpandBtn,
+.detailSidebarExpandBtnMuted {
+  width: 100%;
+  margin-top: 10px;
+  min-height: 32px;
+  border-radius: 8px;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+}
+
+.detailSidebarExpandBtn {
+  border: 1px solid #E7DACB;
+  background-color: #FBF8F4;
+  color: $primary-color;
+
+  &:hover {
+    background-color: #F5EDE4;
+  }
+}
+
+.detailSidebarExpandBtnMuted {
+  border: none;
+  background: transparent;
+  color: $text-ink3;
+
+  &:hover {
+    color: $primary-color;
+  }
+}
+
+.detailSidebarSection {
+  background-color: #FFFFFF;
+  border: 1px solid #E7DACB;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.detailSidebarTitle {
+  margin: 0 0 14px;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label-wide;
+  color: $primary-color;
+}
+
+.detailWorkflowPanel,
+.detailActivityPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.detailWorkflowSummary,
+.detailWorkflowSummaryMuted {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+}
+
+.detailWorkflowSummary {
+  background-color: #EAF6EF;
+  color: #2E8D61;
+}
+
+.detailWorkflowSummaryMuted {
+  background-color: #F7F3EE;
+  color: $text-ink3;
+  font-weight: $font-weight-semibold;
+}
+
+.detailWorkflowTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detailWorkflowTimelineCollapsed {
+  max-height: calc(#{$detail-workflow-item-height} * 3);
+  overflow: hidden;
+}
+
+.detailWorkflowTimelineExpanded {
+  max-height: calc(#{$detail-workflow-item-height} * 5);
+  overflow-y: auto;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #D8CEC3;
+    border-radius: 999px;
+  }
+}
+
+.detailWorkflowGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.detailWorkflowGroupTitle {
+  margin: 0 0 8px;
+  font-size: $font-size-base;
+  font-weight: $font-weight-extrabold;
+  color: $text-ink;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detailWorkflowGroupCount {
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+  color: $primary-color;
+  background-color: #F5EDE4;
+  border-radius: 20px;
+  padding: 1px 7px;
+}
+
+.detailWorkflowHint {
+  margin: 4px 0 0;
+  font-size: $font-size-md;
+  color: $text-ink3;
+  line-height: $line-height-relaxed;
+}
+
+.detailWorkflowEmpty {
+  margin: 0;
+  font-size: $font-size-md;
+  color: $text-ink3;
+}
+
+.detailWorkflowItem {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+
+  &:last-child .detailWorkflowRailLine {
+    display: none;
+  }
+}
+
+.detailWorkflowItemCurrent {
+  border-color: #E8C98E;
+  background: linear-gradient(180deg, #FFF9EE 0%, #FFFCF6 100%);
+  box-shadow: inset 3px 0 0 #B6872C;
+}
+
+.detailWorkflowRail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100%;
+}
+
+.detailWorkflowRailLine {
+  flex: 1 1 auto;
+  width: 2px;
+  min-height: 16px;
+  margin-top: 4px;
+  background-color: #E0D6CB;
+}
+
+.detailWorkflowContent {
+  min-width: 0;
+}
+
+.detailWorkflowDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 4px;
+  border: 2px solid #D8CEC3;
+  background-color: #FFFFFF;
+}
+
+.detailWorkflowDotDone {
+  border-color: #2E8D61;
+  background-color: #2E8D61;
+}
+
+.detailWorkflowDotActive {
+  border-color: #B6872C;
+  background-color: #FFF4D8;
+}
+
+.detailWorkflowDotPending {
+  border-color: #D8CEC3;
+  background-color: #FFFFFF;
+}
+
+.detailWorkflowName {
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  color: $text-ink;
+}
+
+.detailWorkflowStage {
+  display: inline-flex;
+  margin-bottom: 4px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background-color: #F5EDE4;
+  color: $primary-color;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.detailWorkflowMeta {
+  font-size: $font-size-md;
+  color: $text-ink3;
+  margin-top: 2px;
+}
+
+.detailWorkflowStatus {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+}
+
+.detailWorkflowStatusDone {
+  background-color: #E0F4E8;
+  color: #2E8D61;
+}
+
+.detailWorkflowStatusActive {
+  background-color: #FFF4D8;
+  color: #B6872C;
+}
+
+.detailWorkflowStatusPending {
+  background-color: #F3EFEB;
+  color: #8B7C70;
+}
+
+.detailWorkflowCurrentBadge {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background-color: #FFF0CF;
+  color: #9A6A1E;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.detailActivityPanel {
+  gap: 10px;
+}
+
+.detailActivityCount {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $text-ink3;
+}
+
+.detailActivityFeed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailActivityFeedCollapsed {
+  max-height: calc(#{$detail-activity-item-height} * 3);
+  overflow: hidden;
+}
+
+.detailActivityFeedExpanded {
+  max-height: calc(#{$detail-activity-item-height} * 5);
+  overflow-y: auto;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #D8CEC3;
+    border-radius: 999px;
+  }
+}
+
+.detailActivityGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detailActivityItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detailActivityAuthorRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.detailActivityAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-extrabold;
+  flex-shrink: 0;
+}
+
+.detailActivityAuthorMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: $font-size-md;
+  color: $text-ink2;
+
+  strong {
+    color: $text-ink;
+    font-size: $font-size-base;
+  }
+}
+
+.detailActivityBubbleClamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.detailActivityExpandTextBtn {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: $primary-color;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.detailActivityBubble {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: $font-size-base;
+  line-height: $line-height-relaxed;
+}
+
+.detailActivityBubbleEdit {
+  background-color: #FFF0E3;
+  color: #8B5E3C;
+  border: 1px solid #F1DFC2;
+}
+
+.detailActivityBubbleDefault {
+  background-color: #F3EFEB;
+  color: $text-ink2;
+  border: 1px solid #E8E2D9;
+}
+
+.detailCommentComposer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #EFE5DA;
+
+  textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 72px;
+    padding: 10px 12px;
+    border: 1px solid #E7DACB;
+    border-radius: 10px;
+    font-family: $font-family-base;
+    font-size: $font-size-base;
+    background-color: #FAFAF8;
+  }
+}
+
+.detailCommentActions {
+  display: flex;
+  justify-content: flex-end;
+
+  button {
+    min-height: 32px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+    color: #FFFFFF;
+    font-weight: $font-weight-bold;
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+}
+
+.detailEmptyState,
+.detailErrorState {
+  padding: 24px;
+  border: 1px dashed #DDCFC1;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.8);
+  color: $text-ink2;
+  text-align: center;
+}
+
+.detailErrorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  .btnSecondary {
+    background-color: #FFFFFF;
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: $font-size-base2;
+    font-weight: $font-weight-bold;
+    color: $text-ink2;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 1100px) {
+  .contentPaneDetail {
+    overflow-y: auto;
+  }
+
+  .detailPage {
+    min-height: min-content;
+    flex: 0 0 auto;
+  }
+
+  .detailBodySplit {
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .detailLeftColumn {
+    order: 1;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .detailRightColumn {
+    order: 2;
+    overflow: visible;
+  }
+
+  .detailStepperArea {
+    height: $detail-stepper-height;
+    flex-shrink: 0;
+
+    .detailStepper {
+      overflow-x: auto;
+      justify-content: flex-start;
+    }
+
+    .detailStep {
+      flex: 0 0 auto;
+      min-width: 72px;
+      max-width: 96px;
+    }
+
+    .detailStepLabel {
+      white-space: normal;
+      text-overflow: clip;
+    }
+
+    .detailStepConnector {
+      flex: 0 0 18px;
+      min-width: 18px;
+    }
+  }
+
+  .detailMain {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 560px) {
+  .detailStepperArea .detailStepper {
+    flex-direction: column;
+    align-items: stretch;
+    overflow-x: visible;
+    scroll-snap-type: none;
+    padding: 8px 10px;
+    gap: 0;
+  }
+
+  .detailStepConnector {
+    display: none;
+  }
+
+  .detailStep {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    min-width: 0;
+    max-width: none;
+    flex: 0 0 auto;
+    padding: 10px 8px 10px 12px;
+    margin-left: 10px;
+    border-left: 3px solid #E0D6CB;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .detailStepCompleted {
+    border-left-color: #2E8D61;
+  }
+
+  .detailStepActive {
+    border-left-color: #2E8D61;
+    background-color: #F4FBF6;
+  }
+
+  .detailStepLabel {
+    text-align: left;
+    font-size: $font-size-base;
+  }
+
+  .detailStepCircle {
+    width: 26px;
+    height: 26px;
+    font-size: $font-size-sm2;
+  }
+}
+
+@media (max-width: 720px) {
+  .detailInfoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .detailHeader {
+    flex-direction: column;
+  }
+
+  .detailActions {
+    width: 100%;
   }
 }
 

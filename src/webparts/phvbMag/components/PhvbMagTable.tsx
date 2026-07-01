@@ -497,44 +497,88 @@ function ListPager(props: IListPagerProps): React.ReactElement {
   );
 }
 
-function MyRequestsTable(props: IPhvbMagTableProps): React.ReactElement {
-  const { items, isLoading, searchQuery, onSearchChange, onSelectItem } = props;
+interface IRequestBoardTableProps extends IPhvbMagTableProps {
+  boardTitle: string;
+  countSuffix: string;
+  showStatusFilters?: boolean;
+  emptyMessage?: string;
+}
+
+const REQUEST_BOARD_TABS: Record<'YeuCauCuaToi' | 'BanNhap' | 'CapSo' | 'QLVanBan', { countSuffix: string; showStatusFilters: boolean; emptyMessage: string }> = {
+  YeuCauCuaToi: {
+    countSuffix: 'yêu cầu',
+    showStatusFilters: true,
+    emptyMessage: 'Không có yêu cầu phù hợp với bộ lọc hiện tại.'
+  },
+  BanNhap: {
+    countSuffix: 'bản nháp',
+    showStatusFilters: false,
+    emptyMessage: 'Không có bản nháp phù hợp với bộ lọc hiện tại.'
+  },
+  CapSo: {
+    countSuffix: 'hồ sơ',
+    showStatusFilters: false,
+    emptyMessage: 'Không có hồ sơ phù hợp với bộ lọc hiện tại.'
+  },
+  QLVanBan: {
+    countSuffix: 'văn bản',
+    showStatusFilters: false,
+    emptyMessage: 'Không có văn bản phù hợp với bộ lọc hiện tại.'
+  }
+};
+
+function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
+  const {
+    items,
+    isLoading,
+    searchQuery,
+    onSearchChange,
+    onSelectItem,
+    boardTitle,
+    countSuffix,
+    showStatusFilters = false,
+    emptyMessage = 'Không có dữ liệu phù hợp với bộ lọc hiện tại.'
+  } = props;
   const [statusFilter, setStatusFilter] = React.useState<RequestStatusFilterKey>('all');
 
   const filteredItems = React.useMemo(() => items.filter(item => {
-    if (statusFilter === 'all') {
+    if (!showStatusFilters || statusFilter === 'all') {
       return true;
     }
 
     return getRequestStatusState(item).filterKey === statusFilter;
-  }), [items, statusFilter]);
+  }), [items, showStatusFilters, statusFilter]);
 
-  const pagination = usePagedItems(filteredItems, [statusFilter, searchQuery]);
+  const pagination = usePagedItems(filteredItems, [statusFilter, searchQuery, showStatusFilters]);
   const { pagedItems, totalItems } = pagination;
 
   return (
     <div className={styles.requestBoard}>
       <div className={styles.requestBoardHeader}>
         <div className={styles.requestBoardTitle}>
-          <h3>Yêu cầu của tôi</h3>
-          <span>{items.length} yêu cầu</span>
+          <h3>{boardTitle}</h3>
+          <span>{items.length} {countSuffix}</span>
         </div>
       </div>
 
-      <div className={styles.requestQuickFilters}>
-        {requestStatusFilterOptions.map(option => (
-          <button
-            key={option.key}
-            type="button"
-            className={[styles.requestQuickFilter, statusFilter === option.key ? styles.requestQuickFilterActive : ''].filter(Boolean).join(' ')}
-            onClick={() => setStatusFilter(option.key)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <div className={[styles.requestToolBar, !showStatusFilters ? styles.requestToolBarSearchOnly : ''].filter(Boolean).join(' ')}>
+        {showStatusFilters && (
+          <div className={styles.requestQuickFilters}>
+            {requestStatusFilterOptions.map(option => (
+              <button
+                key={option.key}
+                type="button"
+                className={[styles.requestQuickFilter, statusFilter === option.key ? styles.requestQuickFilterActive : ''].filter(Boolean).join(' ')}
+                onClick={() => setStatusFilter(option.key)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-      <RequestSearchControls searchQuery={searchQuery} onSearchChange={onSearchChange} />
+        <RequestSearchControls searchQuery={searchQuery} onSearchChange={onSearchChange} />
+      </div>
 
       {isLoading ? (
         <div className={styles.skeletonContainer}>
@@ -549,7 +593,7 @@ function MyRequestsTable(props: IPhvbMagTableProps): React.ReactElement {
         </div>
       ) : totalItems === 0 ? (
         <div className={styles.emptyState}>
-          <p>Không có yêu cầu phù hợp với bộ lọc hiện tại.</p>
+          <p>{emptyMessage}</p>
         </div>
       ) : (
         <>
@@ -603,24 +647,26 @@ function MyRequestsTable(props: IPhvbMagTableProps): React.ReactElement {
 }
 
 function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
-  const { activeTab, items, isLoading, onSelectItem } = props;
+  const { activeTab, items, isLoading, searchQuery, onSearchChange, onSelectItem } = props;
   const [metricFilter, setMetricFilter] = React.useState<TaskMetricFilterKey>('all');
+  const isTaskTab = activeTab === 'ViecCanLam';
   const today = toStartOfDay(new Date());
-  const metrics = getMetricCards(items, today, activeTab);
-  const sectionTitle = activeTab === 'ViecCanLam' ? 'Cần xử lý' : TAB_LABELS[activeTab];
+  const metrics = isTaskTab ? getMetricCards(items, today, activeTab) : [];
+  const sectionTitle = isTaskTab ? 'Cần xử lý' : TAB_LABELS[activeTab];
   const visibleItems = React.useMemo(() => {
-    if (activeTab !== 'ViecCanLam') {
+    if (!isTaskTab) {
       return items;
     }
 
     return items.filter(item => matchesTaskMetricFilter(item, metricFilter, today));
-  }, [activeTab, items, metricFilter]);
-  const pagination = usePagedItems(visibleItems, [metricFilter, items, activeTab]);
+  }, [isTaskTab, items, metricFilter]);
+  const pagination = usePagedItems(visibleItems, [metricFilter, items, activeTab, searchQuery]);
   const { pagedItems, totalItems } = pagination;
+  const listCountText = isTaskTab ? `${visibleItems.length} việc` : `${visibleItems.length} mục`;
 
   return (
-    <div className={styles.tableCard}>
-      {!isLoading && (
+    <div className={[styles.tableCard, isTaskTab ? styles.tableCardCompact : ''].filter(Boolean).join(' ')}>
+      {!isLoading && isTaskTab && (
         <div className={styles.metricsGrid}>
           {metrics.map(metric => (
             <article key={metric.key} className={[styles.metricCard, metricToneClassMap[metric.tone]].join(' ')}>
@@ -635,22 +681,26 @@ function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
       <div className={styles.listSectionHeader}>
         <div className={styles.titleArea}>
           <h3>{sectionTitle}</h3>
-          <span className={styles.countText}>{visibleItems.length} việc</span>
+          <span className={styles.countText}>{listCountText}</span>
         </div>
       </div>
 
-      {activeTab === 'ViecCanLam' && (
-        <div className={styles.requestQuickFilters}>
-          {taskMetricFilterOptions.map(option => (
-            <button
-              key={option.key}
-              type="button"
-              className={[styles.requestQuickFilter, metricFilter === option.key ? styles.requestQuickFilterActive : ''].filter(Boolean).join(' ')}
-              onClick={() => setMetricFilter(option.key)}
-            >
-              {option.label}
-            </button>
-          ))}
+      {isTaskTab && (
+        <div className={styles.requestToolBar}>
+          <div className={styles.requestQuickFilters}>
+            {taskMetricFilterOptions.map(option => (
+              <button
+                key={option.key}
+                type="button"
+                className={[styles.requestQuickFilter, metricFilter === option.key ? styles.requestQuickFilterActive : ''].filter(Boolean).join(' ')}
+                onClick={() => setMetricFilter(option.key)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          <RequestSearchControls searchQuery={searchQuery} onSearchChange={onSearchChange} />
         </div>
       )}
 
@@ -723,11 +773,28 @@ function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
   );
 }
 
+const BOARD_TABLE_TABS: Array<keyof typeof REQUEST_BOARD_TABS> = ['YeuCauCuaToi', 'BanNhap', 'CapSo', 'QLVanBan'];
+
+function isBoardTableTab(tab: TabType): tab is keyof typeof REQUEST_BOARD_TABS {
+  return BOARD_TABLE_TABS.indexOf(tab as keyof typeof REQUEST_BOARD_TABS) > -1;
+}
+
 export function PhvbMagTable(props: IPhvbMagTableProps): React.ReactElement {
   const { activeTab } = props;
 
-  if (activeTab === 'YeuCauCuaToi') {
-    return <MyRequestsTable {...props} />;
+  if (isBoardTableTab(activeTab)) {
+    const boardConfig = REQUEST_BOARD_TABS[activeTab];
+
+    return (
+      <RequestBoardTable
+        key={activeTab}
+        {...props}
+        boardTitle={TAB_LABELS[activeTab]}
+        countSuffix={boardConfig.countSuffix}
+        showStatusFilters={boardConfig.showStatusFilters}
+        emptyMessage={boardConfig.emptyMessage}
+      />
+    );
   }
 
   return <TaskListView key={activeTab} {...props} />;

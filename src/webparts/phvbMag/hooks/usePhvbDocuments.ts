@@ -3,7 +3,7 @@ import type { SPHttpClient } from '@microsoft/sp-http';
 import { hasSharePointSiteContext, resolveListTitle } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE } from '../services/PhvbMag.error';
 import { phvbDocumentsService } from '../services/PhvbMag.service';
-import type { ICreateRequestInput, ISaveRequestResult, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
+import type { ICreateRequestInput, IEditRequestContext, IPhvbDirectoryUser, ISaveRequestResult, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 
 interface IUsePhvbDocumentsOptions {
@@ -24,7 +24,12 @@ interface IUsePhvbDocumentsResult {
   isSaving: boolean;
   errorMessage?: string;
   setActiveTab: (tab: TabType) => void;
-  saveRequest: (input: ICreateRequestInput, mode: SaveRequestMode) => Promise<ISaveRequestResult | undefined>;
+  saveRequest: (
+    input: ICreateRequestInput,
+    mode: SaveRequestMode,
+    directoryUsers?: ReadonlyArray<IPhvbDirectoryUser>,
+    editContext?: IEditRequestContext
+  ) => Promise<ISaveRequestResult | undefined>;
 }
 
 export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDocumentsResult {
@@ -136,7 +141,12 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     };
   }, [activeTab, hasAnySiteContext, resolvedListTitle, siteContext, userEmail]);
 
-  const saveRequest = async (input: ICreateRequestInput, mode: SaveRequestMode): Promise<ISaveRequestResult | undefined> => {
+  const saveRequest = async (
+    input: ICreateRequestInput,
+    mode: SaveRequestMode,
+    directoryUsers?: ReadonlyArray<IPhvbDirectoryUser>,
+    editContext?: IEditRequestContext
+  ): Promise<ISaveRequestResult | undefined> => {
     if (!hasAnySiteContext) {
       setErrorMessage(SITE_CONTEXT_ERROR_MESSAGE);
       return undefined;
@@ -145,11 +155,21 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     setIsSaving(true);
 
     try {
-      const requestReferenceId = await phvbDocumentsService.createRequest({
-        ...documentContext,
-        input,
-        saveMode: mode
-      });
+      const requestReferenceId = editContext
+        ? await phvbDocumentsService.updateRequest({
+          ...documentContext,
+          input,
+          saveMode: mode,
+          directoryUsers,
+          itemId: editContext.itemId,
+          existingIdYeuCau: editContext.idYeuCau
+        })
+        : await phvbDocumentsService.createRequest({
+          ...documentContext,
+          input,
+          saveMode: mode,
+          directoryUsers
+        });
 
       const targetTab: TabType = mode === 'draft' ? 'BanNhap' : activeTab;
 

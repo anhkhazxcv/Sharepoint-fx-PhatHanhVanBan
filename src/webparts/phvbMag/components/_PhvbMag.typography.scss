@@ -1,0 +1,196 @@
+// Typography system extracted from phvb-final.html
+// Font: Plus Jakarta Sans (weights 300–800)
+
+$font-family-base: 'Plus Jakarta Sans', sans-serif;
+
+// Font sizes (px) — preserve exact HTML scale
+$font-size-2xs: 9px;
+$font-size-xs: 9.5px;
+$font-size-sm: 10px;
+$font-size-sm2: 10.5px;
+$font-size-md: 11px;
+$font-size-md2: 11.5px;
+$font-size-base: 12px;
+$font-size-base2: 12.5px;
+$font-size-body: 13px;
+$font-size-lg: 14px;
+$font-size-lg2: 14.5px;
+$font-size-xl: 15px;
+$font-size-2xl: 16px;
+$font-size-3xl: 18px;
+$font-size-stat: 26px;
+
+// Font weights
+$font-weight-light: 300;
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+$font-weight-extrabold: 800;
+
+// Line heights
+$line-height-body: 1.55;
+$line-height-tight: 1;
+$line-height-snug: 1.25;
+$line-height-compact: 1.3;
+$line-height-normal: 1.35;
+$line-height-relaxed: 1.45;
+$line-height-loose: 1.5;
+
+// Letter spacing
+$letter-spacing-tight: -0.5px;
+$letter-spacing-label: 0.07em;
+$letter-spacing-label-wide: 0.08em;
+$letter-spacing-group: 0.09em;
+
+// Semantic text colors (from --ink tokens)
+$text-ink: #1C1510;
+$text-ink2: #6B5A4A;
+$text-ink3: #B0998A;
+
+@mixin ty-body {
+  font-family: $font-family-base;
+  font-size: $font-size-body;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-body;
+}
+
+@mixin ty-section-title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-extrabold;
+  line-height: $line-height-tight;
+}
+
+@mixin ty-page-eyebrow {
+  font-size: $font-size-md2;
+  font-weight: $font-weight-semibold;
+  color: $text-ink3;
+}
+
+@mixin ty-label-upper {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-extrabold;
+  text-transform: uppercase;
+  letter-spacing: $letter-spacing-label;
+  color: $text-ink3;
+}
+
+@mixin ty-label-upper-wide {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-extrabold;
+  text-transform: uppercase;
+  letter-spacing: $letter-spacing-label-wide;
+  color: $text-ink3;
+}
+
+@mixin ty-form-label {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  text-transform: uppercase;
+  letter-spacing: $letter-spacing-label;
+  color: $text-ink2;
+}
+
+@mixin ty-input {
+  font-family: $font-family-base;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-body;
+}
+
+@mixin ty-button {
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+}
+
+@mixin ty-badge {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+}
+
+@mixin ty-table-head {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-extrabold;
+  text-transform: uppercase;
+  letter-spacing: $letter-spacing-label;
+  color: $text-ink3;
+}
+
+@mixin ty-table-cell {
+  font-size: $font-size-base2;
+  font-weight: $font-weight-regular;
+}
+
+@mixin ty-modal-title {
+  font-size: $font-size-lg2;
+  font-weight: $font-weight-extrabold;
+}
+
+@mixin ty-detail-title {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-extrabold;
+  line-height: $line-height-compact;
+}
+
+@mixin ty-stat-value {
+  font-size: $font-size-stat;
+  font-weight: $font-weight-extrabold;
+  line-height: $line-height-tight;
+}
+
+@mixin ty-stat-label {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-extrabold;
+  text-transform: uppercase;
+  letter-spacing: $letter-spacing-label;
+  color: $text-ink3;
+}
+
+@mixin ty-inbox-title {
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-normal;
+}
+
+@mixin ty-inbox-sub {
+  font-size: $font-size-md2;
+  font-weight: $font-weight-regular;
+  color: $text-ink3;
+}
+
+@mixin ty-chip {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+}
+
+// CSS custom properties for runtime reuse (scoped to web part root)
+@mixin phvb-typography-vars {
+  --phvb-font-family: #{$font-family-base};
+  --phvb-font-size-body: #{$font-size-body};
+  --phvb-line-height-body: #{$line-height-body};
+  --phvb-font-size-2xs: #{$font-size-2xs};
+  --phvb-font-size-xs: #{$font-size-xs};
+  --phvb-font-size-sm: #{$font-size-sm};
+  --phvb-font-size-sm2: #{$font-size-sm2};
+  --phvb-font-size-md: #{$font-size-md};
+  --phvb-font-size-md2: #{$font-size-md2};
+  --phvb-font-size-base: #{$font-size-base};
+  --phvb-font-size-base2: #{$font-size-base2};
+  --phvb-font-size-lg: #{$font-size-lg};
+  --phvb-font-size-lg2: #{$font-size-lg2};
+  --phvb-font-size-2xl: #{$font-size-2xl};
+  --phvb-font-size-stat: #{$font-size-stat};
+  --phvb-font-weight-regular: #{$font-weight-regular};
+  --phvb-font-weight-medium: #{$font-weight-medium};
+  --phvb-font-weight-semibold: #{$font-weight-semibold};
+  --phvb-font-weight-bold: #{$font-weight-bold};
+  --phvb-font-weight-extrabold: #{$font-weight-extrabold};
+  --phvb-letter-spacing-label: #{$letter-spacing-label};
+  --phvb-letter-spacing-label-wide: #{$letter-spacing-label-wide};
+  --phvb-letter-spacing-group: #{$letter-spacing-group};
+  --phvb-text-ink: #{$text-ink};
+  --phvb-text-ink2: #{$text-ink2};
+  --phvb-text-ink3: #{$text-ink3};
+}

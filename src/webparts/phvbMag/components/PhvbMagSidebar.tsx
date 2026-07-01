@@ -32,11 +32,10 @@ interface INavItemProps {
   isCollapsed: boolean;
   onSelectTab: (tab: TabType) => void;
   badgeCount?: number;
-  badgeClassName?: string;
 }
 
 function NavItem(props: INavItemProps): React.ReactElement {
-  const { tab, label, icon, activeTab, isCollapsed, onSelectTab, badgeCount, badgeClassName } = props;
+  const { tab, label, icon, activeTab, isCollapsed, onSelectTab, badgeCount } = props;
   const classNames = [styles.navItem, activeTab === tab ? styles.active : '', isCollapsed ? styles.navItemCollapsed : '']
     .filter(Boolean)
     .join(' ');
@@ -45,8 +44,8 @@ function NavItem(props: INavItemProps): React.ReactElement {
     <button type="button" className={classNames} onClick={() => onSelectTab(tab)} title={label}>
       <span className={styles.iconWrapper}>{icon}</span>
       {!isCollapsed && <span className={styles.navText}>{label}</span>}
-      {badgeCount && badgeCount > 0 && (
-        <span className={[styles.countBadge, badgeClassName || ''].filter(Boolean).join(' ')}>{badgeCount}</span>
+      {badgeCount !== undefined && badgeCount > 0 && (
+        <span className={styles.countBadge}>{badgeCount}</span>
       )}
     </button>
   );
@@ -105,7 +104,6 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
             badgeCount={counts.yeuCauCuaToi}
-            badgeClassName={styles.blueBadge}
             icon={<SidebarMyRequestsIcon />}
           />
 
@@ -115,6 +113,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
+            badgeCount={counts.banNhap}
             icon={<SidebarDraftIcon />}
           />
 
@@ -157,6 +156,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
+            badgeCount={counts.qlVanBan}
             icon={<SidebarAdminIcon />}
           />
         </nav>
