@@ -22,7 +22,7 @@ const STANDARD_FORM_RULES: IRequestTypeFormRules = {
   showBieuMauDinhKem: true,
   showGhiChuThamDinh: true,
   requireTaiLieuSoanThao: true,
-  requireNguoiGopY: true,
+  requireNguoiGopY: false,
   requireNguoiThamDinh: true,
   includeGopYThamDinhWorkflow: true,
   includeAttachmentsOnSave: true
@@ -60,6 +60,11 @@ export function getRequestTypeFormRules(requestType: RequestTypeValue): IRequest
 
 export function isRevokeRequestType(requestType: RequestTypeValue): boolean {
   return requestType === 'Thu hồi';
+}
+
+export function shouldSkipGopYStage(input: Pick<ICreateRequestInput, 'requestType' | 'nguoiGopY'>): boolean {
+  const rules = getRequestTypeFormRules(input.requestType);
+  return !rules.includeGopYThamDinhWorkflow || input.nguoiGopY.length === 0;
 }
 
 export function getRevokeExcludedFormFields(): Pick<

@@ -4,8 +4,13 @@ import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { phvbAttachmentService } from './PhvbMagAttachment.service';
 import { phvbWorkflowWriteService } from './PhvbMagWorkflowWrite.service';
 import { generateRequestReferenceId } from '../utils/PhvbMagRequestId.utils';
-import { sanitizeRequestInputForSave } from '../utils/PhvbMagRequestForm.utils';
-import type { ICreateRequestInput, IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbSiteContext, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
+import { sanitizeRequestInputForSave, getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
+import {
+  IWorkflowStageParticipants,
+  resolveDocumentStatusAfterSkippingEmptyStages,
+  resolveStatusForWorkflowStage
+} from '../utils/PhvbMagWorkflowState.utils';
+import type { IAllUserWorkflowItem, ICreateRequestInput, IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbSiteContext, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 
 const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -118,7 +123,7 @@ function getUserScopedFilter(tab: TabType, userEmail: string): string | undefine
 }
 
 function isTodoTab(tab: TabType): boolean {
-  return tab === 'ViecCanLam';
+  return tab === 'TrangChu';
 }
 
 function matchesUserInField(value: string | undefined, userEmail: string): boolean {
@@ -149,11 +154,43 @@ function shouldIncludeFolderOldId(requestType: ICreateRequestInput['requestType'
   return requestType === 'Điều chỉnh' || requestType === 'Thu hồi';
 }
 
+function buildWorkflowParticipantSnapshot(input: ICreateRequestInput): IWorkflowStageParticipants {
+  const rules = getRequestTypeFormRules(input.requestType);
+  const toPlaceholder = (email: string): IAllUserWorkflowItem => ({
+    Id: 0,
+    Email_ThucHien: email
+  });
+
+  return {
+    gopY: rules.includeGopYThamDinhWorkflow ? input.nguoiGopY.map(toPlaceholder) : [],
+    thamDinh: rules.includeGopYThamDinhWorkflow ? input.nguoiThamDinh.map(toPlaceholder) : [],
+    pheDuyet: input.approvalUsers.map(toPlaceholder)
+  };
+}
+
+function resolveInitialSubmitStatus(input: ICreateRequestInput): string {
+  const rules = getRequestTypeFormRules(input.requestType);
+
+  if (!rules.includeGopYThamDinhWorkflow) {
+    return resolveStatusForWorkflowStage('pheduyet');
+  }
+
+  const skippedStatus = resolveDocumentStatusAfterSkippingEmptyStages(
+    REQUEST_STATUS.DANG_GOP_Y,
+    buildWorkflowParticipantSnapshot(input),
+    input.requestType
+  );
+
+  return skippedStatus || REQUEST_STATUS.DANG_GOP_Y;
+}
+
 function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenceId: string): ICreateSharePointPayload {
   const input = sanitizeRequestInputForSave(options.input);
   const today = formatCurrentDate();
   const requestType = input.requestType || input.type;
-  const statusApproved = options.saveMode === 'draft' ? REQUEST_STATUS.BAN_NHAP : REQUEST_STATUS.DANG_GOP_Y;
+  const statusApproved = options.saveMode === 'draft'
+    ? REQUEST_STATUS.BAN_NHAP
+    : resolveInitialSubmitStatus(input);
   const payload: ICreateSharePointPayload = {
     IdYeuCau: requestReferenceId,
     Title: input.title,
@@ -231,7 +268,7 @@ export class PhvbDocumentsService {
     ]);
 
     return {
-      viecCanLam: filterItemsForTab(todoItems, 'ViecCanLam', options.userEmail).length,
+      trangChu: filterItemsForTab(todoItems, 'TrangChu', options.userEmail).length,
       yeuCauCuaToi: myRequestItems.length,
       banNhap: banNhapItems.length,
       capSo: capSoItems.length,

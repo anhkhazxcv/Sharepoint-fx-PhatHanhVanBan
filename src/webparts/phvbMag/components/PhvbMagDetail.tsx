@@ -9,6 +9,7 @@ import { PhvbMagDetailDocumentsTab } from './PhvbMagDetailDocumentsTab';
 import { PhvbMagDetailHeader } from './PhvbMagDetailHeader';
 import { PhvbMagDetailHistoryTab } from './PhvbMagDetailHistoryTab';
 import { PhvbMagDetailInfoTab } from './PhvbMagDetailInfoTab';
+import { PhvbMagDetailRightPanel } from './PhvbMagDetailRightPanel';
 import { PhvbMagDetailStepper } from './PhvbMagDetailStepper';
 import { PhvbMagDetailWorkflowSidebar } from './PhvbMagDetailWorkflowSidebar';
 
@@ -65,8 +66,6 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     onOpenParticipantModal
   } = props;
   const [activeTab, setActiveTab] = useState<DetailTabKey>('info');
-  const [isWorkflowExpanded, setIsWorkflowExpanded] = useState(false);
-  const [isActivityExpanded, setIsActivityExpanded] = useState(false);
   const title = data.release.Tenvanban || data.release.IdYeuCau || 'Chi tiết văn bản';
 
   const renderTabContent = (): React.ReactElement => {
@@ -127,22 +126,18 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
           </div>
         </div>
 
-        <div className={styles.detailRightColumn}>
-          <div className={styles.detailWorkflowSlot}>
+        <PhvbMagDetailRightPanel
+          workflowSlot={(
             <PhvbMagDetailWorkflowSidebar
               release={data.release}
               workflowParticipants={data.workflowParticipants}
-              isExpanded={isWorkflowExpanded}
-              onExpandedChange={setIsWorkflowExpanded}
               canOpenParticipantModal={canOpenParticipantModal}
               onOpenParticipantModal={onOpenParticipantModal}
             />
-          </div>
-          <div className={styles.detailActivitySlot}>
+          )}
+          activitySlot={(
             <PhvbMagDetailActivityFeed
               comments={data.comments}
-              isExpanded={isActivityExpanded}
-              onExpandedChange={setIsActivityExpanded}
               selectedFiles={commentSelectedFiles || []}
               isSaving={isCommentSaving}
               errorMessage={commentErrorMessage}
@@ -150,8 +145,8 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
               onRemoveFile={onCommentRemoveFile || (() => undefined)}
               onSubmitComment={onSubmitComment || (async () => false)}
             />
-          </div>
-        </div>
+          )}
+        />
       </div>
     </div>
   );

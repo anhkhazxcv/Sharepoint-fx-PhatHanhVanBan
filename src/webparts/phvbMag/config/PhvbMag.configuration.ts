@@ -4,6 +4,7 @@ export const DEFAULT_LIST_TITLE = 'InDoc_Release';
 export const ISSUANCE_LIBRARY_TITLE = 'VanBanBanHanh_Ver02';
 export const ATTACHMENT_LIBRARY_TITLE = 'VanBanGopYThamDinh';
 export const COMMENT_ATTACHMENT_LIBRARY_TITLE = 'CommentAttach';
+export const TEMPLATE_LIBRARY_TITLE = 'BieuMau';
 export const HISTORY_LIST_TITLE = 'LichSuThucHien';
 export const COMMENT_HISTORY_STATUS = 'Bình luận';
 export const ALL_USER_GOPY_LIST_TITLE = 'AllUser_GopY';
@@ -13,9 +14,6 @@ export const ATTACHMENT_FORM_SUBFOLDER = 'Biểu Mẫu';
 export const DRAFT_DOCUMENT_ACCEPT = '.docx,.pdf,.xlsx,.xls';
 export const FORM_ATTACHMENT_ACCEPT = '.docx,.pdf,.xlsx,.xls';
 export const ALL_FILTER_VALUE = 'All';
-
-export const DETAIL_PANEL_COLLAPSED_VISIBLE_COUNT = 3;
-export const DETAIL_PANEL_EXPANDED_VISIBLE_COUNT = 5;
 
 export const REQUEST_STATUS = {
   BAN_HANH: 'Ban hành',
@@ -66,7 +64,7 @@ export const WORKFLOW_PARTICIPANT_STATUS = {
 } as const;
 
 export const TAB_LABELS: Record<TabType, string> = {
-  ViecCanLam: 'Việc cần làm',
+  TrangChu: 'Trang chủ',
   YeuCauCuaToi: 'Yêu cầu của tôi',
   BanNhap: 'Bản nháp',
   ThuVienTaiLieu: 'Thư viện tài liệu',

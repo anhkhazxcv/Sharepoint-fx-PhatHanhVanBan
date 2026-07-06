@@ -16,7 +16,8 @@ import {
   getRequestTypeFormRules,
   getRevokeExcludedFormFields,
   isRevokeRequestType,
-  sanitizeRequestInputForSave
+  sanitizeRequestInputForSave,
+  shouldSkipGopYStage
 } from '../utils/PhvbMagRequestForm.utils';
 import styles from './PhvbMag.module.scss';
 import {
@@ -256,7 +257,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
         deadlineThamDinh: nextValues.deadlineThamDinh,
         deadlinePheDuyet: nextValues.deadlinePheDuyet,
         loaiSla: nextValues.loaiSla,
-        skipGopY: !openRules.includeGopYThamDinhWorkflow,
+        skipGopY: shouldSkipGopYStage(nextValues),
         skipThamDinh: !openRules.includeGopYThamDinhWorkflow
       }));
       setShowFolderPicker(false);
@@ -411,7 +412,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
       deadlineThamDinh: values.deadlineThamDinh,
       deadlinePheDuyet: values.deadlinePheDuyet,
       loaiSla: values.loaiSla,
-      skipGopY: !rules.includeGopYThamDinhWorkflow,
+      skipGopY: shouldSkipGopYStage(values),
       skipThamDinh: !rules.includeGopYThamDinhWorkflow
     });
   };
@@ -441,8 +442,11 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
 
   const slaMaxDeadline = getSlaMaxDeadline(formValues.loaiSla);
   const todayInputDate = getTodayInputDate();
+  const skipGopYStage = shouldSkipGopYStage(formValues);
   const gopYMaxDate = shiftInputDate(formValues.deadlineThamDinh || '', -1) || slaMaxDeadline;
-  const thamDinhMinDate = shiftInputDate(formValues.deadlineGopY || '', 1) || todayInputDate;
+  const thamDinhMinDate = skipGopYStage
+    ? todayInputDate
+    : shiftInputDate(formValues.deadlineGopY || '', 1) || todayInputDate;
   const thamDinhMaxDate = shiftInputDate(formValues.deadlinePheDuyet || '', -1) || slaMaxDeadline;
   const pheDuyetMinDate = formRules.includeGopYThamDinhWorkflow
     ? shiftInputDate(formValues.deadlineThamDinh || '', 1) || todayInputDate
@@ -944,7 +948,14 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   label="NGƯỜI GÓP Ý"
                   required={formRules.requireNguoiGopY}
                   selectedEmails={formValues.nguoiGopY}
-                  onChange={emails => updateField('nguoiGopY', emails)}
+                  onChange={emails => {
+                    const nextState = {
+                      ...formValues,
+                      nguoiGopY: emails
+                    };
+                    setFormValues(nextState);
+                    setDeadlineErrors(runDeadlineValidation(nextState));
+                  }}
                   approvers={approvers}
                   deadlineValue={formValues.deadlineGopY}
                   onDeadlineChange={date => handleDeadlineChange('deadlineGopY', date)}

@@ -6,7 +6,7 @@ import type {
   IPhvbSiteContext,
   ISelectedBanHanhFolder
 } from '../models/PhvbMag.models';
-import { phvbBanHanhService } from '../services/PhvbMagBanHanh.service';
+import { phvbDocumentLibraryService } from '../services/PhvbMagDocumentLibrary.service';
 import { ISSUANCE_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
 import { buildFolderTree, formatBanHanhDate, getFilesInFolder, getStoragePathAfterLibrary, truncateText } from '../utils/PhvbMagBanHanh.tree';
 import { PhvbMagFolderConfirmDialog } from './PhvbMagFolderConfirmDialog';
@@ -135,7 +135,7 @@ export function PhvbMagFolderPickerDialog(props: IPhvbMagFolderPickerDialogProps
       setExpandedPaths(new Set<string>());
 
       try {
-        const items = await phvbBanHanhService.loadLibraryItems(siteContext);
+        const items = await phvbDocumentLibraryService.loadBanHanhLibraryItems(siteContext);
         if (!isMounted) {
           return;
         }

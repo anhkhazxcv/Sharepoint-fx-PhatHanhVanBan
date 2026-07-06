@@ -1,6 +1,7 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { resolveListTitle } from '../config/PhvbMag.configuration';
-import { DEFAULT_LIST_PAGE_SIZE, escapeODataValue, getCandidateSiteUrls, MAX_LIST_FETCH_TOP, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
+import { DEFAULT_LIST_PAGE_SIZE, escapeODataValue, MAX_LIST_FETCH_TOP, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
+import { ensureSharePointResponseOk, tryAcrossCandidateSites } from '../infrastructure/SharePointHttp.utils';
 import { SharePointRequestError } from '../services/PhvbMag.error';
 import type { IPhvbSiteContext, IVanBanItem } from '../models/PhvbMag.models';
 
@@ -142,24 +143,10 @@ async function readJson<T>(response: SPHttpClientResponse): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function ensureOk(response: SPHttpClientResponse, requestUrl: string): Promise<SPHttpClientResponse> {
-  if (!response.ok) {
-    const details = await response.text();
-    throw new SharePointRequestError(
-      `SharePoint request failed with status ${response.status}`,
-      response.status,
-      requestUrl,
-      details
-    );
-  }
-
-  return response;
-}
-
 async function runGetRequest(siteUrl: string, query: IFetchPhvbItemsQuery, selectFields: string[]): Promise<SPHttpClientResponse> {
   const requestUrl = `${getItemsEndpoint(siteUrl, query.listTitle)}?${buildQueryString(query, selectFields)}`;
   const response = await query.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-  return ensureOk(response, requestUrl);
+  return ensureSharePointResponseOk(response, requestUrl);
 }
 
 async function runPostRequest(siteUrl: string, command: ICreatePhvbItemCommand): Promise<number> {
@@ -173,7 +160,7 @@ async function runPostRequest(siteUrl: string, command: ICreatePhvbItemCommand):
     }
   });
 
-  await ensureOk(response, requestUrl);
+  await ensureSharePointResponseOk(response, requestUrl);
   const data = await response.json() as { Id?: number; ID?: number };
   const createdId = data.Id || data.ID;
 
@@ -202,7 +189,7 @@ async function runPatchRequest(siteUrl: string, command: IUpdatePhvbItemCommand)
     }
   });
 
-  await ensureOk(response, requestUrl);
+  await ensureSharePointResponseOk(response, requestUrl);
 }
 
 async function runDeleteRequest(siteUrl: string, command: IDeletePhvbItemCommand): Promise<void> {
@@ -217,29 +204,7 @@ async function runDeleteRequest(siteUrl: string, command: IDeletePhvbItemCommand
     }
   });
 
-  await ensureOk(response, requestUrl);
-}
-
-async function tryAcrossCandidateSites<T>(
-  context: IPhvbSiteContext,
-  runner: (siteUrl: string) => Promise<T>
-): Promise<T> {
-  const candidates = getCandidateSiteUrls(context);
-  let lastError: unknown = null;
-
-  if (candidates.length === 0) {
-    throw new Error('Missing SharePoint site context.');
-  }
-
-  for (let index = 0; index < candidates.length; index += 1) {
-    try {
-      return await runner(candidates[index]);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError || new Error('Unable to resolve SharePoint data source.');
+  await ensureSharePointResponseOk(response, requestUrl);
 }
 
 export class SharePointPhvbRepository implements IPhvbRepository {

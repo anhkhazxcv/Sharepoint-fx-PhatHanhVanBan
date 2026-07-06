@@ -109,10 +109,10 @@ export interface IEditRequestContext {
   idYeuCau: string;
 }
 
-export type TabType = 'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'CapSo' | 'QLVanBan';
+export type TabType = 'TrangChu' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'CapSo' | 'QLVanBan';
 
 export interface ITabCounts {
-  viecCanLam: number;
+  trangChu: number;
   yeuCauCuaToi: number;
   banNhap: number;
   capSo: number;
@@ -169,6 +169,13 @@ export interface IBanHanhLibraryItem {
   fileUrl: string;
 }
 
+export interface ITemplateLibraryItem {
+  id: number;
+  name: string;
+  fileExtension: string;
+  fileUrl: string;
+}
+
 export interface IBanHanhFolderNode {
   id: number;
   name: string;
@@ -217,7 +224,7 @@ export type BadgeVariant = 'badgeTC' | 'badgeQC' | 'badgeQD' | 'badgeCS' | 'badg
 export type UniqueItemField = 'LoaiYeuCau' | 'KhoaPhongNguoiTao';
 
 export const DEFAULT_TAB_COUNTS: ITabCounts = {
-  viecCanLam: 0,
+  trangChu: 0,
   yeuCauCuaToi: 0,
   banNhap: 0,
   capSo: 0,

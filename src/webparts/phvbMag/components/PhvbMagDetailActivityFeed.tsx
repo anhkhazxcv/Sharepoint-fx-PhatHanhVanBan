@@ -1,10 +1,6 @@
 import * as React from 'react';
 import { useMemo, useRef, useState } from 'react';
-import {
-  DETAIL_PANEL_COLLAPSED_VISIBLE_COUNT,
-  DETAIL_PANEL_EXPANDED_VISIBLE_COUNT,
-  DRAFT_DOCUMENT_ACCEPT
-} from '../config/PhvbMag.configuration';
+import { DRAFT_DOCUMENT_ACCEPT } from '../config/PhvbMag.configuration';
 import type { ICommentWithAttachments } from '../models/PhvbMag.models';
 import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { DeleteFileIcon, UploadDocumentIcon } from './PhvbMagIcons';
@@ -13,8 +9,6 @@ import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagDetailActivityFeedProps {
   comments: ICommentWithAttachments[];
-  isExpanded: boolean;
-  onExpandedChange: (expanded: boolean) => void;
   selectedFiles: File[];
   isSaving?: boolean;
   errorMessage?: string;
@@ -230,8 +224,6 @@ function ActivityCommentComposer(props: IActivityCommentComposerProps): React.Re
 export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps): React.ReactElement {
   const {
     comments,
-    isExpanded,
-    onExpandedChange,
     selectedFiles,
     isSaving,
     errorMessage,
@@ -244,17 +236,11 @@ export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps
     return comments.slice().sort((left, right) => right.Id - left.Id);
   }, [comments]);
 
-  const visibleComments = isExpanded
-    ? sortedComments
-    : sortedComments.slice(0, DETAIL_PANEL_COLLAPSED_VISIBLE_COUNT);
-
-  const hiddenCount = Math.max(0, sortedComments.length - visibleComments.length);
-  const canExpand = sortedComments.length > DETAIL_PANEL_COLLAPSED_VISIBLE_COUNT;
-
   return (
     <PhvbMagSidebarAccordion
       title="Trao đổi & hoạt động"
       badge={comments.length}
+      fillHeight
       defaultOpen
       footer={(
         <ActivityCommentComposer
@@ -272,44 +258,13 @@ export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps
           {comments.length} hoạt động / bình luận
         </div>
 
-        <div
-          className={[
-            styles.detailActivityFeed,
-            isExpanded ? styles.detailActivityFeedExpanded : styles.detailActivityFeedCollapsed
-          ].filter(Boolean).join(' ')}
-        >
-          {visibleComments.length === 0 ? (
+        <div className={styles.detailActivityFeed}>
+          {sortedComments.length === 0 ? (
             <p className={styles.detailWorkflowEmpty}>Chưa có trao đổi nào.</p>
           ) : (
-            visibleComments.map(item => <ActivityCommentItem key={item.Id} item={item} />)
+            sortedComments.map(item => <ActivityCommentItem key={item.Id} item={item} />)
           )}
         </div>
-
-        {hiddenCount > 0 && !isExpanded && canExpand ? (
-          <button
-            type="button"
-            className={styles.detailSidebarExpandBtn}
-            onClick={() => onExpandedChange(true)}
-          >
-            Xem tất cả hoạt động ({sortedComments.length})
-          </button>
-        ) : null}
-
-        {isExpanded && sortedComments.length > DETAIL_PANEL_EXPANDED_VISIBLE_COUNT ? (
-          <div className={styles.detailWorkflowSummaryMuted}>
-            Cuộn để xem thêm {sortedComments.length - DETAIL_PANEL_EXPANDED_VISIBLE_COUNT} hoạt động
-          </div>
-        ) : null}
-
-        {isExpanded && canExpand ? (
-          <button
-            type="button"
-            className={styles.detailSidebarExpandBtnMuted}
-            onClick={() => onExpandedChange(false)}
-          >
-            Thu gọn hoạt động
-          </button>
-        ) : null}
       </div>
     </PhvbMagSidebarAccordion>
   );

@@ -1,7 +1,8 @@
-import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
+import { SPHttpClient } from '@microsoft/sp-http';
 import { COMMENT_ATTACHMENT_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
 import { escapeODataValue, getCandidateSiteUrls, getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { resolveCommentAttachmentFolderName } from '../utils/PhvbMagCommentAttachment.utils';
+import { ensureSharePointResponseOk } from '../infrastructure/SharePointHttp.utils';
 import { SharePointRequestError } from './PhvbMag.error';
 import type { ICommentAttachmentItem, IPhvbSiteContext } from '../models/PhvbMag.models';
 
@@ -38,20 +39,6 @@ function splitRelativePath(value: string): string[] {
     .filter(segment => Boolean(segment));
 }
 
-async function ensureOk(response: SPHttpClientResponse, requestUrl: string): Promise<SPHttpClientResponse> {
-  if (!response.ok) {
-    const details = await response.text();
-    throw new SharePointRequestError(
-      `SharePoint request failed with status ${response.status}`,
-      response.status,
-      requestUrl,
-      details
-    );
-  }
-
-  return response;
-}
-
 async function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
   return new Promise<ArrayBuffer>((resolve, reject) => {
     const reader = new FileReader();
@@ -83,7 +70,7 @@ export class PhvbCommentAttachmentService {
   private async getLibraryRootFolder(siteUrl: string, context: IPhvbSiteContext): Promise<string> {
     const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(COMMENT_ATTACHMENT_LIBRARY_TITLE)}')/RootFolder?$select=ServerRelativeUrl`;
     const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-    await ensureOk(response, requestUrl);
+    await ensureSharePointResponseOk(response, requestUrl);
     const data = await response.json() as { ServerRelativeUrl?: string };
 
     if (!data.ServerRelativeUrl) {
@@ -194,7 +181,7 @@ export class PhvbCommentAttachmentService {
       }
     });
 
-    await ensureOk(response, requestUrl);
+    await ensureSharePointResponseOk(response, requestUrl);
   }
 
   public async uploadCommentFiles(
@@ -276,7 +263,7 @@ export class PhvbCommentAttachmentService {
           '@folderPath': folderPath
         })}`;
         const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-        await ensureOk(response, requestUrl);
+        await ensureSharePointResponseOk(response, requestUrl);
         const data = await response.json() as { value?: ISharePointFolderFile[] };
         const items = data.value || [];
 

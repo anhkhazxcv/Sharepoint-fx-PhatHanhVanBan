@@ -34,7 +34,7 @@ interface IUsePhvbDocumentsResult {
 
 export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDocumentsResult {
   const { userDisplayName, userEmail, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, spHttpClient } = options;
-  const [activeTab, setActiveTab] = useState<TabType>('ViecCanLam');
+  const [activeTab, setActiveTab] = useState<TabType>('TrangChu');
   const [counts, setCounts] = useState<ITabCounts>(DEFAULT_TAB_COUNTS);
   const [items, setItems] = useState<IVanBanItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);

@@ -1,9 +1,6 @@
-import {
-  DETAIL_PANEL_COLLAPSED_VISIBLE_COUNT,
-  DETAIL_PANEL_EXPANDED_VISIBLE_COUNT,
-  WORKFLOW_PARTICIPANT_STATUS
-} from '../config/PhvbMag.configuration';
+import { WORKFLOW_PARTICIPANT_STATUS } from '../config/PhvbMag.configuration';
 import type { IVanBanItem, IWorkflowParticipantItem, WorkflowStage } from '../models/PhvbMag.models';
+import { formatExecutionDateTime, parseExecutionDateTime } from './PhvbMagDateTime.utils';
 
 export type WorkflowStepTone = 'done' | 'active' | 'pending';
 
@@ -12,8 +9,10 @@ export interface IWorkflowTimelineStep {
   stageLabel: string;
   name: string;
   meta?: string;
+  subtitle?: string;
   status?: string;
   statusTone: WorkflowStepTone;
+  stepNumber: number;
 }
 
 const STAGE_LABELS: Record<WorkflowStage, string> = {
@@ -81,12 +80,96 @@ export function resolveWorkflowStepTone(status?: string): WorkflowStepTone {
   return 'pending';
 }
 
-function resolveParticipantMeta(participant: IWorkflowParticipantItem): string | undefined {
-  if (!isWorkflowParticipantConfirmed(participant.TrangThai_ThucHien)) {
+function formatShortDayMonth(value?: string): string | undefined {
+  const parsed = parseExecutionDateTime(value);
+
+  if (!parsed || isNaN(parsed.getTime())) {
     return undefined;
   }
 
-  return participant.Modified || undefined;
+  const day = parsed.getDate();
+  const month = parsed.getMonth() + 1;
+  return `${day < 10 ? `0${day}` : day}/${month < 10 ? `0${month}` : month}`;
+}
+
+function resolveStageDeadline(release: IVanBanItem, stage: WorkflowStage): string | undefined {
+  switch (stage) {
+    case 'gopy':
+      return release.Date_GopY;
+    case 'thamdinh':
+      return release.Date_ThamDinh;
+    case 'pheduyet':
+      return release.Date_PheDuyet;
+    default:
+      return undefined;
+  }
+}
+
+function buildParticipantSubtitle(
+  release: IVanBanItem,
+  participant: IWorkflowParticipantItem,
+  stage: WorkflowStage
+): string | undefined {
+  const parts: string[] = [];
+
+  if (participant.PhongBan_ThucHien) {
+    parts.push(participant.PhongBan_ThucHien);
+  }
+
+  const deadline = formatShortDayMonth(resolveStageDeadline(release, stage));
+  if (deadline) {
+    parts.push(`HĐ ${deadline}`);
+  }
+
+  if (isWorkflowParticipantConfirmed(participant.TrangThai_ThucHien)) {
+    const doneDate = formatShortDayMonth(participant.Modified || participant.Ngay_ThucHien);
+    if (doneDate) {
+      parts.push(`Done ${doneDate}`);
+    }
+  } else if (isWorkflowParticipantUnconfirmed(participant.TrangThai_ThucHien)) {
+    const normalized = normalizeStatusValue(participant.TrangThai_ThucHien);
+    if (normalized === 'chua den luot') {
+      parts.push(WORKFLOW_PARTICIPANT_STATUS.CHUA_DEN_LUOT);
+    }
+  }
+
+  return parts.length > 0 ? parts.join(' · ') : undefined;
+}
+
+export function resolveWorkflowStepStatusChip(step: IWorkflowTimelineStep): string {
+  if (step.statusTone === 'active') {
+    return 'Đang xử lý';
+  }
+
+  if (step.statusTone === 'pending') {
+    return 'Chờ';
+  }
+
+  if (step.id === 'draft-creator') {
+    return step.status || 'Hoàn thành';
+  }
+
+  if (step.stageLabel === 'Góp ý' && step.status === WORKFLOW_PARTICIPANT_STATUS.DA_XAC_NHAN) {
+    return 'Đồng ý';
+  }
+
+  return step.status || WORKFLOW_PARTICIPANT_STATUS.DA_XAC_NHAN;
+}
+
+export function getWorkflowStepDisplayInitials(name: string): string {
+  const normalized = name.trim();
+
+  if (!normalized) {
+    return '?';
+  }
+
+  const parts = normalized.split(/\s+/).filter(Boolean);
+
+  if (parts.length === 1) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+
+  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
 }
 
 function markCurrentPendingStep(steps: IWorkflowTimelineStep[]): void {
@@ -116,8 +199,10 @@ export function buildWorkflowTimelineSteps(
       stageLabel: 'Soạn thảo',
       name: release.NguoiTao || '---',
       meta: release.NgayTaoYeuCau,
+      subtitle: release.NgayTaoYeuCau ? formatExecutionDateTime(release.NgayTaoYeuCau) : undefined,
       status: 'Hoàn thành',
-      statusTone: 'done'
+      statusTone: 'done',
+      stepNumber: 1
     }
   ];
 
@@ -130,12 +215,12 @@ export function buildWorkflowTimelineSteps(
         steps.push({
           id: `participant-${stage}-${participant.Id}`,
           stageLabel: STAGE_LABELS[stage],
-          name: participant.PhongBan_ThucHien
-            ? `${participant.User_ThucHien || '---'} (${participant.PhongBan_ThucHien})`
-            : (participant.User_ThucHien || '---'),
-          meta: resolveParticipantMeta(participant),
+          name: participant.User_ThucHien || '---',
+          meta: participant.Modified || participant.Ngay_ThucHien,
+          subtitle: buildParticipantSubtitle(release, participant, stage),
           status: resolveWorkflowParticipantStatusLabel(participant.TrangThai_ThucHien),
-          statusTone: resolveWorkflowStepTone(participant.TrangThai_ThucHien)
+          statusTone: resolveWorkflowStepTone(participant.TrangThai_ThucHien),
+          stepNumber: steps.length + 1
         });
       });
   });
@@ -171,54 +256,4 @@ export function findCurrentWorkflowStepIndex(steps: IWorkflowTimelineStep[]): nu
   }
 
   return steps.length - 1;
-}
-
-export interface IWorkflowTimelineWindow {
-  visibleSteps: IWorkflowTimelineStep[];
-  completedHiddenCount: number;
-  pendingHiddenCount: number;
-  currentIndex: number;
-}
-
-const COLLAPSED_VISIBLE_STEP_COUNT = DETAIL_PANEL_COLLAPSED_VISIBLE_COUNT;
-const EXPANDED_VISIBLE_STEP_COUNT = DETAIL_PANEL_EXPANDED_VISIBLE_COUNT;
-
-export function getWorkflowTimelineWindow(
-  steps: IWorkflowTimelineStep[],
-  isExpanded: boolean
-): IWorkflowTimelineWindow {
-  const currentIndex = findCurrentWorkflowStepIndex(steps);
-
-  if (isExpanded) {
-    return {
-      visibleSteps: steps,
-      completedHiddenCount: 0,
-      pendingHiddenCount: Math.max(0, steps.length - EXPANDED_VISIBLE_STEP_COUNT),
-      currentIndex
-    };
-  }
-
-  if (steps.length <= COLLAPSED_VISIBLE_STEP_COUNT) {
-    return {
-      visibleSteps: steps,
-      completedHiddenCount: 0,
-      pendingHiddenCount: 0,
-      currentIndex
-    };
-  }
-
-  let start = Math.max(0, currentIndex - 1);
-  let end = start + COLLAPSED_VISIBLE_STEP_COUNT;
-
-  if (end > steps.length) {
-    end = steps.length;
-    start = Math.max(0, end - COLLAPSED_VISIBLE_STEP_COUNT);
-  }
-
-  return {
-    visibleSteps: steps.slice(start, end),
-    completedHiddenCount: start,
-    pendingHiddenCount: steps.length - end,
-    currentIndex
-  };
 }

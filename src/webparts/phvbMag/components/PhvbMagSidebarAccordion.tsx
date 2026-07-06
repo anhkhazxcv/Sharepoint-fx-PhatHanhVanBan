@@ -5,6 +5,8 @@ import styles from './PhvbMag.module.scss';
 interface IPhvbMagSidebarAccordionProps {
   title: string;
   badge?: string | number;
+  titleSuffix?: string;
+  headerActions?: React.ReactNode;
   defaultOpen?: boolean;
   bodyMaxHeight?: number;
   className?: string;
@@ -18,6 +20,8 @@ export function PhvbMagSidebarAccordion(props: IPhvbMagSidebarAccordionProps): R
   const {
     title,
     badge,
+    titleSuffix,
+    headerActions,
     defaultOpen = true,
     bodyMaxHeight = 320,
     className,
@@ -33,8 +37,13 @@ export function PhvbMagSidebarAccordion(props: IPhvbMagSidebarAccordionProps): R
     styles.detailSidebarAccordion,
     fillHeight ? styles.detailSidebarAccordionFill : '',
     compact ? styles.detailSidebarAccordionCompact : '',
+    !isOpen || compact ? styles.detailSidebarAccordionCollapsed : '',
     className || ''
   ].filter(Boolean).join(' ');
+
+  const stopHeaderActionToggle = (event: React.SyntheticEvent): void => {
+    event.stopPropagation();
+  };
 
   return (
     <section className={sectionClassName}>
@@ -47,17 +56,32 @@ export function PhvbMagSidebarAccordion(props: IPhvbMagSidebarAccordionProps): R
       >
         <span className={styles.detailSidebarAccordionTitleRow}>
           <span className={styles.detailSidebarAccordionTitle}>{title}</span>
+          {titleSuffix ? (
+            <span className={styles.detailSidebarAccordionTitleSuffix}>{titleSuffix}</span>
+          ) : null}
           {badge !== undefined && badge !== null && `${badge}` !== '' ? (
             <span className={styles.detailSidebarAccordionBadge}>{badge}</span>
           ) : null}
         </span>
-        <span
-          className={[
-            styles.detailSidebarAccordionChevron,
-            isOpen && !compact ? styles.detailSidebarAccordionChevronOpen : ''
-          ].filter(Boolean).join(' ')}
-          aria-hidden="true"
-        />
+
+        <span className={styles.detailSidebarAccordionHeaderActions}>
+          {headerActions ? (
+            <span
+              className={styles.detailSidebarAccordionHeaderActionsSlot}
+              onClick={stopHeaderActionToggle}
+              onPointerDown={stopHeaderActionToggle}
+            >
+              {headerActions}
+            </span>
+          ) : null}
+          <span
+            className={[
+              styles.detailSidebarAccordionChevron,
+              isOpen && !compact ? styles.detailSidebarAccordionChevronOpen : ''
+            ].filter(Boolean).join(' ')}
+            aria-hidden="true"
+          />
+        </span>
       </button>
 
       {isOpen && !compact ? (

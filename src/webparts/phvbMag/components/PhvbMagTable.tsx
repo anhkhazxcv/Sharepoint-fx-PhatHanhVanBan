@@ -649,7 +649,7 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
 function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
   const { activeTab, items, isLoading, searchQuery, onSearchChange, onSelectItem } = props;
   const [metricFilter, setMetricFilter] = React.useState<TaskMetricFilterKey>('all');
-  const isTaskTab = activeTab === 'ViecCanLam';
+  const isTaskTab = activeTab === 'TrangChu';
   const today = toStartOfDay(new Date());
   const metrics = isTaskTab ? getMetricCards(items, today, activeTab) : [];
   const sectionTitle = isTaskTab ? 'Cần xử lý' : TAB_LABELS[activeTab];

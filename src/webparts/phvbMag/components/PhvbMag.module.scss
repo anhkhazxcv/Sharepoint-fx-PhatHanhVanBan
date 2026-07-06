@@ -40,6 +40,20 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   .contentPaneDetail {
     width: 100%;
     max-width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detailPage {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .detailBodySplit {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
   }
 }
 
@@ -131,19 +145,20 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     .logoBox {
       width: 40px;
       height: 40px;
-      background-color: $primary-color;
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 12px rgba(123, 76, 44, 0.2);
+      overflow: hidden;
+      flex-shrink: 0;
+      background-color: rgb(117, 84, 33);
+      box-shadow: 0 4px 12px rgba(44, 37, 32, 0.18);
 
-      .logoM {
-        color: #FFFFFF;
-        font-weight: $font-weight-extrabold;
-        font-size: $font-size-lg;
-        font-family: $font-family-base;
-        letter-spacing: $letter-spacing-tight;
+      .logoImage {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: contain;
       }
     }
 
@@ -3370,6 +3385,195 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   }
 }
 
+.templateModalContent {
+  width: min(720px, calc(100vw - 40px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: $shadow-lg;
+  overflow: hidden;
+  animation: scaleUp 0.2s ease;
+}
+
+.templateModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #EFE5DA;
+
+  h4 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: $font-weight-extrabold;
+    color: $text-ink;
+  }
+}
+
+.templateModalTitleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.templateModalTitleIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: #F3EEFC;
+  color: #6B4AA8;
+  flex-shrink: 0;
+}
+
+.templateModalClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #E7DACB;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: $text-ink3;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #FBF8F4;
+    color: $primary-color;
+  }
+}
+
+.templateModalIntro {
+  margin: 0;
+  padding: 14px 24px 0;
+  font-size: $font-size-base;
+  line-height: $line-height-relaxed;
+  color: $text-ink3;
+}
+
+.templateModalBody {
+  padding: 16px 24px;
+  overflow-y: auto;
+  min-height: 120px;
+}
+
+.templateModalStatus,
+.templateModalError {
+  margin: 0;
+  padding: 12px 0;
+  font-size: $font-size-base;
+  color: $text-ink3;
+}
+
+.templateModalError {
+  color: #C14D56;
+}
+
+.templateModalList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.templateModalItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid #E7DACB;
+  border-radius: 12px;
+  background-color: #FFFFFF;
+}
+
+.templateModalItemIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #FAF6F0;
+  flex-shrink: 0;
+}
+
+.templateModalItemMain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.templateModalItemTitle {
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  color: $text-ink;
+  line-height: $line-height-tight;
+  word-break: break-word;
+}
+
+.templateModalItemMeta {
+  font-size: $font-size-sm2;
+  color: $text-ink3;
+}
+
+.templateModalDownloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid #E2D6C8;
+  border-radius: 999px;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #FBF8F4;
+    border-color: rgba(123, 76, 44, 0.28);
+    color: $primary-color;
+  }
+}
+
+.templateModalFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 24px 20px;
+  border-top: 1px solid #EFE5DA;
+}
+
+.templateModalCloseBtn {
+  min-height: 38px;
+  padding: 0 18px;
+  border: 1px solid #E2D6C8;
+  border-radius: 10px;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #FBF8F4;
+    color: $primary-color;
+  }
+}
+
 .workflowParticipantModalHeader {
   display: flex;
   align-items: center;
@@ -3525,21 +3729,33 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   color: #C14D56;
 }
 
-.detailWorkflowManageParticipantsBtn {
-  width: 100%;
-  margin-top: 10px;
-  min-height: 36px;
-  border: 1px solid rgba(139, 90, 57, 0.28);
-  border-radius: 8px;
+.detailWorkflowAdjustParticipantsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #E2D6C8;
+  border-radius: 999px;
   background-color: #FFFFFF;
-  color: $primary-color;
-  font-size: 13px;
-  font-weight: 600;
+  color: $text-ink2;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+  white-space: nowrap;
   cursor: pointer;
 
   &:hover {
-    background-color: rgba(139, 90, 57, 0.06);
+    background-color: #FBF8F4;
+    border-color: rgba(123, 76, 44, 0.28);
+    color: $primary-color;
   }
+}
+
+.detailWorkflowAdjustParticipantsBtnIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: $text-ink3;
 }
 
 @media (max-width: 900px) {
@@ -3565,8 +3781,6 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 // -------------------------------------------------------------
 $detail-stepper-height: 72px;
 $detail-page-gap: 18px;
-$detail-workflow-item-height: 88px;
-$detail-activity-item-height: 100px;
 
 .contentPaneDetail {
   padding: 20px 24px 28px;
@@ -3594,12 +3808,12 @@ $detail-activity-item-height: 100px;
 }
 
 .detailBodySplit {
-  flex: 0 0 auto;
-  min-height: auto;
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(360px, 400px);
   gap: $detail-page-gap;
-  align-items: start;
+  align-items: stretch;
 }
 
 .detailLeftColumn {
@@ -3932,9 +4146,16 @@ $detail-activity-item-height: 100px;
 .detailRightColumn {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
   min-width: 0;
-  overflow: visible;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.detailRightColumnResizing {
+  user-select: none;
+  cursor: row-resize;
 }
 
 .detailWorkflowSlot,
@@ -3943,9 +4164,70 @@ $detail-activity-item-height: 100px;
   flex-direction: column;
   flex: 0 0 auto;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 
   > .detailSidebarAccordion {
     width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  > .detailSidebarAccordionCollapsed {
+    flex: 0 0 auto;
+    min-height: auto;
+  }
+}
+
+.detailWorkflowSlot:has(> .detailSidebarAccordionCollapsed),
+.detailActivitySlot:has(> .detailSidebarAccordionCollapsed) {
+  flex: 0 0 auto !important;
+  min-height: auto;
+}
+
+.detailRightColumn:has(.detailWorkflowSlot > .detailSidebarAccordionCollapsed)
+  .detailActivitySlot:not(:has(> .detailSidebarAccordionCollapsed)) {
+  flex: 1 1 auto !important;
+}
+
+.detailRightColumn:has(.detailActivitySlot > .detailSidebarAccordionCollapsed)
+  .detailWorkflowSlot:not(:has(> .detailSidebarAccordionCollapsed)) {
+  flex: 1 1 auto !important;
+}
+
+.detailRightColumn:has(.detailSidebarAccordionCollapsed) .detailRightPanelSplitter {
+  display: none;
+}
+
+.detailActivitySlot {
+  flex: 1 1 auto;
+}
+
+.detailRightPanelSplitter {
+  flex: 0 0 10px;
+  margin: 2px 0;
+  border-radius: 999px;
+  background-color: transparent;
+  cursor: row-resize;
+  position: relative;
+  touch-action: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 4px;
+    border-radius: 999px;
+    background-color: #D8CEC4;
+    transition: background-color 0.15s ease;
+  }
+
+  &:hover::before,
+  &.detailRightPanelSplitterActive::before {
+    background-color: rgba(123, 76, 44, 0.55);
   }
 }
 
@@ -4162,11 +4444,17 @@ $detail-activity-item-height: 100px;
   }
 
   .detailActivityFeed,
-  .detailWorkflowTimeline {
+  .detailWorkflowStepList {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
   }
+}
+
+.detailSidebarAccordionCollapsed {
+  flex: 0 0 auto !important;
+  min-height: auto;
+  overflow: visible;
 }
 
 .detailSidebarAccordionCompact {
@@ -4216,6 +4504,27 @@ $detail-activity-item-height: 100px;
   text-transform: uppercase;
 }
 
+.detailSidebarAccordionTitleSuffix {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label-wide;
+  color: $text-ink3;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.detailSidebarAccordionHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.detailSidebarAccordionHeaderActionsSlot {
+  display: inline-flex;
+  align-items: center;
+}
+
 .detailSidebarAccordionBadge {
   display: inline-flex;
   align-items: center;
@@ -4252,37 +4561,6 @@ $detail-activity-item-height: 100px;
   padding: 0 16px 16px;
 }
 
-.detailSidebarExpandBtn,
-.detailSidebarExpandBtnMuted {
-  width: 100%;
-  margin-top: 10px;
-  min-height: 32px;
-  border-radius: 8px;
-  font-size: $font-size-md;
-  font-weight: $font-weight-bold;
-  cursor: pointer;
-}
-
-.detailSidebarExpandBtn {
-  border: 1px solid #E7DACB;
-  background-color: #FBF8F4;
-  color: $primary-color;
-
-  &:hover {
-    background-color: #F5EDE4;
-  }
-}
-
-.detailSidebarExpandBtnMuted {
-  border: none;
-  background: transparent;
-  color: $text-ink3;
-
-  &:hover {
-    color: $primary-color;
-  }
-}
-
 .detailSidebarSection {
   background-color: #FFFFFF;
   border: 1px solid #E7DACB;
@@ -4305,74 +4583,152 @@ $detail-activity-item-height: 100px;
   min-height: 0;
 }
 
-.detailWorkflowSummary,
-.detailWorkflowSummaryMuted {
-  margin: 0 0 10px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: $font-size-md;
-  font-weight: $font-weight-bold;
-}
-
-.detailWorkflowSummary {
-  background-color: #EAF6EF;
-  color: #2E8D61;
-}
-
-.detailWorkflowSummaryMuted {
-  background-color: #F7F3EE;
-  color: $text-ink3;
-  font-weight: $font-weight-semibold;
-}
-
-.detailWorkflowTimeline {
+.detailWorkflowStepList {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-.detailWorkflowTimelineCollapsed {
-  max-height: calc(#{$detail-workflow-item-height} * 3);
-  overflow: hidden;
-}
-
-.detailWorkflowTimelineExpanded {
-  max-height: calc(#{$detail-workflow-item-height} * 5);
-  overflow-y: auto;
-  scrollbar-width: thin;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: #D8CEC3;
-    border-radius: 999px;
-  }
-}
-
-.detailWorkflowGroup {
-  display: flex;
-  flex-direction: column;
-}
-
-.detailWorkflowGroupTitle {
-  margin: 0 0 8px;
-  font-size: $font-size-base;
-  font-weight: $font-weight-extrabold;
-  color: $text-ink;
-  display: flex;
-  align-items: center;
   gap: 8px;
 }
 
-.detailWorkflowGroupCount {
+.detailWorkflowStepCard {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.detailWorkflowStepCardDone {
+  background-color: #EEF8F1;
+  border-color: #CFE8D6;
+}
+
+.detailWorkflowStepCardActive {
+  background-color: #F3EEFC;
+  border-color: #C9B8EA;
+}
+
+.detailWorkflowStepCardPending {
+  background-color: #F7F4F0;
+  border-color: #ECE6DE;
+  opacity: 0.72;
+}
+
+.detailWorkflowStepCardIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detailWorkflowStepCardIconDone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background-color: #FFFFFF;
+  color: #2F9B57;
+}
+
+.detailWorkflowStepCardIconActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background-color: #7B4C2C;
+  color: #FFFFFF;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+}
+
+.detailWorkflowStepCardIconPending {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background-color: #FFFFFF;
+  border: 1px solid #E2D6C8;
+  color: $text-ink3;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+}
+
+.detailWorkflowStepCardMain {
+  min-width: 0;
+}
+
+.detailWorkflowStepCardTitleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detailWorkflowStepCardTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-extrabold;
+  color: $text-ink;
+  line-height: $line-height-tight;
+}
+
+.detailWorkflowStepCardCurrentBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: #7B4C2C;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: 0.04em;
+}
+
+.detailWorkflowStepCardMeta {
+  margin-top: 4px;
+  font-size: $font-size-sm2;
+  color: $text-ink3;
+  line-height: $line-height-relaxed;
+}
+
+.detailWorkflowStepCardStatus {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detailWorkflowStepCardStatusChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
   font-size: $font-size-sm2;
   font-weight: $font-weight-bold;
-  color: $primary-color;
-  background-color: #F5EDE4;
-  border-radius: 20px;
-  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.detailWorkflowStepCardStatusChipDone {
+  background-color: #FFFFFF;
+  color: #2F9B57;
+  border: 1px solid #B9E2C8;
+}
+
+.detailWorkflowStepCardStatusChipActive {
+  background-color: #FFFFFF;
+  color: #6B4AA8;
+  border: 1px solid #C9B8EA;
+}
+
+.detailWorkflowStepCardStatusChipPending {
+  background-color: #FFFFFF;
+  color: $text-ink3;
+  border: 1px solid #E2D6C8;
 }
 
 .detailWorkflowHint {
@@ -4386,132 +4742,6 @@ $detail-activity-item-height: 100px;
   margin: 0;
   font-size: $font-size-md;
   color: $text-ink3;
-}
-
-.detailWorkflowItem {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 12px;
-  margin-bottom: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-
-  &:last-child .detailWorkflowRailLine {
-    display: none;
-  }
-}
-
-.detailWorkflowItemCurrent {
-  border-color: #E8C98E;
-  background: linear-gradient(180deg, #FFF9EE 0%, #FFFCF6 100%);
-  box-shadow: inset 3px 0 0 #B6872C;
-}
-
-.detailWorkflowRail {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 100%;
-}
-
-.detailWorkflowRailLine {
-  flex: 1 1 auto;
-  width: 2px;
-  min-height: 16px;
-  margin-top: 4px;
-  background-color: #E0D6CB;
-}
-
-.detailWorkflowContent {
-  min-width: 0;
-}
-
-.detailWorkflowDot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  margin-top: 4px;
-  border: 2px solid #D8CEC3;
-  background-color: #FFFFFF;
-}
-
-.detailWorkflowDotDone {
-  border-color: #2E8D61;
-  background-color: #2E8D61;
-}
-
-.detailWorkflowDotActive {
-  border-color: #B6872C;
-  background-color: #FFF4D8;
-}
-
-.detailWorkflowDotPending {
-  border-color: #D8CEC3;
-  background-color: #FFFFFF;
-}
-
-.detailWorkflowName {
-  font-size: $font-size-base2;
-  font-weight: $font-weight-bold;
-  color: $text-ink;
-}
-
-.detailWorkflowStage {
-  display: inline-flex;
-  margin-bottom: 4px;
-  padding: 1px 7px;
-  border-radius: 4px;
-  background-color: #F5EDE4;
-  color: $primary-color;
-  font-size: $font-size-sm2;
-  font-weight: $font-weight-extrabold;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.detailWorkflowMeta {
-  font-size: $font-size-md;
-  color: $text-ink3;
-  margin-top: 2px;
-}
-
-.detailWorkflowStatus {
-  display: inline-flex;
-  margin-top: 6px;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-size: $font-size-sm2;
-  font-weight: $font-weight-bold;
-}
-
-.detailWorkflowStatusDone {
-  background-color: #E0F4E8;
-  color: #2E8D61;
-}
-
-.detailWorkflowStatusActive {
-  background-color: #FFF4D8;
-  color: #B6872C;
-}
-
-.detailWorkflowStatusPending {
-  background-color: #F3EFEB;
-  color: #8B7C70;
-}
-
-.detailWorkflowCurrentBadge {
-  display: inline-flex;
-  margin-top: 8px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background-color: #FFF0CF;
-  color: #9A6A1E;
-  font-size: $font-size-sm2;
-  font-weight: $font-weight-extrabold;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .detailActivityPanel {
@@ -4528,32 +4758,6 @@ $detail-activity-item-height: 100px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.detailActivityFeedCollapsed {
-  max-height: calc(#{$detail-activity-item-height} * 3);
-  overflow: hidden;
-}
-
-.detailActivityFeedExpanded {
-  max-height: calc(#{$detail-activity-item-height} * 5);
-  overflow-y: auto;
-  scrollbar-width: thin;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: #D8CEC3;
-    border-radius: 999px;
-  }
-}
-
-.detailActivityGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .detailActivityItem {
@@ -4851,6 +5055,20 @@ $detail-activity-item-height: 100px;
   .detailRightColumn {
     order: 2;
     overflow: visible;
+    flex: 0 0 auto;
+    min-height: auto;
+  }
+
+  .detailWorkflowSlot,
+  .detailActivitySlot {
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow: visible;
+
+    > .detailSidebarAccordion {
+      flex: 0 0 auto;
+      min-height: auto;
+    }
   }
 
   .detailStepperArea {

@@ -7,20 +7,21 @@ interface IPhvbMagToolbarProps {
   activeTab: TabType;
   canCreate: boolean;
   onOpenCreate: () => void;
+  onOpenTemplate: () => void;
 }
 
 export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement {
-  const { activeTab, canCreate, onOpenCreate } = props;
+  const { activeTab, canCreate, onOpenCreate, onOpenTemplate } = props;
 
   return (
-    <header className={[styles.contentHeader, activeTab === 'ViecCanLam' ? styles.contentHeaderTask : ''].filter(Boolean).join(' ')}>
+    <header className={[styles.contentHeader, activeTab === 'TrangChu' ? styles.contentHeaderTask : ''].filter(Boolean).join(' ')}>
       <div className={styles.pageHeading}>
         <span className={styles.pageEyebrow}>Văn bản nội bộ</span>
         <h2>{TAB_LABELS[activeTab]}</h2>
       </div>
 
       <div className={styles.headerActions}>
-        <button type="button" className={styles.btnTemplate}>
+        <button type="button" className={styles.btnTemplate} onClick={onOpenTemplate}>
           <span>Template</span>
         </button>
 

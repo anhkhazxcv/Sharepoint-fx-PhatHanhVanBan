@@ -9,7 +9,6 @@ import {
   DocumentBulletList24Regular,
   ChevronLeft20Regular,
   ChevronRight20Regular,
-  ClipboardTask20Regular,
   Delete20Regular,
   Dismiss12Regular,
   Dismiss20Regular,
@@ -19,6 +18,7 @@ import {
   DocumentMultiple20Regular,
   Folder20Regular,
   FolderOpen20Regular,
+  Home20Regular,
   Person20Regular,
   Search16Regular,
   TextNumberListLtr20Regular
@@ -29,8 +29,8 @@ interface IIconProps {
   style?: React.CSSProperties;
 }
 
-export function SidebarTasksIcon(props: IIconProps): React.ReactElement {
-  return <ClipboardTask20Regular className={props.className} />;
+export function SidebarHomeIcon(props: IIconProps): React.ReactElement {
+  return <Home20Regular className={props.className} />;
 }
 
 export function SidebarMyRequestsIcon(props: IIconProps): React.ReactElement {

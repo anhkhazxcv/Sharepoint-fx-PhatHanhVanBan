@@ -24,6 +24,7 @@ import { PhvbMagDetail } from './PhvbMagDetail';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import { PhvbMagSidebar } from './PhvbMagSidebar';
 import { PhvbMagTable } from './PhvbMagTable';
+import { PhvbMagTemplateModal } from './PhvbMagTemplateModal';
 import { PhvbMagToolbar } from './PhvbMagToolbar';
 import { PhvbMagWorkflowParticipantModal } from './PhvbMagWorkflowParticipantModal';
 
@@ -40,11 +41,13 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isDetailSidebarCollapsed, setIsDetailSidebarCollapsed] = useState<boolean>(true);
   const [userDepartment, setUserDepartment] = useState<string>('');
   const [approverUsers, setApproverUsers] = useState<IPhvbDirectoryUser[]>([]);
   const [isLoadingApprovers, setIsLoadingApprovers] = useState<boolean>(true);
   const [graphErrorMessage, setGraphErrorMessage] = useState<string | undefined>(undefined);
   const [isParticipantModalOpen, setIsParticipantModalOpen] = useState<boolean>(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
 
   const defaultRequestForm = useMemo(() => {
     const form = cloneDefaultRequestForm();
@@ -306,22 +309,27 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
   return (
     <div className={[styles.phvbContainer, isDetailRoute ? styles.phvbContainerDetail : ''].filter(Boolean).join(' ')}>
-      {!isDetailRoute && (
-        <PhvbMagSidebar
-          activeTab={activeTab}
-          counts={counts}
-          isCollapsed={isSidebarCollapsed}
-          onSelectTab={handleSelectTab}
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          userDisplayName={userDisplayName}
-          userDepartment={userDepartment}
-        />
-      )}
+      <PhvbMagSidebar
+        activeTab={activeTab}
+        counts={counts}
+        isCollapsed={isDetailRoute ? isDetailSidebarCollapsed : isSidebarCollapsed}
+        onSelectTab={handleSelectTab}
+        onToggleCollapse={() => {
+          if (isDetailRoute) {
+            setIsDetailSidebarCollapsed(previous => !previous);
+            return;
+          }
+
+          setIsSidebarCollapsed(previous => !previous);
+        }}
+        userDisplayName={userDisplayName}
+        userDepartment={userDepartment}
+      />
 
       <main
         className={[
           styles.contentPane,
-          activeTab === 'ViecCanLam' && !isDetailRoute ? styles.contentPaneTask : '',
+          activeTab === 'TrangChu' && !isDetailRoute ? styles.contentPaneTask : '',
           isDetailRoute ? styles.contentPaneDetail : ''
         ].filter(Boolean).join(' ')}
       >
@@ -396,6 +404,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
               activeTab={activeTab}
               canCreate={Boolean(currentWebUrl || siteCollectionUrl || sourceSiteUrl)}
               onOpenCreate={() => navigate(`/tab/${activeTab}/create`)}
+              onOpenTemplate={() => setIsTemplateModalOpen(true)}
             />
 
             <PhvbMagTable
@@ -411,6 +420,12 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       </main>
 
       <PhvbMagLoadingOverlay isOpen={isEditRoute && isDraftLoading} message="Đang tải bản nháp..." />
+
+      <PhvbMagTemplateModal
+        isOpen={isTemplateModalOpen}
+        siteContext={siteContext}
+        onClose={() => setIsTemplateModalOpen(false)}
+      />
 
       <PhvbMagCreateModal
         isOpen={isModalOpen}
@@ -435,12 +450,13 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
   return (
     <HashRouter>
       <Routes>
+        <Route path="/tab/ViecCanLam/*" element={<Navigate to="/tab/TrangChu" replace />} />
         <Route path="/tab/:tabName" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/detail/:idYeuCau" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/edit/:editIdYeuCau" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/create" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/item/:itemId" element={<Navigate to="../" replace />} />
-        <Route path="*" element={<Navigate to="/tab/ViecCanLam" replace />} />
+        <Route path="*" element={<Navigate to="/tab/TrangChu" replace />} />
       </Routes>
       <ToastContainer />
     </HashRouter>

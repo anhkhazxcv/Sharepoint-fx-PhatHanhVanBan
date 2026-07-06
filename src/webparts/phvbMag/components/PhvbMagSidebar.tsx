@@ -11,8 +11,11 @@ import {
   SidebarMyRequestsIcon,
   SidebarNumberingIcon,
   //SidebarReleaseIcon,
-  SidebarTasksIcon
+  SidebarHomeIcon,
 } from './PhvbMagIcons';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const magLogoUrl: string = require('../assets/logoMag.png');
 
 interface IPhvbMagSidebarProps {
   activeTab: TabType;
@@ -63,7 +66,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
         <div className={styles.sidebarHeader}>
           <div className={styles.sidebarBrand}>
             <div className={styles.logoBox}>
-              <span className={styles.logoM}>M</span>
+              <img src={magLogoUrl} alt="MAG" className={styles.logoImage} />
             </div>
             {!isCollapsed && (
               <div className={styles.headerTitle}>
@@ -86,13 +89,13 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
 
         <nav className={styles.navMenu}>
           <NavItem
-            tab="ViecCanLam"
-            label={TAB_LABELS.ViecCanLam}
+            tab="TrangChu"
+            label={TAB_LABELS.TrangChu}
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
-            badgeCount={counts.viecCanLam}
-            icon={<SidebarTasksIcon />}
+            badgeCount={counts.trangChu}
+            icon={<SidebarHomeIcon />}
           />
 
           {!isCollapsed && <div className={styles.navGroupLabel}>YÊU CẦU</div>}
