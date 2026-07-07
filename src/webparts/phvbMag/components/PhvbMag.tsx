@@ -3,12 +3,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS } from '../config/PhvbMag.configuration';
+import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS, PHVB_ROLES } from '../config/PhvbMag.configuration';
+import { usePhvbBanHanh } from '../hooks/usePhvbBanHanh';
 import { usePhvbCapSo } from '../hooks/usePhvbCapSo';
 import { usePhvbComments } from '../hooks/usePhvbComments';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
 import { usePhvbDraftEdit } from '../hooks/usePhvbDraftEdit';
 import { usePhvbRequestDetail } from '../hooks/usePhvbRequestDetail';
+import { usePhvbRoles } from '../hooks/usePhvbRoles';
 import { usePhvbWorkflowActions } from '../hooks/usePhvbWorkflowActions';
 import { usePhvbWorkflowParticipants } from '../hooks/usePhvbWorkflowParticipants';
 import type { ICreateRequestInput, IPhvbDirectoryUser, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
@@ -94,6 +96,14 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   }), [siteContext, userDisplayName, userEmail]);
 
   const {
+    roles,
+    hasRole
+  } = usePhvbRoles({
+    siteContext,
+    userEmail
+  });
+
+  const {
     data: detailData,
     isLoading: isDetailLoading,
     errorMessage: detailErrorMessage,
@@ -146,6 +156,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   } = usePhvbCapSo({
     documentContext,
     detail: detailData,
+    hasDcRole: hasRole(PHVB_ROLES.DC),
     onCompleted: () => {
       refetchDetail();
     }
@@ -162,12 +173,48 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   };
 
   const {
+    canPrepare: canPrepareBanHanh,
+    canPublish: canPublishBanHanh,
+    isSaving: isBanHanhSaving,
+    errorMessage: banHanhErrorMessage,
+    prepareForBanHanh,
+    publishBanHanh
+  } = usePhvbBanHanh({
+    documentContext,
+    detail: detailData,
+    roles,
+    onCompleted: () => {
+      refetchDetail();
+    }
+  });
+
+  const handlePrepareBanHanh = async (): Promise<boolean> => {
+    const succeeded = await prepareForBanHanh();
+
+    if (succeeded) {
+      ToastService.success('Đã chuyển yêu cầu sang Chờ ban hành.');
+    }
+
+    return succeeded;
+  };
+
+  const handlePublishBanHanh = async (): Promise<boolean> => {
+    const succeeded = await publishBanHanh();
+
+    if (succeeded) {
+      ToastService.success('Đã ban hành văn bản thành công.');
+    }
+
+    return succeeded;
+  };
+
+  const {
     canOpen: canOpenParticipantModal,
     isSaving: isParticipantSaving,
     errorMessage: participantErrorMessage,
     saveChanges: saveParticipantChanges
   } = usePhvbWorkflowParticipants({
-    documentContext: siteContext,
+    documentContext,
     detail: detailData,
     directoryUsers: approverUsers,
     onCompleted: () => {
@@ -324,6 +371,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         }}
         userDisplayName={userDisplayName}
         userDepartment={userDepartment}
+        showCapSoTab={hasRole(PHVB_ROLES.DC)}
       />
 
       <main
@@ -384,6 +432,12 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
                 isCapSoSaving={isCapSoSaving}
                 capSoErrorMessage={capSoErrorMessage}
                 onAssignDocumentNumber={handleAssignDocumentNumber}
+                canPrepareBanHanh={canPrepareBanHanh}
+                canPublishBanHanh={canPublishBanHanh}
+                isBanHanhSaving={isBanHanhSaving}
+                banHanhErrorMessage={banHanhErrorMessage}
+                onPrepareBanHanh={handlePrepareBanHanh}
+                onPublishBanHanh={handlePublishBanHanh}
                 canOpenParticipantModal={canOpenParticipantModal}
                 onOpenParticipantModal={() => setIsParticipantModalOpen(true)}
               />

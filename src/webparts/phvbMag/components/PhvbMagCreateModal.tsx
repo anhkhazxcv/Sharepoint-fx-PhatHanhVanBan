@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useEffect, useState, useRef } from 'react';
+import { Lightbulb20Regular } from '@fluentui/react-icons';
 import type { IAttachmentLibraryItem, ICreateRequestInput, IPhvbDirectoryUser, IPhvbSiteContext, ISelectedBanHanhFolder, SaveRequestMode } from '../models/PhvbMag.models';
 import { DRAFT_DOCUMENT_ACCEPT, FORM_ATTACHMENT_ACCEPT, ISSUANCE_LIBRARY_TITLE, SLA_OPTIONS } from '../config/PhvbMag.configuration';
 import { getParentStoragePathAfterLibrary, getStoragePathAfterLibrary } from '../utils/PhvbMagBanHanh.tree';
@@ -476,7 +477,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
         folderLuuTru: '',
         folder: '',
         idFolderOld: undefined,
-        isSendMailNotify: type === 'Thu hồi'
+        isSendMailNotify: type === 'Thu hồi' ? false : true
       };
 
       if (isRevokeRequestType(type)) {
@@ -493,6 +494,8 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
   };
 
   const isAdjustOrRevokeRequest = formValues.requestType === 'Điều chỉnh' || isRevokeRequestType(formValues.requestType);
+  const isRevoke = isRevokeRequestType(formValues.requestType);
+  const isIssueNotify = !isRevoke;
 
   const validateIssuanceFolder = (): boolean => {
     if (!formValues.folderLuuTru.trim()) {
@@ -628,15 +631,24 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
 
               <div className={styles.formGroup}>
                 <label className={styles.fieldLabel}>THÔNG BÁO EMAIL</label>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', minHeight: '36px' }}>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(formValues.isSendMailNotify)}
-                    onChange={event => updateField('isSendMailNotify', event.target.checked)}
-                    disabled={formValues.requestType !== 'Thu hồi'}
-                  />
-                  <span style={{ color: formValues.requestType !== 'Thu hồi' ? '#8C827A' : undefined }}>Gửi thông báo email</span>
-                </label>
+                <div
+                  className={`${styles.createEmailNotifyBox} ${isIssueNotify ? styles.createEmailNotifyBoxIssue : styles.createEmailNotifyBoxRevoke}`}
+                >
+                  <label className={styles.createEmailNotifyRow}>
+                    <input
+                      type="checkbox"
+                      checked={isIssueNotify ? true : Boolean(formValues.isSendMailNotify)}
+                      onChange={event => updateField('isSendMailNotify', event.target.checked)}
+                      disabled={isIssueNotify}
+                    />
+                    <span className={styles.createEmailNotifyLabel}>
+                      {isIssueNotify ? 'Tự động gửi thông báo khi ban hành' : 'Gửi thông báo thu hồi đến CBNV'}
+                    </span>
+                  </label>
+                  {!isIssueNotify && (
+                    <span className={styles.createEmailNotifyOptional}>Không bắt buộc</span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -742,6 +754,14 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 <label className={styles.fieldLabel}>
                   LÝ DO PHÁT HÀNH / TÓM TẤT NỘI DUNG <span className={styles.required}>*</span>
                 </label>
+                {!isRevoke && (
+                  <div className={styles.createSummaryHintCallout}>
+                    <Lightbulb20Regular className={styles.createSummaryHintIcon} aria-hidden="true" />
+                    <p className={styles.createSummaryHintText}>
+                      Đây là nội dung mô tả được hiển thị trên Intranet. Ghi chú nội bộ cho cấp thẩm định/phê duyệt vui lòng điền ở phần Ghi chú cho cấp TĐ/PD bên dưới.
+                    </p>
+                  </div>
+                )}
                 <textarea
                   rows={4}
                   placeholder={isRevokeRequestType(formValues.requestType)
@@ -838,7 +858,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
               <div className={styles.formGroup}>
                 <label className={styles.fieldLabel}>BIỂU MẪU ĐÍNH KÈM</label>
                 <span className={styles.fieldSubtitle}>
-                  Các mẫu tham chiếu đi kèm - Sau khi ban hành, CBNV tải được biểu mẫu nhưng chỉ xem được văn bản chính
+                  CBNV có thể tải được biểu mẫu về để sử dụng sau khi ban hành
                 </span>
 
                 <div
@@ -941,6 +961,21 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 <p className={styles.deadlineError}>{deadlineErrors.message}</p>
               )}
 
+              {formRules.showGhiChuThamDinh && (
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label className={styles.fieldLabel}>GHI CHÚ CHO CẤP TĐ / PD</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Điểm cần chú ý, yêu cầu đặc biệt khi thẩm định / phê duyệt..."
+                    value={formValues.ghiChuThamDinh}
+                    onChange={event => updateField('ghiChuThamDinh', event.target.value)}
+                    className={styles.formTextAreaSmall}
+                  />
+                </div>
+              </div>
+              )}
+
               {(formRules.showNguoiGopY || formRules.showNguoiThamDinh) && (
               <div className={styles.formRowTwoCol}>
                 {formRules.showNguoiGopY && (
@@ -986,7 +1021,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
               </div>
               )}
 
-              <div className={formRules.showGhiChuThamDinh ? styles.formRowTwoCol : styles.formRow}>
+              <div className={styles.formRowTwoCol}>
                 <UserTagPicker
                   label="NGƯỜI PHÊ DUYỆT"
                   required
@@ -1001,19 +1036,6 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   placeholder="Nhập tên hoặc email..."
                   isLoading={isLoadingApprovers}
                 />
-
-                {formRules.showGhiChuThamDinh && (
-                <div className={styles.formGroup}>
-                  <label className={styles.fieldLabel}>GHI CHÚ CHO NGƯỜI THẨM ĐỊNH</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Điểm cần chú ý, yêu cầu đặc biệt..."
-                    value={formValues.ghiChuThamDinh}
-                    onChange={event => updateField('ghiChuThamDinh', event.target.value)}
-                    className={styles.formTextAreaSmall}
-                  />
-                </div>
-                )}
               </div>
             </div>
           </div>

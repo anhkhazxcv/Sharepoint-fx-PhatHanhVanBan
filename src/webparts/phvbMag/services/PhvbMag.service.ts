@@ -10,7 +10,7 @@ import {
   resolveDocumentStatusAfterSkippingEmptyStages,
   resolveStatusForWorkflowStage
 } from '../utils/PhvbMagWorkflowState.utils';
-import type { IAllUserWorkflowItem, ICreateRequestInput, IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbSiteContext, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
+import type { IAllUserWorkflowItem, ICreateRequestInput, IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbLogContext, IPhvbSiteContext, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 
 const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -59,6 +59,7 @@ interface ICreateRequestOptions extends IPhvbDocumentContext {
   input: ICreateRequestInput;
   saveMode: SaveRequestMode;
   directoryUsers?: ReadonlyArray<IPhvbDirectoryUser>;
+  logContext?: IPhvbLogContext;
 }
 
 interface IUpdateRequestOptions extends ICreateRequestOptions {
@@ -116,7 +117,7 @@ function getUserScopedFilter(tab: TabType, userEmail: string): string | undefine
         ? `StatusApproved eq '${escapeODataValue(REQUEST_STATUS.BAN_NHAP)}' and EmailNguoiTao eq '${normalizedEmail}'`
         : 'Id eq 0';
     case 'CapSo':
-      return `StatusApproved eq '${escapeODataValue(REQUEST_STATUS.DA_CAP_SO)}' and (SoVanBan eq null or SoVanBan eq '')`;
+      return `StatusApproved eq '${escapeODataValue(REQUEST_STATUS.CHO_CAP_SO)}'`;
     default:
       return undefined;
   }
@@ -302,6 +303,7 @@ export class PhvbDocumentsService {
 
     await phvbRepository.createItem({
       ...options,
+      logContext: options.logContext,
       payload: mapCreateRequestPayload(options, requestReferenceId)
     });
 
@@ -324,6 +326,7 @@ export class PhvbDocumentsService {
 
     await phvbRepository.updateItem({
       ...options,
+      logContext: options.logContext,
       itemId: options.itemId,
       payload: updatePayload
     });

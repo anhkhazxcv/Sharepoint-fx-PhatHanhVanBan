@@ -33,6 +33,12 @@ interface IPhvbMagDetailProps {
   isCapSoSaving?: boolean;
   capSoErrorMessage?: string;
   onAssignDocumentNumber?: (soVanBan: string) => Promise<boolean>;
+  canPrepareBanHanh?: boolean;
+  canPublishBanHanh?: boolean;
+  isBanHanhSaving?: boolean;
+  banHanhErrorMessage?: string;
+  onPrepareBanHanh?: () => Promise<boolean>;
+  onPublishBanHanh?: () => Promise<boolean>;
   canOpenParticipantModal?: boolean;
   onOpenParticipantModal?: () => void;
 }
@@ -62,6 +68,12 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     isCapSoSaving,
     capSoErrorMessage,
     onAssignDocumentNumber,
+    canPrepareBanHanh,
+    canPublishBanHanh,
+    isBanHanhSaving,
+    banHanhErrorMessage,
+    onPrepareBanHanh,
+    onPublishBanHanh,
     canOpenParticipantModal,
     onOpenParticipantModal
   } = props;
@@ -94,6 +106,12 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
         isCapSoSaving={isCapSoSaving}
         capSoErrorMessage={capSoErrorMessage}
         onAssignDocumentNumber={onAssignDocumentNumber}
+        canPrepareBanHanh={canPrepareBanHanh}
+        canPublishBanHanh={canPublishBanHanh}
+        isBanHanhSaving={isBanHanhSaving}
+        banHanhErrorMessage={banHanhErrorMessage}
+        onPrepareBanHanh={onPrepareBanHanh}
+        onPublishBanHanh={onPublishBanHanh}
       />
 
       <div className={styles.detailBodySplit}>

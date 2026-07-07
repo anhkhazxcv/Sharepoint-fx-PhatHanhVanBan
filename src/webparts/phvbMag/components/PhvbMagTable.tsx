@@ -175,6 +175,10 @@ function getStageLabel(item: IVanBanItem): string {
     return REQUEST_STATUS.DANG_PHE_DUYET;
   }
 
+  if (item.StatusApproved === REQUEST_STATUS.CHO_CAP_SO) {
+    return REQUEST_STATUS.CHO_CAP_SO;
+  }
+
   if (item.StatusApproved === REQUEST_STATUS.DA_CAP_SO) {
     return REQUEST_STATUS.DA_CAP_SO;
   }
@@ -189,6 +193,14 @@ function getStageLabel(item: IVanBanItem): string {
 
   if (item.PheDuyet) {
     return 'Cần phê duyệt';
+  }
+
+  if (item.StatusApproved === REQUEST_STATUS.CHO_CAP_SO) {
+    return 'Cần cấp số';
+  }
+
+  if (item.StatusApproved === REQUEST_STATUS.DA_CAP_SO) {
+    return REQUEST_STATUS.DA_CAP_SO;
   }
 
   if (!item.SoVanBan) {
@@ -219,6 +231,14 @@ function getWorkflowText(item: IVanBanItem): string {
 
   if (item.PheDuyet) {
     return `${owner} đã qua góp ý và đang chờ phê duyệt`;
+  }
+
+  if (item.StatusApproved === REQUEST_STATUS.CHO_CAP_SO) {
+    return `${owner} đang chờ cấp số phát hành`;
+  }
+
+  if (item.StatusApproved === REQUEST_STATUS.DA_CAP_SO) {
+    return `${owner} đã cấp số, chờ admin chuẩn bị ban hành`;
   }
 
   if (!item.SoVanBan) {

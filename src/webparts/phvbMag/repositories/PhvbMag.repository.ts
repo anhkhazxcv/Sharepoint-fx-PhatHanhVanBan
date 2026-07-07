@@ -1,9 +1,10 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { resolveListTitle } from '../config/PhvbMag.configuration';
 import { DEFAULT_LIST_PAGE_SIZE, escapeODataValue, MAX_LIST_FETCH_TOP, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
-import { ensureSharePointResponseOk, tryAcrossCandidateSites } from '../infrastructure/SharePointHttp.utils';
+import { ensureSharePointResponseOk, type IApiLogParams, tryAcrossCandidateSites } from '../infrastructure/SharePointHttp.utils';
 import { SharePointRequestError } from '../services/PhvbMag.error';
-import type { IPhvbSiteContext, IVanBanItem } from '../models/PhvbMag.models';
+import { phvbLogService, serializeLogPayload } from '../services/PhvbMagLog.service';
+import type { IPhvbLogContext, IPhvbSiteContext, IVanBanItem } from '../models/PhvbMag.models';
 
 export interface IFetchPhvbItemsQuery extends IPhvbSiteContext {
   selectFields: ReadonlyArray<string>;
@@ -11,6 +12,7 @@ export interface IFetchPhvbItemsQuery extends IPhvbSiteContext {
   top?: number;
   skip?: number;
   orderBy?: string;
+  logContext?: IPhvbLogContext;
 }
 
 export interface IFetchPhvbItemsPageResult {
@@ -21,16 +23,19 @@ export interface IFetchPhvbItemsPageResult {
 
 export interface ICreatePhvbItemCommand extends IPhvbSiteContext {
   payload: Record<string, string | boolean | number>;
+  logContext?: IPhvbLogContext;
 }
 
 export interface IUpdatePhvbItemCommand extends IPhvbSiteContext {
   itemId: number;
   payload: Record<string, string | boolean | number>;
+  logContext?: IPhvbLogContext;
 }
 
 export interface IDeletePhvbItemCommand extends IPhvbSiteContext {
   listTitle: string;
   itemId: number;
+  logContext?: IPhvbLogContext;
 }
 
 export interface IPhvbRepository {
@@ -64,6 +69,39 @@ function buildQueryString(query: IFetchPhvbItemsQuery, selectFields: string[]): 
   }
 
   return queryParts.join('&');
+}
+
+function buildRepositoryApiLogParams(
+  context: IPhvbSiteContext & { logContext?: IPhvbLogContext; listTitle?: string },
+  httpMethod: string,
+  itemId?: string | number,
+  payload?: Record<string, string | boolean | number> | ReadonlyArray<string>
+): IApiLogParams {
+  const requestFields = Array.isArray(payload)
+    ? payload.join(', ')
+    : payload
+      ? Object.keys(payload).join(', ')
+      : undefined;
+
+  return {
+    siteContext: context,
+    logContext: context.logContext,
+    listName: context.listTitle,
+    itemId: itemId ?? context.logContext?.itemId,
+    requestFields,
+    requestPayload: payload ? serializeLogPayload(payload) : undefined,
+    httpMethod
+  };
+}
+
+function logRepositoryError(
+  context: IPhvbSiteContext & { logContext?: IPhvbLogContext; listTitle?: string },
+  httpMethod: string,
+  error: unknown,
+  itemId?: string | number,
+  payload?: Record<string, string | boolean | number> | ReadonlyArray<string>
+): void {
+  phvbLogService.logApiError(buildRepositoryApiLogParams(context, httpMethod, itemId, payload), error);
 }
 
 function extractMissingFieldName(error: unknown): string | undefined {
@@ -146,7 +184,11 @@ async function readJson<T>(response: SPHttpClientResponse): Promise<T> {
 async function runGetRequest(siteUrl: string, query: IFetchPhvbItemsQuery, selectFields: string[]): Promise<SPHttpClientResponse> {
   const requestUrl = `${getItemsEndpoint(siteUrl, query.listTitle)}?${buildQueryString(query, selectFields)}`;
   const response = await query.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-  return ensureSharePointResponseOk(response, requestUrl);
+  return ensureSharePointResponseOk(
+    response,
+    requestUrl,
+    buildRepositoryApiLogParams(query, 'SP_GET', undefined, selectFields)
+  );
 }
 
 async function runPostRequest(siteUrl: string, command: ICreatePhvbItemCommand): Promise<number> {
@@ -160,17 +202,23 @@ async function runPostRequest(siteUrl: string, command: ICreatePhvbItemCommand):
     }
   });
 
-  await ensureSharePointResponseOk(response, requestUrl);
+  await ensureSharePointResponseOk(
+    response,
+    requestUrl,
+    buildRepositoryApiLogParams(command, 'SP_CREATE', undefined, command.payload)
+  );
   const data = await response.json() as { Id?: number; ID?: number };
   const createdId = data.Id || data.ID;
 
   if (!createdId) {
-    throw new SharePointRequestError(
+    const error = new SharePointRequestError(
       'SharePoint created item but did not return an Id.',
       response.status,
       requestUrl,
       JSON.stringify(data)
     );
+    logRepositoryError(command, 'SP_CREATE', error, undefined, command.payload);
+    throw error;
   }
 
   return createdId;
@@ -189,7 +237,11 @@ async function runPatchRequest(siteUrl: string, command: IUpdatePhvbItemCommand)
     }
   });
 
-  await ensureSharePointResponseOk(response, requestUrl);
+  await ensureSharePointResponseOk(
+    response,
+    requestUrl,
+    buildRepositoryApiLogParams(command, 'SP_UPDATE', command.itemId, command.payload)
+  );
 }
 
 async function runDeleteRequest(siteUrl: string, command: IDeletePhvbItemCommand): Promise<void> {
@@ -204,7 +256,11 @@ async function runDeleteRequest(siteUrl: string, command: IDeletePhvbItemCommand
     }
   });
 
-  await ensureSharePointResponseOk(response, requestUrl);
+  await ensureSharePointResponseOk(
+    response,
+    requestUrl,
+    buildRepositoryApiLogParams(command, 'SP_DELETE', command.itemId)
+  );
 }
 
 export class SharePointPhvbRepository implements IPhvbRepository {

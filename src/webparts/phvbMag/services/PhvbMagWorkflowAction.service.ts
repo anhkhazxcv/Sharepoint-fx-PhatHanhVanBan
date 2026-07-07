@@ -25,6 +25,7 @@ import {
 import type {
   IAllUserWorkflowItem,
   IPhvbDocumentContext,
+  IPhvbLogContext,
   IRequestDetailData,
   WorkflowStage
 } from '../models/PhvbMag.models';
@@ -40,6 +41,7 @@ export interface IWorkflowActionInput {
 interface IWorkflowActionOptions extends IPhvbDocumentContext {
   detail: IRequestDetailData;
   input: IWorkflowActionInput;
+  logContext?: IPhvbLogContext;
 }
 
 function getAllUserListTitleForStage(stage: WorkflowStage): string {
@@ -80,7 +82,7 @@ function resolveDocumentStatusForAction(action: WorkflowActionKey): string {
 }
 
 async function createHistoryRecord(
-  context: IPhvbDocumentContext,
+  context: IPhvbDocumentContext & { logContext?: IPhvbLogContext },
   idYeuCau: string,
   historyStatus: string,
   comment: string,
@@ -130,7 +132,7 @@ function actionCommentIsDiscussion(historyStatus: string): boolean {
 }
 
 async function updateParticipantConfirmation(
-  context: IPhvbDocumentContext,
+  context: IPhvbDocumentContext & { logContext?: IPhvbLogContext },
   stage: WorkflowStage,
   participant: IAllUserWorkflowItem,
   comment: string
@@ -150,7 +152,7 @@ async function updateParticipantConfirmation(
 }
 
 async function updateReleaseStatus(
-  context: IPhvbDocumentContext,
+  context: IPhvbDocumentContext & { logContext?: IPhvbLogContext },
   releaseId: number,
   statusApproved: string
 ): Promise<void> {
@@ -283,6 +285,17 @@ export class PhvbWorkflowActionService {
 
     if (!participant || stage === 'none') {
       throw new Error('Không tìm thấy nhiệm vụ chờ xử lý của bạn.');
+    }
+
+    if (options.input.action === 'requestRevision') {
+      await createHistoryRecord(
+        options,
+        idYeuCau,
+        historyStatus,
+        comment,
+        options.detail.release.KhoaPhongNguoiTao
+      );
+      return;
     }
 
     await updateParticipantConfirmation(options, stage, participant, comment);

@@ -9,7 +9,7 @@ import {
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
-import type { ICreateRequestInput, IPhvbDirectoryUser, IPhvbSiteContext, SaveRequestMode } from '../models/PhvbMag.models';
+import type { ICreateRequestInput, IPhvbDirectoryUser, IPhvbLogContext, IPhvbSiteContext, SaveRequestMode } from '../models/PhvbMag.models';
 
 interface ICreateWorkflowRecordsOptions extends IPhvbSiteContext {
   requestReferenceId: string;
@@ -18,6 +18,7 @@ interface ICreateWorkflowRecordsOptions extends IPhvbSiteContext {
   creatorEmail: string;
   directoryUsers: ReadonlyArray<IPhvbDirectoryUser>;
   saveMode: SaveRequestMode;
+  logContext?: IPhvbLogContext;
 }
 
 export interface IResolvedDirectoryUser {

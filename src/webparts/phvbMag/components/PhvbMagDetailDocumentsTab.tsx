@@ -37,7 +37,15 @@ export function PhvbMagDetailDocumentsTab(props: IPhvbMagDetailDocumentsTabProps
           <tbody>
             {files.map(file => (
               <tr key={file.id}>
-                <td>{file.name}</td>
+                <td>
+                  {file.fileUrl ? (
+                    <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className={styles.detailDocLink}>
+                      {file.name}
+                    </a>
+                  ) : (
+                    file.name
+                  )}
+                </td>
                 <td className={styles.detailDocFolder}>{file.folderPath || '---'}</td>
                 <td>
                   {file.fileUrl ? (

@@ -1,6 +1,6 @@
 import { WORKFLOW_PARTICIPANT_STATUS } from '../config/PhvbMag.configuration';
 import type { IVanBanItem, IWorkflowParticipantItem, WorkflowStage } from '../models/PhvbMag.models';
-import { formatExecutionDateTime, parseExecutionDateTime } from './PhvbMagDateTime.utils';
+import { formatExecutionDateTime } from './PhvbMagDateTime.utils';
 
 export type WorkflowStepTone = 'done' | 'active' | 'pending';
 
@@ -80,60 +80,13 @@ export function resolveWorkflowStepTone(status?: string): WorkflowStepTone {
   return 'pending';
 }
 
-function formatShortDayMonth(value?: string): string | undefined {
-  const parsed = parseExecutionDateTime(value);
-
-  if (!parsed || isNaN(parsed.getTime())) {
+function buildParticipantSubtitle(participant: IWorkflowParticipantItem): string | undefined {
+  if (!isWorkflowParticipantConfirmed(participant.TrangThai_ThucHien)) {
     return undefined;
   }
 
-  const day = parsed.getDate();
-  const month = parsed.getMonth() + 1;
-  return `${day < 10 ? `0${day}` : day}/${month < 10 ? `0${month}` : month}`;
-}
-
-function resolveStageDeadline(release: IVanBanItem, stage: WorkflowStage): string | undefined {
-  switch (stage) {
-    case 'gopy':
-      return release.Date_GopY;
-    case 'thamdinh':
-      return release.Date_ThamDinh;
-    case 'pheduyet':
-      return release.Date_PheDuyet;
-    default:
-      return undefined;
-  }
-}
-
-function buildParticipantSubtitle(
-  release: IVanBanItem,
-  participant: IWorkflowParticipantItem,
-  stage: WorkflowStage
-): string | undefined {
-  const parts: string[] = [];
-
-  if (participant.PhongBan_ThucHien) {
-    parts.push(participant.PhongBan_ThucHien);
-  }
-
-  const deadline = formatShortDayMonth(resolveStageDeadline(release, stage));
-  if (deadline) {
-    parts.push(`HĐ ${deadline}`);
-  }
-
-  if (isWorkflowParticipantConfirmed(participant.TrangThai_ThucHien)) {
-    const doneDate = formatShortDayMonth(participant.Modified || participant.Ngay_ThucHien);
-    if (doneDate) {
-      parts.push(`Done ${doneDate}`);
-    }
-  } else if (isWorkflowParticipantUnconfirmed(participant.TrangThai_ThucHien)) {
-    const normalized = normalizeStatusValue(participant.TrangThai_ThucHien);
-    if (normalized === 'chua den luot') {
-      parts.push(WORKFLOW_PARTICIPANT_STATUS.CHUA_DEN_LUOT);
-    }
-  }
-
-  return parts.length > 0 ? parts.join(' · ') : undefined;
+  const approvalDate = participant.Modified || participant.Ngay_ThucHien;
+  return approvalDate ? formatExecutionDateTime(approvalDate) : undefined;
 }
 
 export function resolveWorkflowStepStatusChip(step: IWorkflowTimelineStep): string {
@@ -217,7 +170,7 @@ export function buildWorkflowTimelineSteps(
           stageLabel: STAGE_LABELS[stage],
           name: participant.User_ThucHien || '---',
           meta: participant.Modified || participant.Ngay_ThucHien,
-          subtitle: buildParticipantSubtitle(release, participant, stage),
+          subtitle: buildParticipantSubtitle(participant),
           status: resolveWorkflowParticipantStatusLabel(participant.TrangThai_ThucHien),
           statusTone: resolveWorkflowStepTone(participant.TrangThai_ThucHien),
           stepNumber: steps.length + 1

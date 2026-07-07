@@ -1,13 +1,37 @@
-import { SPHttpClient } from '@microsoft/sp-http';
+import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { ATTACHMENT_FORM_SUBFOLDER, ATTACHMENT_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
-import { escapeODataValue, getCandidateSiteUrls, getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
+import { escapeODataValue, getCandidateSiteUrls, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
+import { buildSharePointFileOpenUrl } from '../infrastructure/SharePointFile.utils';
 import { ensureSharePointResponseOk } from '../infrastructure/SharePointHttp.utils';
-import { SharePointRequestError } from './PhvbMag.error';
-import type { IAttachmentLibraryItem, ICreateRequestInput, IPhvbSiteContext } from '../models/PhvbMag.models';
+import { buildApiLogParams } from './PhvbMagLog.service';
+import type { IAttachmentLibraryItem, ICreateRequestInput, IPhvbLogContext, IPhvbSiteContext } from '../models/PhvbMag.models';
 
 interface IUploadRequestFilesOptions extends IPhvbSiteContext {
   requestReferenceId: string;
   input: ICreateRequestInput;
+  logContext?: IPhvbLogContext;
+}
+
+interface IAttachmentServiceContext extends IPhvbSiteContext {
+  logContext?: IPhvbLogContext;
+}
+
+async function ensureAttachmentResponseOk(
+  response: SPHttpClientResponse,
+  requestUrl: string,
+  context: IAttachmentServiceContext,
+  httpMethod: string,
+  requestPayload?: unknown
+): Promise<SPHttpClientResponse> {
+  return ensureSharePointResponseOk(
+    response,
+    requestUrl,
+    buildApiLogParams(context, context.logContext, {
+      httpMethod,
+      listName: ATTACHMENT_LIBRARY_TITLE,
+      requestPayload: requestPayload || requestUrl
+    })
+  );
 }
 
 interface IListFormValue {
@@ -41,6 +65,7 @@ function splitRelativePath(value: string): string[] {
 
 interface ISharePointAttachmentItem {
   Id: number;
+  UniqueId?: string;
   FileLeafRef?: string;
   FileRef?: string;
   FileDirRef?: string;
@@ -50,6 +75,7 @@ interface ISharePointAttachmentItem {
 
 const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'Id',
+  'UniqueId',
   'FileLeafRef',
   'FileRef',
   'FileDirRef',
@@ -76,12 +102,16 @@ function sanitizeSharePointFolderName(value: string): string {
 function mapAttachmentItem(item: ISharePointAttachmentItem, siteUrl: string): IAttachmentLibraryItem {
   const fileRef = item.FileRef || '';
   const fileDirRef = item.FileDirRef || '';
-  const origin = getSiteOrigin(siteUrl);
+  const fileName = item.FileLeafRef || '';
 
   return {
     id: item.Id,
-    name: item.FileLeafRef || '',
-    fileUrl: fileRef ? `${origin}${fileRef}` : '',
+    name: fileName,
+    fileUrl: buildSharePointFileOpenUrl(siteUrl, {
+      uniqueId: item.UniqueId,
+      fileRef,
+      fileName
+    }),
     modified: item.Modified,
     folderPath: fileDirRef,
     isFormAttachment: fileDirRef.indexOf(`/${ATTACHMENT_FORM_SUBFOLDER}`) > -1
@@ -103,10 +133,10 @@ async function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
 }
 
 export class PhvbAttachmentService {
-  private async getLibraryRootFolder(siteUrl: string, context: IPhvbSiteContext): Promise<string> {
+  private async getLibraryRootFolder(siteUrl: string, context: IAttachmentServiceContext): Promise<string> {
     const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/RootFolder?$select=ServerRelativeUrl`;
     const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-    await ensureSharePointResponseOk(response, requestUrl);
+    await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_GET');
     const data = await response.json() as { ServerRelativeUrl?: string };
 
     if (!data.ServerRelativeUrl) {
@@ -126,7 +156,7 @@ export class PhvbAttachmentService {
 
   private async createFolder(
     siteUrl: string,
-    context: IPhvbSiteContext,
+    context: IAttachmentServiceContext,
     folderPath: string
   ): Promise<void> {
     const normalizedPath = normalizeServerRelativePath(folderPath);
@@ -159,24 +189,19 @@ export class PhvbAttachmentService {
       return;
     }
 
-    throw new SharePointRequestError(
-      `SharePoint request failed with status ${response.status}`,
-      response.status,
-      requestUrl,
-      details
-    );
+    await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_CREATE');
   }
 
   private async resolveFolderListItemId(
     siteUrl: string,
-    context: IPhvbSiteContext,
+    context: IAttachmentServiceContext,
     folderPath: string
   ): Promise<number> {
     const metadataUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/ListItemAllFields?$select=Id&${buildODataParameterQuery({
       '@folderPath': normalizeServerRelativePath(folderPath)
     })}`;
     const metadataResponse = await context.spHttpClient.get(metadataUrl, SPHttpClient.configurations.v1);
-    await ensureSharePointResponseOk(metadataResponse, metadataUrl);
+    await ensureAttachmentResponseOk(metadataResponse, metadataUrl, context, 'SP_GET');
     const metadata = await metadataResponse.json() as { Id?: number };
     const listItemId = metadata.Id || 0;
 
@@ -189,7 +214,7 @@ export class PhvbAttachmentService {
 
   private async applyListItemMetadataOnCreate(
     siteUrl: string,
-    context: IPhvbSiteContext,
+    context: IAttachmentServiceContext,
     listItemId: number,
     requestReferenceId: string
   ): Promise<void> {
@@ -206,12 +231,12 @@ export class PhvbAttachmentService {
       }
     });
 
-    await ensureSharePointResponseOk(response, requestUrl);
+    await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_UPDATE');
   }
 
   private async ensureFolder(
     siteUrl: string,
-    context: IPhvbSiteContext,
+    context: IAttachmentServiceContext,
     folderPath: string,
     requestReferenceId: string
   ): Promise<void> {
@@ -228,7 +253,7 @@ export class PhvbAttachmentService {
 
   private async ensureFolderPath(
     siteUrl: string,
-    context: IPhvbSiteContext,
+    context: IAttachmentServiceContext,
     libraryRootPath: string,
     relativePath: string,
     requestReferenceId: string
@@ -246,7 +271,7 @@ export class PhvbAttachmentService {
 
   private async uploadFileToFolder(
     siteUrl: string,
-    context: IPhvbSiteContext,
+    context: IAttachmentServiceContext,
     folderPath: string,
     file: File,
     requestReferenceId: string
@@ -265,7 +290,7 @@ export class PhvbAttachmentService {
       }
     });
 
-    await ensureSharePointResponseOk(response, requestUrl);
+    await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_CREATE', file.name);
     const data = await response.json() as { ListItemAllFields?: { Id?: number } };
     let listItemId = data.ListItemAllFields && data.ListItemAllFields.Id ? data.ListItemAllFields.Id : 0;
 
@@ -275,7 +300,7 @@ export class PhvbAttachmentService {
         '@filePath': uploadedFilePath
       })}`;
       const metadataResponse = await context.spHttpClient.get(metadataUrl, SPHttpClient.configurations.v1);
-      await ensureSharePointResponseOk(metadataResponse, metadataUrl);
+      await ensureAttachmentResponseOk(metadataResponse, metadataUrl, context, 'SP_GET');
       const metadata = await metadataResponse.json() as { Id?: number };
       listItemId = metadata.Id || 0;
     }
@@ -382,7 +407,7 @@ export class PhvbAttachmentService {
       try {
         const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items?$select=${ATTACHMENT_SELECT_FIELDS.join(',')}&$filter=${filter}&$top=500&$orderby=Modified desc`;
         const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-        await ensureSharePointResponseOk(response, requestUrl);
+        await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_GET');
         const data = await response.json() as { value?: ISharePointAttachmentItem[] };
         const items = data.value || [];
 
@@ -395,7 +420,7 @@ export class PhvbAttachmentService {
     throw lastError || new Error('Unable to load attachment files.');
   }
 
-  public async deleteRequestFiles(context: IPhvbSiteContext, itemIds: number[]): Promise<void> {
+  public async deleteRequestFiles(context: IAttachmentServiceContext, itemIds: number[]): Promise<void> {
     const uniqueIds = itemIds.filter((id, index, array) => array.indexOf(id) === index && id > 0);
 
     if (uniqueIds.length === 0) {
@@ -427,7 +452,7 @@ export class PhvbAttachmentService {
             }
           });
 
-          await ensureSharePointResponseOk(response, requestUrl);
+          await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_DELETE');
         }
 
         return;

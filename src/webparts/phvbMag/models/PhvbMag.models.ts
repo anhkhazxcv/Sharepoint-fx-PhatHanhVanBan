@@ -120,6 +120,11 @@ export interface ITabCounts {
   admin: number;
 }
 
+export interface IPhvbRoleEntry {
+  role: string;
+  email: string;
+}
+
 export interface ICreateRequestInput {
   title: string;
   code: string;
@@ -218,6 +223,27 @@ export interface IPhvbUserContext {
 }
 
 export interface IPhvbDocumentContext extends IPhvbSiteContext, IPhvbUserContext {}
+
+export interface IPhvbLogEntry {
+  title: string;
+  userEmail?: string;
+  screenName?: string;
+  actionName?: string;
+  listName?: string;
+  itemId?: string | number;
+  errorMessage?: string;
+  requestFields?: string;
+  requestPayload?: string;
+  flowRunId?: string;
+}
+
+export interface IPhvbLogContext {
+  userEmail?: string;
+  screenName?: string;
+  actionName?: string;
+  flowRunId?: string;
+  itemId?: string | number;
+}
 
 export type BadgeVariant = 'badgeTC' | 'badgeQC' | 'badgeQD' | 'badgeCS' | 'badgeHD';
 

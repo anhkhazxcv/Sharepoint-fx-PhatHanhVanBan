@@ -1,6 +1,6 @@
 import { REQUEST_STATUS } from '../config/PhvbMag.configuration';
 import type { IAllUserWorkflowItem, IVanBanItem, WorkflowStage } from '../models/PhvbMag.models';
-import { isRevokeRelease } from './PhvbMagCapSo.utils';
+import { isIssueOrAdjustRequest, isRevokeRelease } from './PhvbMagCapSo.utils';
 import { isWorkflowParticipantConfirmed } from './PhvbMagWorkflowTimeline.utils';
 
 export type WorkflowDocumentStage = WorkflowStage | 'none';
@@ -132,6 +132,10 @@ export function resolveNextDocumentStatusAfterStageComplete(
     return REQUEST_STATUS.CHO_ADMIN_THU_HOI;
   }
 
+  if (isIssueOrAdjustRequest(loaiYeuCau)) {
+    return REQUEST_STATUS.CHO_CAP_SO;
+  }
+
   return REQUEST_STATUS.DA_CAP_SO;
 }
 
@@ -185,6 +189,7 @@ export function isTerminalWorkflowStatus(statusApproved?: string): boolean {
   const status = (statusApproved || '').trim();
 
   return (
+    status === REQUEST_STATUS.CHO_CAP_SO ||
     status === REQUEST_STATUS.DA_CAP_SO ||
     status === REQUEST_STATUS.CHO_BAN_HANH ||
     status === REQUEST_STATUS.BAN_HANH ||

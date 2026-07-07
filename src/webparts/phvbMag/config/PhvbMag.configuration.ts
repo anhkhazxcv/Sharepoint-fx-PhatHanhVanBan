@@ -6,6 +6,8 @@ export const ATTACHMENT_LIBRARY_TITLE = 'VanBanGopYThamDinh';
 export const COMMENT_ATTACHMENT_LIBRARY_TITLE = 'CommentAttach';
 export const TEMPLATE_LIBRARY_TITLE = 'BieuMau';
 export const HISTORY_LIST_TITLE = 'LichSuThucHien';
+export const LOG_LIST_TITLE = 'Log';
+export const PHVB_ROLE_LIST_TITLE = 'PHVB_Role';
 export const COMMENT_HISTORY_STATUS = 'Bình luận';
 export const ALL_USER_GOPY_LIST_TITLE = 'AllUser_GopY';
 export const ALL_USER_THAMDINH_LIST_TITLE = 'AllUser_ThamDinh';
@@ -18,6 +20,7 @@ export const ALL_FILTER_VALUE = 'All';
 export const REQUEST_STATUS = {
   BAN_HANH: 'Ban hành',
   CHO_BAN_HANH: 'Chờ ban hành',
+  CHO_CAP_SO: 'Chờ cấp số',
   DA_CAP_SO: 'Đã cấp số',
   DANG_GOP_Y: 'Đang góp ý',
   DANG_PHE_DUYET: 'Đang phê duyệt',
@@ -31,6 +34,14 @@ export const REQUEST_STATUS = {
 } as const;
 
 export type RequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
+
+export const PHVB_ROLES = {
+  DC: 'dc',
+  ADMIN: 'admin',
+  SUPER_ADMIN: 'superAdmin'
+} as const;
+
+export type PhvbRoleKey = typeof PHVB_ROLES[keyof typeof PHVB_ROLES];
 
 export const EXECUTION_HISTORY_STATUS = {
   TAO_BAN_NHAP: 'Tạo bản nháp',
@@ -221,6 +232,7 @@ export function getWorkflowStepFromStatus(statusApproved?: string): number {
       return 3;
     case REQUEST_STATUS.DANG_PHE_DUYET:
       return 4;
+    case REQUEST_STATUS.CHO_CAP_SO:
     case REQUEST_STATUS.DA_CAP_SO:
       return 5;
     case REQUEST_STATUS.CHO_ADMIN_THU_HOI:

@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { phvbCommentService } from '../services/PhvbMagComment.service';
+import { createFlowRunId } from '../services/PhvbMagLog.service';
 import { appendCommentAttachmentFiles } from '../utils/PhvbMagCommentAttachment.utils';
-import type { IPhvbDocumentContext } from '../models/PhvbMag.models';
+import type { IPhvbDocumentContext, IPhvbLogContext } from '../models/PhvbMag.models';
 
 interface IUsePhvbCommentsOptions {
   documentContext: IPhvbDocumentContext;
@@ -69,10 +70,18 @@ export function usePhvbComments(options: IUsePhvbCommentsOptions): IUsePhvbComme
     setErrorMessage(undefined);
 
     try {
+      const logContext: IPhvbLogContext = {
+        flowRunId: createFlowRunId(),
+        screenName: 'PhvbMagActivityFeed',
+        actionName: 'Comment_Create',
+        userEmail: documentContext.userEmail,
+        itemId: normalizedIdYeuCau
+      };
+
       await phvbCommentService.createComment(documentContext, normalizedIdYeuCau, {
         text: normalizedText,
         files: selectedFiles
-      });
+      }, logContext);
 
       clearComposer();
 

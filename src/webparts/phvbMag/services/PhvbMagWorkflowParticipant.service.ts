@@ -16,13 +16,14 @@ import {
   buildDirectoryUserMap,
   resolveDirectoryUser
 } from './PhvbMagWorkflowWrite.service';
-import type { IPhvbDirectoryUser, IPhvbSiteContext, IRequestDetailData } from '../models/PhvbMag.models';
+import type { IPhvbDirectoryUser, IPhvbLogContext, IPhvbSiteContext, IRequestDetailData } from '../models/PhvbMag.models';
 
 interface IApplyParticipantChangesOptions extends IPhvbSiteContext {
   detail: IRequestDetailData;
   directoryUsers: ReadonlyArray<IPhvbDirectoryUser>;
   changes: IWorkflowParticipantChanges;
   finalDraft: IWorkflowParticipantsByStage;
+  logContext?: IPhvbLogContext;
 }
 
 export class PhvbWorkflowParticipantService {

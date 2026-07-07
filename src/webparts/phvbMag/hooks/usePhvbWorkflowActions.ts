@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { phvbWorkflowActionService, type IWorkflowActionInput } from '../services/PhvbMagWorkflowAction.service';
-import type { IPhvbDocumentContext, IRequestDetailData } from '../models/PhvbMag.models';
+import { createFlowRunId } from '../services/PhvbMagLog.service';
+import type { IPhvbDocumentContext, IPhvbLogContext, IRequestDetailData } from '../models/PhvbMag.models';
 import {
   resolveWorkflowActionContext,
   type WorkflowActionKey
@@ -17,6 +18,33 @@ interface IUsePhvbWorkflowActionsResult {
   isProcessing: boolean;
   errorMessage?: string;
   runAction: (action: WorkflowActionKey, comment?: string) => Promise<boolean>;
+}
+
+function buildWorkflowLogActionName(action: WorkflowActionKey): string {
+  switch (action) {
+    case 'approve':
+      return 'Workflow_Approve';
+    case 'reject':
+      return 'Workflow_Reject';
+    case 'requestRevision':
+      return 'Workflow_RequestRevision';
+    default:
+      return 'Workflow_Action';
+  }
+}
+
+function buildWorkflowLogContext(
+  documentContext: IPhvbDocumentContext,
+  detail: IRequestDetailData,
+  action: WorkflowActionKey
+): IPhvbLogContext {
+  return {
+    flowRunId: createFlowRunId(),
+    screenName: 'PhvbMagDetail',
+    actionName: buildWorkflowLogActionName(action),
+    userEmail: documentContext.userEmail,
+    itemId: detail.release.IdYeuCau || detail.release.Id
+  };
 }
 
 export function usePhvbWorkflowActions(options: IUsePhvbWorkflowActionsOptions): IUsePhvbWorkflowActionsResult {
@@ -50,7 +78,8 @@ export function usePhvbWorkflowActions(options: IUsePhvbWorkflowActionsOptions):
       await phvbWorkflowActionService.executeAction({
         ...documentContext,
         detail,
-        input
+        input,
+        logContext: buildWorkflowLogContext(documentContext, detail, action)
       });
 
       if (onCompleted) {

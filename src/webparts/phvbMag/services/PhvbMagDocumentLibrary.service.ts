@@ -1,6 +1,7 @@
 import { SPHttpClient } from '@microsoft/sp-http';
 import { ISSUANCE_LIBRARY_TITLE, TEMPLATE_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
 import { ensureSharePointResponseOk, tryAcrossCandidateSites } from '../infrastructure/SharePointHttp.utils';
+import { buildApiLogParams } from '../services/PhvbMagLog.service';
 import { escapeODataValue, getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import type { IBanHanhLibraryItem, IPhvbSiteContext, ITemplateLibraryItem } from '../models/PhvbMag.models';
 
@@ -116,7 +117,14 @@ async function loadDocumentLibraryItems<TItem>(
   return tryAcrossCandidateSites(context, async (siteUrl: string) => {
     const requestUrl = `${getLibraryItemsEndpoint(siteUrl, libraryTitle)}?${buildLibraryItemsQuery(options)}`;
     const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-    await ensureSharePointResponseOk(response, requestUrl);
+    await ensureSharePointResponseOk(
+      response,
+      requestUrl,
+      buildApiLogParams(context, undefined, {
+        httpMethod: 'SP_GET',
+        listName: libraryTitle
+      })
+    );
     const data = await response.json() as { value?: ISharePointDocumentLibraryItem[] };
     const items = data.value || [];
 

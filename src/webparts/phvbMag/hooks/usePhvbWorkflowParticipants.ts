@@ -1,15 +1,16 @@
 import { useCallback, useMemo, useState } from 'react';
 import { phvbWorkflowParticipantService } from '../services/PhvbMagWorkflowParticipant.service';
+import { createFlowRunId } from '../services/PhvbMagLog.service';
 import {
   canOpenWorkflowParticipantModal,
   collectParticipantChanges,
   IWorkflowParticipantChanges,
   IWorkflowParticipantsByStage
 } from '../utils/PhvbMagWorkflowParticipant.utils';
-import type { IPhvbDirectoryUser, IPhvbSiteContext, IRequestDetailData } from '../models/PhvbMag.models';
+import type { IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbLogContext, IRequestDetailData } from '../models/PhvbMag.models';
 
 interface IUsePhvbWorkflowParticipantsOptions {
-  documentContext: IPhvbSiteContext;
+  documentContext: IPhvbDocumentContext;
   detail?: IRequestDetailData;
   directoryUsers: ReadonlyArray<IPhvbDirectoryUser>;
   onCompleted?: () => void;
@@ -66,12 +67,21 @@ export function usePhvbWorkflowParticipants(
     setErrorMessage(undefined);
 
     try {
+      const logContext: IPhvbLogContext = {
+        flowRunId: createFlowRunId(),
+        screenName: 'PhvbMagWorkflowParticipantModal',
+        actionName: 'Workflow_UpdateParticipants',
+        userEmail: documentContext.userEmail,
+        itemId: detail.release.IdYeuCau || detail.release.Id
+      };
+
       await phvbWorkflowParticipantService.applyParticipantChanges({
         ...documentContext,
         detail,
         directoryUsers,
         changes,
-        finalDraft: currentDraft
+        finalDraft: currentDraft,
+        logContext
       });
 
       if (onCompleted) {

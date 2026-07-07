@@ -26,7 +26,7 @@ export function getWorkflowActionDialogMessage(action: WorkflowActionKey): strin
     case 'reject':
       return 'Bạn có chắc chắn muốn từ chối yêu cầu này? Vui lòng nhập ghi chú bên dưới.';
     case 'requestRevision':
-      return 'Bạn có chắc chắn muốn yêu cầu chỉnh sửa yêu cầu này?';
+      return 'Gửi ghi chú yêu cầu chỉnh sửa. Trạng thái yêu cầu sẽ không thay đổi.';
     default:
       return 'Bạn có chắc chắn muốn tiếp tục?';
   }

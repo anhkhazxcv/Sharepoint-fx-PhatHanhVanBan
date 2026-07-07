@@ -25,6 +25,7 @@ interface IPhvbMagSidebarProps {
   onToggleCollapse: () => void;
   userDisplayName: string;
   userDepartment?: string;
+  showCapSoTab?: boolean;
 }
 
 interface INavItemProps {
@@ -55,7 +56,7 @@ function NavItem(props: INavItemProps): React.ReactElement {
 }
 
 export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement {
-  const { activeTab, counts, isCollapsed, onSelectTab, onToggleCollapse, userDisplayName, userDepartment } = props;
+  const { activeTab, counts, isCollapsed, onSelectTab, onToggleCollapse, userDisplayName, userDepartment, showCapSoTab = false } = props;
   const initials = userDisplayName
     ? userDisplayName.split(' ').pop()?.substring(0, 2).toUpperCase()
     : 'MG';
@@ -143,6 +144,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
 
           {!isCollapsed && <div className={styles.navGroupLabel}>QUẢN TRỊ HỆ THỐNG</div>}
 
+          {showCapSoTab ? (
           <NavItem
             tab="CapSo"
             label={TAB_LABELS.CapSo}
@@ -152,6 +154,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             badgeCount={counts.capSo}
             icon={<SidebarNumberingIcon />}
           />
+          ) : null}
 
           <NavItem
             tab="QLVanBan"

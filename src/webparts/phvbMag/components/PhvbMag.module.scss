@@ -1424,6 +1424,94 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
       min-height: 72px;
     }
 
+    .createSummaryHintCallout {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background-color: $primary-light;
+      border-left: 4px solid $primary-color;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 14px;
+      margin-bottom: 2px;
+    }
+
+    .createSummaryHintIcon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      color: $primary-color;
+      margin-top: 1px;
+    }
+
+    .createSummaryHintText {
+      margin: 0;
+      font-size: $font-size-sm2;
+      line-height: $line-height-loose;
+      color: $text-ink;
+    }
+
+    .createEmailNotifyBox {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1.5px solid;
+      min-height: 44px;
+    }
+
+    .createEmailNotifyBoxIssue {
+      background-color: #E8F5E9;
+      border-color: #2E7D32;
+
+      .createEmailNotifyLabel {
+        color: #1B5E20;
+      }
+
+      .createEmailNotifyRow {
+        cursor: default;
+      }
+
+      input[type='checkbox'] {
+        accent-color: #2E7D32;
+
+        &:disabled {
+          opacity: 1;
+          cursor: default;
+        }
+      }
+    }
+
+    .createEmailNotifyBoxRevoke {
+      background-color: #FFFFFF;
+      border-color: #E8E2D9;
+
+      .createEmailNotifyLabel {
+        color: $text-ink;
+      }
+    }
+
+    .createEmailNotifyRow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .createEmailNotifyLabel {
+      font-size: 13.5px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .createEmailNotifyOptional {
+      font-size: 12.5px;
+      color: $text-muted;
+      flex-shrink: 0;
+    }
+
     /* Thư mục lưu trữ: Custom Folder Selector */
     .folderInputWrapper {
       position: relative;
@@ -4271,10 +4359,76 @@ $detail-page-gap: 18px;
   overflow: visible;
 }
 
+.detailInfoLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .detailInfoGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px 20px;
+}
+
+.detailInfoNoteCallout {
+  background-color: $primary-light;
+  border-left: 4px solid $primary-color;
+  border-radius: 0 8px 8px 0;
+  padding: 14px 16px 16px;
+}
+
+.detailInfoNoteHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.detailInfoNoteIcon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: $primary-color;
+}
+
+.detailInfoNoteTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label;
+  color: $primary-color;
+  text-transform: uppercase;
+}
+
+.detailInfoNoteBody {
+  font-size: $font-size-base2;
+  line-height: $line-height-relaxed;
+  color: $text-ink;
+
+  strong {
+    font-weight: $font-weight-bold;
+    color: $primary-color;
+  }
+}
+
+.detailInfoSummaryBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detailInfoSummaryTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label;
+  color: $primary-color;
+  text-transform: uppercase;
+}
+
+.detailInfoSummaryBody {
+  font-size: $font-size-base2;
+  line-height: $line-height-relaxed;
+  color: $text-ink;
 }
 
 .detailField {

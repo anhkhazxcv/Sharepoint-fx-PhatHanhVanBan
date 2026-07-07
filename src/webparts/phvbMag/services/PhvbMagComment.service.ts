@@ -4,7 +4,7 @@ import { toRuntimeMessage } from './PhvbMag.error';
 import { phvbCommentAttachmentService } from './PhvbMagCommentAttachment.service';
 import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { validateCommentAttachmentFiles } from '../utils/PhvbMagCommentAttachment.utils';
-import type { IPhvbDocumentContext } from '../models/PhvbMag.models';
+import type { IPhvbDocumentContext, IPhvbLogContext } from '../models/PhvbMag.models';
 
 export interface ICreateCommentInput {
   text: string;
@@ -15,7 +15,8 @@ export class PhvbCommentService {
   public async createComment(
     context: IPhvbDocumentContext,
     idYeuCau: string,
-    input: ICreateCommentInput
+    input: ICreateCommentInput,
+    logContext?: IPhvbLogContext
   ): Promise<number> {
     if (!hasSharePointSiteContext(context)) {
       throw new Error('Missing SharePoint site context.');
@@ -56,6 +57,7 @@ export class PhvbCommentService {
     try {
       commentId = await phvbRepository.createItem({
         ...context,
+        logContext,
         listTitle: HISTORY_LIST_TITLE,
         payload
       });
@@ -66,6 +68,7 @@ export class PhvbCommentService {
         delete payloadWithoutIsComment.IsComment;
         commentId = await phvbRepository.createItem({
           ...context,
+          logContext,
           listTitle: HISTORY_LIST_TITLE,
           payload: payloadWithoutIsComment
         });
@@ -75,7 +78,7 @@ export class PhvbCommentService {
     }
 
     if (files.length > 0) {
-      await phvbCommentAttachmentService.uploadCommentFiles(context, commentId, files);
+      await phvbCommentAttachmentService.uploadCommentFiles(context, commentId, files, logContext);
     }
 
     return commentId;

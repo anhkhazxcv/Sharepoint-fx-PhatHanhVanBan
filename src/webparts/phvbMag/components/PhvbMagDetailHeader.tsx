@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { TabType } from '../models/PhvbMag.models';
 import type { IWorkflowActionAvailability, WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
+import { PhvbMagBanHanhDialog, type BanHanhDialogAction } from './PhvbMagBanHanhDialog';
+import { PhvbMagCapSoDialog } from './PhvbMagCapSoDialog';
 import { PhvbMagWorkflowActionDialog } from './PhvbMagWorkflowActionDialog';
 import styles from './PhvbMag.module.scss';
 
@@ -20,6 +22,12 @@ interface IPhvbMagDetailHeaderProps {
   isCapSoSaving?: boolean;
   capSoErrorMessage?: string;
   onAssignDocumentNumber?: (soVanBan: string) => Promise<boolean>;
+  canPrepareBanHanh?: boolean;
+  canPublishBanHanh?: boolean;
+  isBanHanhSaving?: boolean;
+  banHanhErrorMessage?: string;
+  onPrepareBanHanh?: () => Promise<boolean>;
+  onPublishBanHanh?: () => Promise<boolean>;
 }
 
 export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHeaderProps>(
@@ -36,20 +44,31 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       canAssignDocumentNumber = false,
       isCapSoSaving = false,
       capSoErrorMessage,
-      onAssignDocumentNumber
+      onAssignDocumentNumber,
+      canPrepareBanHanh = false,
+      canPublishBanHanh = false,
+      isBanHanhSaving = false,
+      banHanhErrorMessage,
+      onPrepareBanHanh,
+      onPublishBanHanh
     } = props;
     const tabLabel = TAB_LABELS[tabName] || tabName;
-    const [documentNumberDraft, setDocumentNumberDraft] = useState<string>('');
     const [pendingAction, setPendingAction] = useState<WorkflowActionKey | undefined>(undefined);
+    const [isCapSoDialogOpen, setIsCapSoDialogOpen] = useState<boolean>(false);
+    const [pendingBanHanhAction, setPendingBanHanhAction] = useState<BanHanhDialogAction | undefined>(undefined);
 
     const canApprove = Boolean(availableActions?.approve);
     const canRequestRevision = Boolean(availableActions?.requestRevision);
     const canReject = Boolean(availableActions?.reject);
-    const hasAnyAction = canApprove || canRequestRevision || canReject;
-    const isDialogOpen = Boolean(pendingAction);
+    const hasWorkflowActions = canApprove || canRequestRevision || canReject;
+    const hasPostApprovalActions = canAssignDocumentNumber || canPrepareBanHanh || canPublishBanHanh;
+    const isWorkflowDialogOpen = Boolean(pendingAction);
+    const isBanHanhDialogOpen = Boolean(pendingBanHanhAction);
+    const isAnyDialogOpen = isWorkflowDialogOpen || isCapSoDialogOpen || isBanHanhDialogOpen;
+    const isBusy = isProcessing || isCapSoSaving || isBanHanhSaving;
 
     const openActionDialog = (action: WorkflowActionKey): void => {
-      if (isProcessing) {
+      if (isBusy) {
         return;
       }
 
@@ -57,7 +76,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
     };
 
     const closeActionDialog = (): void => {
-      if (isProcessing) {
+      if (isBusy) {
         return;
       }
 
@@ -65,7 +84,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
     };
 
     const handleDialogConfirm = async (comment: string): Promise<void> => {
-      if (!onRunAction || !pendingAction || isProcessing) {
+      if (!onRunAction || !pendingAction || isBusy) {
         return;
       }
 
@@ -76,17 +95,35 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       }
     };
 
-    const canSubmitCapSo = canAssignDocumentNumber && documentNumberDraft.trim().length > 0 && !isCapSoSaving;
-
-    const handleAssignDocumentNumber = async (): Promise<void> => {
-      if (!onAssignDocumentNumber || !canSubmitCapSo) {
+    const handleCapSoConfirm = async (soVanBan: string): Promise<void> => {
+      if (!onAssignDocumentNumber || isBusy) {
         return;
       }
 
-      const succeeded = await onAssignDocumentNumber(documentNumberDraft.trim());
+      const succeeded = await onAssignDocumentNumber(soVanBan);
 
       if (succeeded) {
-        setDocumentNumberDraft('');
+        setIsCapSoDialogOpen(false);
+      }
+    };
+
+    const handleBanHanhConfirm = async (): Promise<void> => {
+      if (isBusy || !pendingBanHanhAction) {
+        return;
+      }
+
+      let succeeded = false;
+
+      if (pendingBanHanhAction === 'prepare' && onPrepareBanHanh) {
+        succeeded = await onPrepareBanHanh();
+      }
+
+      if (pendingBanHanhAction === 'publish' && onPublishBanHanh) {
+        succeeded = await onPublishBanHanh();
+      }
+
+      if (succeeded) {
+        setPendingBanHanhAction(undefined);
       }
     };
 
@@ -111,79 +148,127 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
         </div>
 
         <div className={styles.detailHeaderActionsArea}>
-          {!isDialogOpen && errorMessage ? (
+          {!isAnyDialogOpen && errorMessage ? (
             <p className={styles.detailActionError} role="alert">{errorMessage}</p>
           ) : null}
 
-          {capSoErrorMessage ? (
+          {!isCapSoDialogOpen && capSoErrorMessage ? (
             <p className={styles.detailActionError} role="alert">{capSoErrorMessage}</p>
           ) : null}
 
-          {canAssignDocumentNumber ? (
-            <div className={styles.detailCapSoBox}>
-              <label htmlFor="phvb-detail-document-number">Số văn bản</label>
-              <div className={styles.detailCapSoRow}>
-                <input
-                  id="phvb-detail-document-number"
-                  type="text"
-                  value={documentNumberDraft}
-                  placeholder="Nhập số văn bản..."
-                  disabled={isCapSoSaving}
-                  onChange={event => setDocumentNumberDraft(event.target.value)}
-                />
+          {!isBanHanhDialogOpen && banHanhErrorMessage ? (
+            <p className={styles.detailActionError} role="alert">{banHanhErrorMessage}</p>
+          ) : null}
+
+          {hasPostApprovalActions || hasWorkflowActions ? (
+            <div className={styles.detailActions}>
+              {canAssignDocumentNumber ? (
                 <button
                   type="button"
                   className={styles.detailActionCapSo}
-                  disabled={!canSubmitCapSo}
-                  onClick={() => {
-                    handleAssignDocumentNumber().catch(() => undefined);
-                  }}
+                  disabled={isBusy}
+                  onClick={() => setIsCapSoDialogOpen(true)}
                 >
-                  {isCapSoSaving ? 'Đang cấp số...' : 'Cấp số'}
+                  Cấp số
                 </button>
-              </div>
-            </div>
-          ) : null}
+              ) : null}
 
-          {hasAnyAction ? (
-            <div className={styles.detailActions}>
-              <button
-                type="button"
-                className={styles.detailActionApprove}
-                disabled={!canApprove || isProcessing}
-                onClick={() => openActionDialog('approve')}
-              >
-                {approveLabel}
-              </button>
-              <button
-                type="button"
-                className={styles.detailActionEdit}
-                disabled={!canRequestRevision || isProcessing}
-                onClick={() => openActionDialog('requestRevision')}
-              >
-                Yêu cầu chỉnh sửa
-              </button>
-              <button
-                type="button"
-                className={styles.detailActionReject}
-                disabled={!canReject || isProcessing}
-                onClick={() => openActionDialog('reject')}
-              >
-                Từ chối
-              </button>
+              {canPrepareBanHanh ? (
+                <button
+                  type="button"
+                  className={styles.detailActionApprove}
+                  disabled={isBusy}
+                  onClick={() => setPendingBanHanhAction('prepare')}
+                >
+                  Ban hành
+                </button>
+              ) : null}
+
+              {canPublishBanHanh ? (
+                <button
+                  type="button"
+                  className={styles.detailActionApprove}
+                  disabled={isBusy}
+                  onClick={() => setPendingBanHanhAction('publish')}
+                >
+                  Ban hành văn bản
+                </button>
+              ) : null}
+
+              {canApprove ? (
+                <button
+                  type="button"
+                  className={styles.detailActionApprove}
+                  disabled={isBusy}
+                  onClick={() => openActionDialog('approve')}
+                >
+                  {approveLabel}
+                </button>
+              ) : null}
+
+              {canRequestRevision ? (
+                <button
+                  type="button"
+                  className={styles.detailActionEdit}
+                  disabled={isBusy}
+                  onClick={() => openActionDialog('requestRevision')}
+                >
+                  Yêu cầu chỉnh sửa
+                </button>
+              ) : null}
+
+              {canReject ? (
+                <button
+                  type="button"
+                  className={styles.detailActionReject}
+                  disabled={isBusy}
+                  onClick={() => openActionDialog('reject')}
+                >
+                  Từ chối
+                </button>
+              ) : null}
             </div>
           ) : null}
         </div>
 
         <PhvbMagWorkflowActionDialog
-          isOpen={isDialogOpen}
+          isOpen={isWorkflowDialogOpen}
           action={pendingAction}
           approveLabel={approveLabel}
           isProcessing={isProcessing}
-          errorMessage={isDialogOpen ? errorMessage : undefined}
+          errorMessage={isWorkflowDialogOpen ? errorMessage : undefined}
           onCancel={closeActionDialog}
           onConfirm={comment => {
             handleDialogConfirm(comment).catch(() => undefined);
+          }}
+        />
+
+        <PhvbMagCapSoDialog
+          isOpen={isCapSoDialogOpen}
+          isProcessing={isCapSoSaving}
+          errorMessage={isCapSoDialogOpen ? capSoErrorMessage : undefined}
+          onCancel={() => {
+            if (!isCapSoSaving) {
+              setIsCapSoDialogOpen(false);
+            }
+          }}
+          onConfirm={soVanBan => {
+            handleCapSoConfirm(soVanBan).catch(() => undefined);
+          }}
+        />
+
+        <PhvbMagBanHanhDialog
+          isOpen={isBanHanhDialogOpen}
+          action={pendingBanHanhAction}
+          isProcessing={isBanHanhSaving}
+          errorMessage={isBanHanhDialogOpen ? banHanhErrorMessage : undefined}
+          onCancel={() => {
+            if (!isBanHanhSaving) {
+              setPendingBanHanhAction(undefined);
+            }
+          }}
+          onConfirm={() => {
+            handleBanHanhConfirm().catch(() => undefined);
           }}
         />
       </div>

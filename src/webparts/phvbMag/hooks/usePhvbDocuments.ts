@@ -3,8 +3,9 @@ import type { SPHttpClient } from '@microsoft/sp-http';
 import { hasSharePointSiteContext, resolveListTitle } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE } from '../services/PhvbMag.error';
 import { phvbDocumentsService } from '../services/PhvbMag.service';
-import type { ICreateRequestInput, IEditRequestContext, IPhvbDirectoryUser, ISaveRequestResult, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
+import type { ICreateRequestInput, IEditRequestContext, IPhvbDirectoryUser, IPhvbLogContext, ISaveRequestResult, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
+import { createFlowRunId } from '../services/PhvbMagLog.service';
 
 interface IUsePhvbDocumentsOptions {
   userDisplayName: string;
@@ -154,6 +155,14 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
 
     setIsSaving(true);
 
+    const logContext: IPhvbLogContext = {
+      flowRunId: createFlowRunId(),
+      screenName: 'PhvbMagCreateModal',
+      actionName: editContext ? 'Request_Update' : 'Request_Create',
+      userEmail,
+      itemId: editContext?.idYeuCau
+    };
+
     try {
       const requestReferenceId = editContext
         ? await phvbDocumentsService.updateRequest({
@@ -162,13 +171,15 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
           saveMode: mode,
           directoryUsers,
           itemId: editContext.itemId,
-          existingIdYeuCau: editContext.idYeuCau
+          existingIdYeuCau: editContext.idYeuCau,
+          logContext
         })
         : await phvbDocumentsService.createRequest({
           ...documentContext,
           input,
           saveMode: mode,
-          directoryUsers
+          directoryUsers,
+          logContext
         });
 
       const targetTab: TabType = mode === 'draft' ? 'BanNhap' : activeTab;
