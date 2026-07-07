@@ -5,7 +5,7 @@ import {
 } from '../config/PhvbMag.configuration';
 import type { IVanBanItem, IWorkflowParticipantItem, WorkflowStage } from '../models/PhvbMag.models';
 import { getRequestTypeFormRules, type RequestTypeValue } from './PhvbMagRequestForm.utils';
-import { isTerminalWorkflowStatus } from './PhvbMagWorkflowState.utils';
+import { isTerminalWorkflowStatus, resolveWorkflowStageFromStatus } from './PhvbMagWorkflowState.utils';
 import { isWorkflowParticipantUnconfirmed } from './PhvbMagWorkflowTimeline.utils';
 
 export interface IWorkflowParticipantStageConfig {
@@ -76,6 +76,19 @@ export function getVisibleParticipantStages(loaiYeuCau?: string): WorkflowStage[
   }
 
   return WORKFLOW_STAGE_ORDER.slice();
+}
+
+export function isParticipantStageAddable(stage: WorkflowStage, statusApproved?: string): boolean {
+  const currentStage = resolveWorkflowStageFromStatus(statusApproved);
+
+  if (currentStage === 'none') {
+    return true;
+  }
+
+  const stageIndex = WORKFLOW_STAGE_ORDER.indexOf(stage);
+  const currentIndex = WORKFLOW_STAGE_ORDER.indexOf(currentStage);
+
+  return stageIndex >= currentIndex;
 }
 
 export function groupParticipantsByStage(

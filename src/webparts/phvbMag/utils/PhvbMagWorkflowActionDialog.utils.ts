@@ -1,9 +1,16 @@
 import type { WorkflowActionKey } from './PhvbMagWorkflowPermission.utils';
 
 export const REJECT_COMMENT_REQUIRED_MESSAGE = 'Vui lòng nhập ghi chú khi từ chối.';
+export const REQUEST_REVISION_COMMENT_REQUIRED_MESSAGE = 'Vui lòng nhập ghi chú khi yêu cầu chỉnh sửa.';
 
 export function isWorkflowActionCommentRequired(action: WorkflowActionKey): boolean {
-  return action === 'reject';
+  return action === 'reject' || action === 'requestRevision';
+}
+
+export function getWorkflowActionCommentRequiredMessage(action: WorkflowActionKey): string {
+  return action === 'requestRevision'
+    ? REQUEST_REVISION_COMMENT_REQUIRED_MESSAGE
+    : REJECT_COMMENT_REQUIRED_MESSAGE;
 }
 
 export function getWorkflowActionDialogTitle(action: WorkflowActionKey): string {
@@ -26,7 +33,7 @@ export function getWorkflowActionDialogMessage(action: WorkflowActionKey): strin
     case 'reject':
       return 'Bạn có chắc chắn muốn từ chối yêu cầu này? Vui lòng nhập ghi chú bên dưới.';
     case 'requestRevision':
-      return 'Gửi ghi chú yêu cầu chỉnh sửa. Trạng thái yêu cầu sẽ không thay đổi.';
+      return 'Gửi ghi chú yêu cầu chỉnh sửa. Vui lòng nhập ghi chú bên dưới. Trạng thái yêu cầu sẽ không thay đổi.';
     default:
       return 'Bạn có chắc chắn muốn tiếp tục?';
   }
@@ -63,7 +70,7 @@ export function getWorkflowActionDialogConfirmButtonClassName(
 
 export function validateWorkflowActionComment(action: WorkflowActionKey, comment: string): string | undefined {
   if (isWorkflowActionCommentRequired(action) && !comment.trim()) {
-    return REJECT_COMMENT_REQUIRED_MESSAGE;
+    return getWorkflowActionCommentRequiredMessage(action);
   }
 
   return undefined;

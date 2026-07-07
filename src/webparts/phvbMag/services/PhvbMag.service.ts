@@ -4,6 +4,7 @@ import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { phvbAttachmentService } from './PhvbMagAttachment.service';
 import { phvbWorkflowWriteService } from './PhvbMagWorkflowWrite.service';
 import { generateRequestReferenceId } from '../utils/PhvbMagRequestId.utils';
+import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { sanitizeRequestInputForSave, getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
 import {
   IWorkflowStageParticipants,
@@ -201,7 +202,7 @@ function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenc
     KhoaPhongNguoiTao: input.department || '',
     PheDuyet: input.approvalUsers.join('; '),
     NgayPhatHanh: today,
-    NgayTaoYeuCau: today,
+    NgayTaoYeuCau: formatCurrentExecutionDateTime(),
     HieuLucTu: input.hieuLucTu || today,
     HieuLucDen: input.hieuLucDen || 'Vô thời hạn',
     TomTatNoiDung: input.summary,

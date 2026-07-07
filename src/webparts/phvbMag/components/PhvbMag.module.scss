@@ -1389,6 +1389,12 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
         background-color: #7B4C2C;
         color: #FFFFFF;
         border-color: #7B4C2C;
+
+        &:hover {
+          background-color: #7B4C2C;
+          color: #FFFFFF;
+          border-color: #7B4C2C;
+        }
       }
     }
 
@@ -3424,7 +3430,13 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 .workflowActionDialogError {
   margin: 0 0 14px;
   font-size: $font-size-sm;
-  color: #C14D56;
+  font-weight: 600;
+  color: #DC2626;
+}
+
+.confirmDialogContent .workflowActionDialogError {
+  font-size: $font-size-base2;
+  color: #DC2626;
 }
 
 .confirmDialogActions {

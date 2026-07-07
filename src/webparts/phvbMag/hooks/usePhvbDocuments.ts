@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SPHttpClient } from '@microsoft/sp-http';
 import { hasSharePointSiteContext, resolveListTitle } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE } from '../services/PhvbMag.error';
@@ -31,6 +31,7 @@ interface IUsePhvbDocumentsResult {
     directoryUsers?: ReadonlyArray<IPhvbDirectoryUser>,
     editContext?: IEditRequestContext
   ) => Promise<ISaveRequestResult | undefined>;
+  refetchCounts: () => Promise<void>;
 }
 
 export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDocumentsResult {
@@ -57,42 +58,26 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
   }), [siteContext, userDisplayName, userEmail]);
   const hasAnySiteContext = hasSharePointSiteContext(siteContext);
 
-  useEffect(() => {
-    let isMounted = true;
-
+  const refetchCounts = useCallback(async (): Promise<void> => {
     if (!hasAnySiteContext) {
       setCounts(DEFAULT_TAB_COUNTS);
       setErrorMessage(SITE_CONTEXT_ERROR_MESSAGE);
-      return () => {
-        isMounted = false;
-      };
+      return;
     }
 
-    const loadCounts = async (): Promise<void> => {
-      try {
-        const nextCounts = await phvbDocumentsService.loadTabCounts(documentContext);
-        if (!isMounted) {
-          return;
-        }
-
-        setCounts(nextCounts);
-        setErrorMessage(undefined);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        setCounts(DEFAULT_TAB_COUNTS);
-        setErrorMessage(phvbDocumentsService.getRuntimeErrorMessage(error, resolvedListTitle));
-      }
-    };
-
-    loadCounts().catch(() => undefined);
-
-    return () => {
-      isMounted = false;
-    };
+    try {
+      const nextCounts = await phvbDocumentsService.loadTabCounts(documentContext);
+      setCounts(nextCounts);
+      setErrorMessage(undefined);
+    } catch (error) {
+      setCounts(DEFAULT_TAB_COUNTS);
+      setErrorMessage(phvbDocumentsService.getRuntimeErrorMessage(error, resolvedListTitle));
+    }
   }, [documentContext, hasAnySiteContext, resolvedListTitle]);
+
+  useEffect(() => {
+    refetchCounts().catch(() => undefined);
+  }, [refetchCounts]);
 
   useEffect(() => {
     let isMounted = true;
@@ -218,6 +203,7 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     isSaving,
     errorMessage,
     setActiveTab,
-    saveRequest
+    saveRequest,
+    refetchCounts
   };
 }

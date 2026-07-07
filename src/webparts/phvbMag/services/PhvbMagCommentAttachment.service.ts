@@ -1,6 +1,7 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { COMMENT_ATTACHMENT_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
-import { escapeODataValue, getCandidateSiteUrls, getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
+import { buildSharePointFileOpenUrl } from '../infrastructure/SharePointFile.utils';
+import { escapeODataValue, getCandidateSiteUrls, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { resolveCommentAttachmentFolderName } from '../utils/PhvbMagCommentAttachment.utils';
 import { ensureSharePointResponseOk } from '../infrastructure/SharePointHttp.utils';
 import { buildApiLogParams } from './PhvbMagLog.service';
@@ -32,8 +33,10 @@ interface ISharePointFolderFile {
   Name?: string;
   ServerRelativeUrl?: string;
   TimeLastModified?: string;
+  UniqueId?: string;
   ListItemAllFields?: {
     Id?: number;
+    UniqueId?: string;
   };
 }
 
@@ -73,7 +76,6 @@ async function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
 function mapFolderFile(item: ISharePointFolderFile, commentId: number, siteUrl: string): ICommentAttachmentItem | undefined {
   const listItemId = item.ListItemAllFields && item.ListItemAllFields.Id ? item.ListItemAllFields.Id : 0;
   const serverRelativeUrl = item.ServerRelativeUrl || '';
-  const origin = getSiteOrigin(siteUrl);
 
   if (!listItemId || !item.Name) {
     return undefined;
@@ -83,7 +85,11 @@ function mapFolderFile(item: ISharePointFolderFile, commentId: number, siteUrl: 
     id: listItemId,
     commentId,
     name: item.Name,
-    fileUrl: serverRelativeUrl ? `${origin}${serverRelativeUrl}` : '',
+    fileUrl: buildSharePointFileOpenUrl(siteUrl, {
+      uniqueId: item.UniqueId || item.ListItemAllFields?.UniqueId,
+      fileRef: serverRelativeUrl,
+      fileName: item.Name
+    }),
     modified: item.TimeLastModified
   };
 }
@@ -238,9 +244,11 @@ export class PhvbCommentAttachmentService {
           resolveCommentAttachmentFolderName(commentId)
         );
 
-        for (let fileIndex = 0; fileIndex < files.length; fileIndex += 1) {
-          await this.uploadFileToFolder(siteUrl, attachmentContext, commentFolderPath, files[fileIndex]);
-        }
+        await Promise.all(
+          files.map(file =>
+            this.uploadFileToFolder(siteUrl, attachmentContext, commentFolderPath, file)
+          )
+        );
 
         return;
       } catch (error) {
@@ -281,7 +289,7 @@ export class PhvbCommentAttachmentService {
           return [];
         }
 
-        const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/Files?$select=Name,ServerRelativeUrl,TimeLastModified,ListItemAllFields/Id&$expand=ListItemAllFields&${buildODataParameterQuery({
+        const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/Files?$select=Name,ServerRelativeUrl,TimeLastModified,UniqueId,ListItemAllFields/Id,ListItemAllFields/UniqueId&$expand=ListItemAllFields&${buildODataParameterQuery({
           '@folderPath': folderPath
         })}`;
         const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);

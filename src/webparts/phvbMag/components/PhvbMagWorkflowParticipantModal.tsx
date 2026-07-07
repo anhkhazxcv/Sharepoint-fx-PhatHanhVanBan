@@ -7,6 +7,7 @@ import {
   getParticipantDisplayInitials,
   getVisibleParticipantStages,
   isEmailAlreadyInStageDraft,
+  isParticipantStageAddable,
   IWorkflowParticipantDraftRow,
   IWorkflowParticipantsByStage,
   WORKFLOW_PARTICIPANT_STAGE_CONFIG
@@ -31,6 +32,7 @@ interface IStageSectionProps {
   stage: WorkflowStage;
   rows: IWorkflowParticipantDraftRow[];
   directoryUsers: ReadonlyArray<IPhvbDirectoryUser>;
+  allowAdd: boolean;
   onAddUser: (stage: WorkflowStage, user: IPhvbDirectoryUser) => void;
   onRemoveRow: (stage: WorkflowStage, rowKey: string) => void;
 }
@@ -58,7 +60,7 @@ function findDirectoryUser(
 }
 
 function WorkflowParticipantStageSection(props: IStageSectionProps): React.ReactElement {
-  const { stage, rows, directoryUsers, onAddUser, onRemoveRow } = props;
+  const { stage, rows, directoryUsers, allowAdd, onAddUser, onRemoveRow } = props;
   const stageConfig = WORKFLOW_PARTICIPANT_STAGE_CONFIG[stage];
   const [query, setQuery] = useState('');
   const [selectedUserEmail, setSelectedUserEmail] = useState<string>('');
@@ -103,45 +105,47 @@ function WorkflowParticipantStageSection(props: IStageSectionProps): React.React
     <section className={styles.workflowParticipantSection}>
       <h5 className={styles.workflowParticipantSectionTitle}>{stageConfig.sectionLabel}</h5>
 
-      <div className={styles.workflowParticipantSearchRow}>
-        <input
-          type="text"
-          className={styles.workflowParticipantSearchInput}
-          placeholder={`Tìm kiếm ${stageConfig.sectionLabel}...`}
-          value={query}
-          list={`phvb-participant-suggestions-${stage}`}
-          onChange={event => {
-            setQuery(event.target.value);
-            setSelectedUserEmail('');
-          }}
-          onInput={event => {
-            const value = (event.target as HTMLInputElement).value;
-            const matchedUser = findDirectoryUser(directoryUsers, user =>
-              user.displayName.toLowerCase() === value.trim().toLowerCase() ||
-              user.email.toLowerCase() === value.trim().toLowerCase()
-            );
+      {allowAdd ? (
+        <div className={styles.workflowParticipantSearchRow}>
+          <input
+            type="text"
+            className={styles.workflowParticipantSearchInput}
+            placeholder={`Tìm kiếm ${stageConfig.sectionLabel}...`}
+            value={query}
+            list={`phvb-participant-suggestions-${stage}`}
+            onChange={event => {
+              setQuery(event.target.value);
+              setSelectedUserEmail('');
+            }}
+            onInput={event => {
+              const value = (event.target as HTMLInputElement).value;
+              const matchedUser = findDirectoryUser(directoryUsers, user =>
+                user.displayName.toLowerCase() === value.trim().toLowerCase() ||
+                user.email.toLowerCase() === value.trim().toLowerCase()
+              );
 
-            if (matchedUser) {
-              setSelectedUserEmail(matchedUser.email);
-            }
-          }}
-        />
-        <datalist id={`phvb-participant-suggestions-${stage}`}>
-          {suggestions.slice(0, 20).map(user => (
-            <option key={user.email} value={user.displayName}>
-              {user.email}
-            </option>
-          ))}
-        </datalist>
-        <button
-          type="button"
-          className={styles.btnSecondary}
-          onClick={handleAdd}
-          disabled={suggestions.length === 0 && !selectedUserEmail}
-        >
-          + Thêm
-        </button>
-      </div>
+              if (matchedUser) {
+                setSelectedUserEmail(matchedUser.email);
+              }
+            }}
+          />
+          <datalist id={`phvb-participant-suggestions-${stage}`}>
+            {suggestions.slice(0, 20).map(user => (
+              <option key={user.email} value={user.displayName}>
+                {user.email}
+              </option>
+            ))}
+          </datalist>
+          <button
+            type="button"
+            className={styles.btnSecondary}
+            onClick={handleAdd}
+            disabled={suggestions.length === 0 && !selectedUserEmail}
+          >
+            + Thêm
+          </button>
+        </div>
+      ) : null}
 
       <div className={styles.workflowParticipantList}>
         {visibleRows.length === 0 ? (
@@ -294,6 +298,7 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
               stage={stage}
               rows={currentDraft[stage]}
               directoryUsers={directoryUsers}
+              allowAdd={isParticipantStageAddable(stage, detail.release.StatusApproved)}
               onAddUser={handleAddUser}
               onRemoveRow={handleRemoveRow}
             />

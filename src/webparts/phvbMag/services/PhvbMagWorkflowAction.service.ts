@@ -30,7 +30,7 @@ import type {
   WorkflowStage
 } from '../models/PhvbMag.models';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
-import { REJECT_COMMENT_REQUIRED_MESSAGE } from '../utils/PhvbMagWorkflowActionDialog.utils';
+import { getWorkflowActionCommentRequiredMessage } from '../utils/PhvbMagWorkflowActionDialog.utils';
 import { resolveWorkflowActionContext } from '../utils/PhvbMagWorkflowPermission.utils';
 
 export interface IWorkflowActionInput {
@@ -232,8 +232,8 @@ export class PhvbWorkflowActionService {
 
     const comment = (options.input.comment || '').trim();
 
-    if (options.input.action === 'reject' && !comment) {
-      throw new Error(REJECT_COMMENT_REQUIRED_MESSAGE);
+    if ((options.input.action === 'reject' || options.input.action === 'requestRevision') && !comment) {
+      throw new Error(getWorkflowActionCommentRequiredMessage(options.input.action));
     }
 
     const actionContext = resolveWorkflowActionContext(options.detail, options.userEmail);

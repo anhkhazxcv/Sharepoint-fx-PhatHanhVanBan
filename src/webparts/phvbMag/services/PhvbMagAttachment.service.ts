@@ -347,35 +347,31 @@ export class PhvbAttachmentService {
           requestReferenceId
         );
 
-        for (let fileIndex = 0; fileIndex < draftFiles.length; fileIndex += 1) {
-          await this.uploadFileToFolder(
-            siteUrl,
-            options,
-            documentFolderPath,
-            draftFiles[fileIndex],
-            requestReferenceId
-          );
-        }
+        const draftUpload = Promise.all(
+          draftFiles.map(file =>
+            this.uploadFileToFolder(siteUrl, options, documentFolderPath, file, requestReferenceId)
+          )
+        );
 
-        if (formFiles.length > 0) {
-          const formFolderPath = await this.ensureFolderPath(
-            siteUrl,
-            options,
-            documentFolderPath,
-            ATTACHMENT_FORM_SUBFOLDER,
-            requestReferenceId
-          );
-
-          for (let fileIndex = 0; fileIndex < formFiles.length; fileIndex += 1) {
-            await this.uploadFileToFolder(
+        const formUpload = formFiles.length > 0
+          ? (async (): Promise<void> => {
+            const formFolderPath = await this.ensureFolderPath(
               siteUrl,
               options,
-              formFolderPath,
-              formFiles[fileIndex],
+              documentFolderPath,
+              ATTACHMENT_FORM_SUBFOLDER,
               requestReferenceId
             );
-          }
-        }
+
+            await Promise.all(
+              formFiles.map(file =>
+                this.uploadFileToFolder(siteUrl, options, formFolderPath, file, requestReferenceId)
+              )
+            );
+          })()
+          : Promise.resolve();
+
+        await Promise.all([draftUpload, formUpload]);
 
         return;
       } catch (error) {

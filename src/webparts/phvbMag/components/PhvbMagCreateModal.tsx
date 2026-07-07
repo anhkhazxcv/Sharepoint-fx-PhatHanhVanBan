@@ -645,9 +645,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                       {isIssueNotify ? 'Tự động gửi thông báo khi ban hành' : 'Gửi thông báo thu hồi đến CBNV'}
                     </span>
                   </label>
-                  {!isIssueNotify && (
-                    <span className={styles.createEmailNotifyOptional}>Không bắt buộc</span>
-                  )}
+                  {!isIssueNotify}
                 </div>
               </div>
             </div>

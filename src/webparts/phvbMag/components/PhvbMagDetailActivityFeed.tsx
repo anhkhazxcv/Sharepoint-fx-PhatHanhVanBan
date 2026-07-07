@@ -149,6 +149,16 @@ function ActivityCommentComposer(props: IActivityCommentComposerProps): React.Re
     }
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+
+      if (canSubmit) {
+        handleSubmit().catch(() => undefined);
+      }
+    }
+  };
+
   return (
     <div className={styles.detailCommentComposer}>
       <textarea
@@ -157,6 +167,7 @@ function ActivityCommentComposer(props: IActivityCommentComposerProps): React.Re
         value={commentText}
         disabled={isSaving}
         onChange={event => setCommentText(event.target.value)}
+        onKeyDown={handleKeyDown}
       />
 
       <div className={styles.detailCommentFilePicker}>

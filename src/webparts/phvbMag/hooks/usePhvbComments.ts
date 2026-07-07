@@ -32,20 +32,14 @@ export function usePhvbComments(options: IUsePhvbCommentsOptions): IUsePhvbComme
   }, []);
 
   const addFiles = useCallback((incomingFiles: FileList | File[]): string | undefined => {
-    let nextError: string | undefined;
+    const snapshot = Array.prototype.slice.call(incomingFiles) as File[];
+    const result = appendCommentAttachmentFiles(selectedFiles, snapshot);
 
-    setSelectedFiles(previousFiles => {
-      const result = appendCommentAttachmentFiles(previousFiles, incomingFiles);
-      nextError = result.error;
-      return result.files;
-    });
+    setSelectedFiles(result.files);
+    setErrorMessage(result.error);
 
-    if (nextError) {
-      setErrorMessage(nextError);
-    }
-
-    return nextError;
-  }, []);
+    return result.error;
+  }, [selectedFiles]);
 
   const removeFile = useCallback((fileIndex: number): void => {
     setSelectedFiles(previousFiles => previousFiles.filter((_, index) => index !== fileIndex));

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -79,7 +79,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     return nextDepartments;
   }, [userDepartment]);
 
-  const { activeTab, counts, items, isLoading, isSaving, errorMessage, setActiveTab, saveRequest } = usePhvbDocuments({
+  const { activeTab, counts, items, isLoading, isSaving, errorMessage, setActiveTab, saveRequest, refetchCounts } = usePhvbDocuments({
     userDisplayName,
     userEmail,
     spHttpClient,
@@ -110,6 +110,11 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     refetch: refetchDetail
   } = usePhvbRequestDetail(siteContext, idYeuCau);
 
+  const handleDetailStatusChanged = useCallback((): void => {
+    refetchDetail();
+    refetchCounts().catch(() => undefined);
+  }, [refetchDetail, refetchCounts]);
+
   const {
     actionContext,
     isProcessing: isWorkflowProcessing,
@@ -118,9 +123,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   } = usePhvbWorkflowActions({
     documentContext,
     detail: detailData,
-    onCompleted: () => {
-      refetchDetail();
-    }
+    onCompleted: handleDetailStatusChanged
   });
 
   const {
@@ -157,9 +160,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     documentContext,
     detail: detailData,
     hasDcRole: hasRole(PHVB_ROLES.DC),
-    onCompleted: () => {
-      refetchDetail();
-    }
+    onCompleted: handleDetailStatusChanged
   });
 
   const handleAssignDocumentNumber = async (soVanBan: string): Promise<boolean> => {
@@ -183,9 +184,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     documentContext,
     detail: detailData,
     roles,
-    onCompleted: () => {
-      refetchDetail();
-    }
+    onCompleted: handleDetailStatusChanged
   });
 
   const handlePrepareBanHanh = async (): Promise<boolean> => {
@@ -217,9 +216,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     documentContext,
     detail: detailData,
     directoryUsers: approverUsers,
-    onCompleted: () => {
-      refetchDetail();
-    }
+    onCompleted: handleDetailStatusChanged
   });
 
   const handleSaveParticipants = async (
