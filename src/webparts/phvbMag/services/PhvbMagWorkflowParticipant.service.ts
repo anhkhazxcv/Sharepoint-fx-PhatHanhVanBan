@@ -1,8 +1,10 @@
-import { DEFAULT_LIST_TITLE } from '../config/PhvbMag.configuration';
+import { DEFAULT_LIST_TITLE, EXECUTION_HISTORY_STATUS } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
+import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
 import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import {
   buildFinalStageEmails,
+  buildParticipantChangesSummary,
   buildReleaseParticipantFieldValue,
   canRemoveWorkflowParticipant,
   getVisibleParticipantStages,
@@ -24,6 +26,8 @@ interface IApplyParticipantChangesOptions extends IPhvbSiteContext {
   changes: IWorkflowParticipantChanges;
   finalDraft: IWorkflowParticipantsByStage;
   logContext?: IPhvbLogContext;
+  userDisplayName?: string;
+  userEmail?: string;
 }
 
 export class PhvbWorkflowParticipantService {
@@ -122,6 +126,25 @@ export class PhvbWorkflowParticipantService {
       itemId: options.detail.release.Id,
       payload: releasePayload
     });
+
+    const changeSummary = buildParticipantChangesSummary(
+      options.changes,
+      visibleStages,
+      participantId => participantById.get(participantId)?.Email_ThucHien
+    );
+
+    if (changeSummary) {
+      await createExecutionHistoryRecord(
+        { ...options, logContext: options.logContext },
+        {
+          idYeuCau: requestReferenceId,
+          historyStatus: EXECUTION_HISTORY_STATUS.CAP_NHAT_NGUOI_THAM_GIA,
+          noiDung: changeSummary,
+          department: options.detail.release.KhoaPhongNguoiTao,
+          isComment: false
+        }
+      );
+    }
   }
 
   public getRuntimeErrorMessage(error: unknown, listTitle?: string): string {

@@ -29,15 +29,21 @@ export class PhvbRoleService {
     }
 
     if (!cachePromise) {
-      cachePromise = this.fetchRoles(context)
+      const requestPromise = this.fetchRoles(context)
         .then(roles => {
           cachedRoles = roles;
           return roles;
         });
+      cachePromise = requestPromise;
     }
 
-    const roles = await cachePromise;
-    cachePromise = undefined;
+    const pendingPromise = cachePromise;
+    const roles = await pendingPromise;
+
+    if (cachePromise === pendingPromise) {
+      cachePromise = undefined;
+    }
+
     return roles.slice();
   }
 

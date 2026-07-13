@@ -76,16 +76,6 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
               </div>
             )}
           </div>
-
-          <button
-            type="button"
-            className={styles.collapseButton}
-            onClick={onToggleCollapse}
-            aria-label={isCollapsed ? 'Mở rộng menu trái' : 'Thu gọn menu trái'}
-            title={isCollapsed ? 'Mở rộng menu trái' : 'Thu gọn menu trái'}
-          >
-            {isCollapsed ? <SidebarExpandIcon /> : <SidebarCollapseIcon />}
-          </button>
         </div>
 
         <nav className={styles.navMenu}>
@@ -168,16 +158,28 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
         </nav>
       </div>
 
-      <div className={styles.sidebarFooter} title={userDisplayName || 'Người dùng'}>
-        <div className={styles.userAvatar}>
-          <span>{initials || 'MG'}</span>
-        </div>
-        {!isCollapsed && (
-          <div className={styles.userInfo}>
-            <h4>{userDisplayName || 'Người dùng'}</h4>
-            <p>{userDepartment || 'SharePoint user'}</p>
+      <div className={styles.sidebarBottom}>
+        <div className={styles.sidebarFooter} title={userDisplayName || 'Người dùng'}>
+          <div className={styles.userAvatar}>
+            <span>{initials || 'MG'}</span>
           </div>
-        )}
+          {!isCollapsed && (
+            <div className={styles.userInfo}>
+              <h4>{userDisplayName || 'Người dùng'}</h4>
+              <p>{userDepartment || 'SharePoint user'}</p>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          className={styles.collapseButton}
+          onClick={onToggleCollapse}
+          aria-label={isCollapsed ? 'Mở rộng menu trái' : 'Thu gọn menu trái'}
+          title={isCollapsed ? 'Mở rộng menu trái' : 'Thu gọn menu trái'}
+        >
+          {isCollapsed ? <SidebarExpandIcon /> : <SidebarCollapseIcon />}
+        </button>
       </div>
     </aside>
   );

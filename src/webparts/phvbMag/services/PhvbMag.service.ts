@@ -1,7 +1,8 @@
-import { hasSharePointSiteContext, REQUEST_STATUS, resolveListTitle } from '../config/PhvbMag.configuration';
+import { hasSharePointSiteContext, REQUEST_STATUS, resolveListTitle, EXECUTION_HISTORY_STATUS } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE, toRuntimeMessage } from './PhvbMag.error';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { phvbAttachmentService } from './PhvbMagAttachment.service';
+import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
 import { phvbWorkflowWriteService } from './PhvbMagWorkflowWrite.service';
 import { generateRequestReferenceId } from '../utils/PhvbMagRequestId.utils';
 import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
@@ -46,7 +47,10 @@ const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'ThuMucBanHanh',
   'LinkToFolderOld',
   'GhiChuChoThamDinh',
-  'IsSendMailNotify'
+  'IsSendMailNotify',
+  'EmailNhanBanHanh',
+  'SubjectBanHanh',
+  'BodyEmail'
 ];
 
 export const RELEASE_SELECT_FIELDS = DOCUMENT_SELECT_FIELDS;
@@ -332,9 +336,35 @@ export class PhvbDocumentsService {
       payload: updatePayload
     });
 
-    await this.writeWorkflowAndAttachments(options, options.existingIdYeuCau);
+    await this.writeWorkflowAndAttachments(options, options.existingIdYeuCau, true);
 
     return options.existingIdYeuCau;
+  }
+
+  private resolveRemovedAttachmentNames(input: ICreateRequestInput): string[] {
+    const removedIds = input.removedAttachmentIds || [];
+    const allExisting = (input.existingTaiLieuAttachments || []).concat(input.existingBieuMauAttachments || []);
+    const names: string[] = [];
+
+    removedIds.forEach(id => {
+      let matchedName = '';
+      for (let index = 0; index < allExisting.length; index += 1) {
+        if (allExisting[index].id === id) {
+          matchedName = allExisting[index].name;
+          break;
+        }
+      }
+      names.push(matchedName || `ID ${id}`);
+    });
+
+    return names;
+  }
+
+  private resolveUploadedAttachmentNames(input: ICreateRequestInput): string[] {
+    const names: string[] = [];
+    input.taiLieuFiles.forEach(file => names.push(file.name));
+    input.bieuMauFiles.forEach(file => names.push(file.name));
+    return names;
   }
 
   private async syncAttachments(
@@ -345,22 +375,45 @@ export class PhvbDocumentsService {
     const removedIds = input.removedAttachmentIds || [];
 
     if (removedIds.length > 0) {
+      const removedNames = this.resolveRemovedAttachmentNames(input);
       await phvbAttachmentService.deleteRequestFiles(options, removedIds);
+      await createExecutionHistoryRecord(
+        { ...options, logContext: options.logContext },
+        {
+          idYeuCau: requestReferenceId,
+          historyStatus: EXECUTION_HISTORY_STATUS.XOA_TAI_LIEU,
+          noiDung: removedNames.join('; '),
+          department: input.department || '',
+          isComment: false
+        }
+      );
     }
 
     const hasNewFiles = input.taiLieuFiles.length > 0 || input.bieuMauFiles.length > 0;
     if (hasNewFiles) {
+      const uploadedNames = this.resolveUploadedAttachmentNames(input);
       await phvbAttachmentService.uploadRequestFiles({
         ...options,
         requestReferenceId,
         input
       });
+      await createExecutionHistoryRecord(
+        { ...options, logContext: options.logContext },
+        {
+          idYeuCau: requestReferenceId,
+          historyStatus: EXECUTION_HISTORY_STATUS.THEM_TAI_LIEU,
+          noiDung: uploadedNames.join('; '),
+          department: input.department || '',
+          isComment: false
+        }
+      );
     }
   }
 
   private async writeWorkflowAndAttachments(
     options: ICreateRequestOptions,
-    requestReferenceId: string
+    requestReferenceId: string,
+    isUpdate: boolean = false
   ): Promise<void> {
     const input = sanitizeRequestInputForSave(options.input);
     const normalizedOptions = { ...options, input };
@@ -371,7 +424,8 @@ export class PhvbDocumentsService {
       creatorDisplayName: options.userDisplayName,
       creatorEmail: options.userEmail,
       directoryUsers: options.directoryUsers || [],
-      saveMode: options.saveMode
+      saveMode: options.saveMode,
+      isUpdate
     });
 
     const hasAttachmentChanges =

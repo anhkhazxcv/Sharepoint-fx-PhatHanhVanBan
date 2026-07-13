@@ -8,6 +8,8 @@ export const TEMPLATE_LIBRARY_TITLE = 'BieuMau';
 export const HISTORY_LIST_TITLE = 'LichSuThucHien';
 export const LOG_LIST_TITLE = 'Log';
 export const PHVB_ROLE_LIST_TITLE = 'PHVB_Role';
+export const CONFIG_MAIL_BAN_HANH_LIST_TITLE = 'lstConfigMailBanHanh';
+export const CONFIG_LABEL_CUSTOM_LIST_TITLE = 'lstConfigLabelCustom';
 export const COMMENT_HISTORY_STATUS = 'Bình luận';
 export const ALL_USER_GOPY_LIST_TITLE = 'AllUser_GopY';
 export const ALL_USER_THAMDINH_LIST_TITLE = 'AllUser_ThamDinh';
@@ -43,6 +45,36 @@ export const PHVB_ROLES = {
 
 export type PhvbRoleKey = typeof PHVB_ROLES[keyof typeof PHVB_ROLES];
 
+export const SEND_MAIL_TYPE = {
+  YEU_CAU_GOP_Y: 'YEU_CAU_GOP_Y',
+  XAC_NHAN_GOP_Y: 'XAC_NHAN_GOP_Y',
+  YEU_CAU_THAM_DINH: 'YEU_CAU_THAM_DINH',
+  XAC_NHAN_THAM_DINH: 'XAC_NHAN_THAM_DINH',
+  YEU_CAU_PHE_DUYET: 'YEU_CAU_PHE_DUYET',
+  XAC_NHAN_PHE_DUYET: 'XAC_NHAN_PHE_DUYET',
+  YEU_CAU_CAP_SO: 'YEU_CAU_CAP_SO',
+  XAC_NHAN_CAP_SO: 'XAC_NHAN_CAP_SO',
+  YEU_CAU_BAN_HANH: 'YEU_CAU_BAN_HANH'
+} as const;
+
+export type SendMailType = typeof SEND_MAIL_TYPE[keyof typeof SEND_MAIL_TYPE];
+
+export const SEND_MAIL_APPROVAL_STATUS = {
+  DA_XAC_NHAN: 'Đã xác nhận',
+  DA_TU_CHOI: 'Đã từ chối'
+} as const;
+
+export const BAN_HANH_MAIL_LABELS = {
+  CONTENT_VN: 'contentMailVN',
+  CONTENT_ENG: 'contentMailEng'
+} as const;
+
+export const BAN_HANH_NOTIFY_DEFAULTS = {
+  BO_PHAN_GUI_TV: 'Bộ phận Quản lý VBNB',
+  BO_PHAN_GUI_TA: 'Internal Document Management Team',
+  PRIORITY_FOLDER: '2.Quản Trị Theo Chức Năng'
+} as const;
+
 export const EXECUTION_HISTORY_STATUS = {
   TAO_BAN_NHAP: 'Tạo bản nháp',
   TAO_YEU_CAU: 'Tạo yêu cầu',
@@ -51,7 +83,13 @@ export const EXECUTION_HISTORY_STATUS = {
   XAC_NHAN_THAM_DINH: 'Xác nhận thẩm định',
   PHE_DUYET: 'Phê duyệt',
   TU_CHOI: 'Từ chối',
-  YEU_CAU_CHINH_SUA: 'Yêu cầu chỉnh sửa'
+  YEU_CAU_CHINH_SUA: 'Yêu cầu chỉnh sửa',
+  NHAC_HAN: 'Nhắc hạn',
+  CAP_NHAT_BAN_NHAP: 'Cập nhật bản nháp',
+  CAP_NHAT_YEU_CAU: 'Cập nhật yêu cầu',
+  CAP_NHAT_NGUOI_THAM_GIA: 'Cập nhật người tham gia',
+  THEM_TAI_LIEU: 'Thêm tài liệu',
+  XOA_TAI_LIEU: 'Xóa tài liệu'
 } as const;
 
 export type ExecutionHistoryStatus = typeof EXECUTION_HISTORY_STATUS[keyof typeof EXECUTION_HISTORY_STATUS];
@@ -64,7 +102,13 @@ export const EXECUTION_HISTORY_STATUS_LIST: ReadonlyArray<ExecutionHistoryStatus
   EXECUTION_HISTORY_STATUS.XAC_NHAN_THAM_DINH,
   EXECUTION_HISTORY_STATUS.PHE_DUYET,
   EXECUTION_HISTORY_STATUS.TU_CHOI,
-  EXECUTION_HISTORY_STATUS.YEU_CAU_CHINH_SUA
+  EXECUTION_HISTORY_STATUS.YEU_CAU_CHINH_SUA,
+  EXECUTION_HISTORY_STATUS.NHAC_HAN,
+  EXECUTION_HISTORY_STATUS.CAP_NHAT_BAN_NHAP,
+  EXECUTION_HISTORY_STATUS.CAP_NHAT_YEU_CAU,
+  EXECUTION_HISTORY_STATUS.CAP_NHAT_NGUOI_THAM_GIA,
+  EXECUTION_HISTORY_STATUS.THEM_TAI_LIEU,
+  EXECUTION_HISTORY_STATUS.XOA_TAI_LIEU
 ];
 
 export const WORKFLOW_PARTICIPANT_STATUS = {

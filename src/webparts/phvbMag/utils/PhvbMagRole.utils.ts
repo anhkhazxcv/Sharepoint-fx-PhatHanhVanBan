@@ -33,3 +33,12 @@ export function userHasAnyRole(
 ): boolean {
   return roleNames.some(role => userHasRole(roles, userEmail, role));
 }
+
+export function getRoleEmails(roles: ReadonlyArray<IPhvbRoleEntry>, role: string): string[] {
+  const normalizedRole = normalizeRoleName(role);
+
+  return roles
+    .filter(entry => normalizeRoleName(entry.role) === normalizedRole)
+    .map(entry => entry.email.trim())
+    .filter(email => Boolean(email));
+}

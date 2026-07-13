@@ -5,6 +5,7 @@ import type { IPhvbSiteContext, ITemplateLibraryItem } from '../models/PhvbMag.m
 import { toRuntimeMessage } from '../services/PhvbMag.error';
 import { phvbDocumentLibraryService } from '../services/PhvbMagDocumentLibrary.service';
 import { CloseIcon, FormTemplateFileIcon, SubmitRequestIcon } from './PhvbMagIcons';
+import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagTemplateModalProps {
@@ -125,16 +126,15 @@ export function PhvbMagTemplateModal(props: IPhvbMagTemplateModalProps): React.R
                     <span className={styles.templateModalItemMeta}>{getTemplateMetaLabel(item)}</span>
                   </div>
 
-                  <a
+                  <PhvbMagExternalLink
                     href={item.fileUrl}
+                    mode="download"
+                    downloadFileName={item.name}
                     className={styles.templateModalDownloadBtn}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download={item.name}
                   >
                     <SubmitRequestIcon style={{ width: 16, height: 16, marginLeft: 0 }} />
                     Tải
-                  </a>
+                  </PhvbMagExternalLink>
                 </li>
               ))}
             </ul>

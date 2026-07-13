@@ -25,6 +25,7 @@ import { IPhvbMagProps } from './components/IPhvbMagProps';
 export interface IPhvbMagWebPartProps {
   sourceSiteUrl: string;
   listTitle: string;
+  endPointSendMail?: string;
 }
 
 export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPartProps> {
@@ -35,6 +36,7 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
   protected onInit(): Promise<void> {
     if (!this.properties.sourceSiteUrl) {
       this.properties.sourceSiteUrl = 'https://masterisegroup.sharepoint.com/sites/test';
+      this.properties.endPointSendMail = 'https://defaultabd5926f9a1b41379332b3f4e80959.23.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/f76236a31fed47b1bdcf450d97c818c8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=pzUned3r2JuDD3ZMNoYnRgQubspNIv0swynsil6UxMk';
       //this.properties.sourceSiteUrl = 'https://masterisegroup.sharepoint.com';
     }
 
@@ -66,10 +68,12 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
         userEmail: this.context.pageContext.user.email,
         msGraphClientFactory: this.context.msGraphClientFactory,
         spHttpClient: this.context.spHttpClient,
+        httpClient: this.context.httpClient,
         currentWebUrl: this.context.pageContext.web.absoluteUrl,
         siteCollectionUrl: this.context.pageContext.site.absoluteUrl,
         sourceSiteUrl: this.properties.sourceSiteUrl,
-        listTitle: this.properties.listTitle
+        listTitle: this.properties.listTitle,
+        endPointSendMail: this.properties.endPointSendMail
       }
     );
 
@@ -114,6 +118,10 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
                 PropertyPaneTextField('sourceSiteUrl', {
                   label: 'SharePoint source site URL',
                   description: 'Optional. Leave empty to try current web first, then site collection.'
+                }),
+                PropertyPaneTextField('endPointSendMail', {
+                  label: 'EndPoint Send Mail',
+                  description: 'URL API gửi email workflow (POST JSON). Để trống nếu chưa cấu hình.'
                 })
               ]
             }

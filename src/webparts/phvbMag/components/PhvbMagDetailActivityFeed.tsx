@@ -1,13 +1,20 @@
 import * as React from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { DRAFT_DOCUMENT_ACCEPT } from '../config/PhvbMag.configuration';
-import type { ICommentWithAttachments } from '../models/PhvbMag.models';
-import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
+import type { ICommentWithAttachments, ILichSuThucHienItem } from '../models/PhvbMag.models';
 import { DeleteFileIcon, UploadDocumentIcon } from './PhvbMagIcons';
+import { PhvbMagDetailHistoryItem } from './PhvbMagDetailHistoryItem';
 import { PhvbMagSidebarAccordion } from './PhvbMagSidebarAccordion';
 import styles from './PhvbMag.module.scss';
 
+type ActivityFilter = 'all' | 'discussion' | 'activity';
+
+type ActivityFeedItem =
+  | { kind: 'discussion'; item: ICommentWithAttachments }
+  | { kind: 'activity'; item: ILichSuThucHienItem };
+
 interface IPhvbMagDetailActivityFeedProps {
+  history: ILichSuThucHienItem[];
   comments: ICommentWithAttachments[];
   selectedFiles: File[];
   isSaving?: boolean;
@@ -17,96 +24,76 @@ interface IPhvbMagDetailActivityFeedProps {
   onSubmitComment: (text: string) => Promise<boolean>;
 }
 
-const COMMENT_TRUNCATE_MIN_LENGTH = 120;
+const ACTIVITY_FILTERS: ReadonlyArray<{ key: ActivityFilter; label: string }> = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'discussion', label: 'Trao đổi' },
+  { key: 'activity', label: 'Hoạt động' }
+];
 
-function isEditRequestComment(item: ICommentWithAttachments): boolean {
-  const status = (item.TrangThai_ThucHien || '').toLowerCase();
-  const content = (item.NoiDung || '').toLowerCase();
-  return status.indexOf('chỉnh sửa') > -1 || status.indexOf('chinh sua') > -1 || content.indexOf('yêu cầu chỉnh sửa') > -1;
-}
-
-function getCommentText(item: ICommentWithAttachments): string {
-  return (item.NoiDung || item.TrangThai_ThucHien || '---').trim();
-}
-
-function getCommentInitials(name?: string): string {
-  const normalized = (name || '').trim();
-  if (!normalized) {
-    return '?';
+function getItemTimestamp(item: ILichSuThucHienItem): number {
+  const raw = item.Ngay_ThucHien || item.Created;
+  if (!raw) {
+    return 0;
   }
 
-  const parts = normalized.split(/\s+/);
-  if (parts.length === 1) {
-    return parts[0].substring(0, 1).toUpperCase();
+  const parsed = Date.parse(raw);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+function getFilterButtonLabel(
+  filter: { key: ActivityFilter; label: string },
+  discussionCount: number,
+  activityCount: number
+): string {
+  if (filter.key === 'discussion' && discussionCount > 0) {
+    return `${filter.label} (${discussionCount})`;
   }
 
-  return `${parts[0].substring(0, 1)}${parts[parts.length - 1].substring(0, 1)}`.toUpperCase();
+  if (filter.key === 'activity' && activityCount > 0) {
+    return `${filter.label} (${activityCount})`;
+  }
+
+  return filter.label;
 }
 
-interface IActivityCommentItemProps {
-  item: ICommentWithAttachments;
+function getEmptyMessage(filter: ActivityFilter): string {
+  switch (filter) {
+    case 'discussion':
+      return 'Chưa có trao đổi nào.';
+    case 'activity':
+      return 'Chưa có hoạt động nào.';
+    default:
+      return 'Chưa có trao đổi hoặc hoạt động nào.';
+  }
 }
 
-function ActivityCommentItem(props: IActivityCommentItemProps): React.ReactElement {
-  const { item } = props;
-  const [isExpanded, setIsExpanded] = useState(false);
-  const commentText = getCommentText(item);
-  const shouldTruncate = commentText.length > COMMENT_TRUNCATE_MIN_LENGTH;
+interface IActivityFilterBarProps {
+  activeFilter: ActivityFilter;
+  discussionCount: number;
+  activityCount: number;
+  onChange: (filter: ActivityFilter) => void;
+}
+
+function ActivityFilterBar(props: IActivityFilterBarProps): React.ReactElement {
+  const { activeFilter, discussionCount, activityCount, onChange } = props;
 
   return (
-    <div className={styles.detailActivityItem}>
-      <div className={styles.detailActivityAuthorRow}>
-        <span className={styles.detailActivityAvatar} aria-hidden="true">
-          {getCommentInitials(item.User_ThucHien)}
-        </span>
-        <div className={styles.detailActivityAuthorMeta}>
-          <strong>{item.User_ThucHien || '---'}</strong>
-          {item.Ngay_ThucHien ? (
-            <span>{formatExecutionDateTime(item.Ngay_ThucHien)}</span>
-          ) : null}
-        </div>
-      </div>
-
-      <div
-        className={[
-          styles.detailActivityBubble,
-          isEditRequestComment(item) ? styles.detailActivityBubbleEdit : styles.detailActivityBubbleDefault,
-          shouldTruncate && !isExpanded ? styles.detailActivityBubbleClamped : ''
-        ].filter(Boolean).join(' ')}
-      >
-        {commentText}
-      </div>
-
-      {item.attachments.length > 0 ? (
-        <ul className={styles.detailCommentAttachmentList}>
-          {item.attachments.map(attachment => (
-            <li key={attachment.id}>
-              {attachment.fileUrl ? (
-                <a
-                  href={attachment.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.detailCommentAttachmentLink}
-                >
-                  {attachment.name}
-                </a>
-              ) : (
-                <span>{attachment.name}</span>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {shouldTruncate && !isExpanded ? (
+    <div className={styles.detailActivityFilterBar} role="tablist" aria-label="Lọc trao đổi và hoạt động">
+      {ACTIVITY_FILTERS.map(filter => (
         <button
+          key={filter.key}
           type="button"
-          className={styles.detailActivityExpandTextBtn}
-          onClick={() => setIsExpanded(true)}
+          role="tab"
+          aria-selected={activeFilter === filter.key}
+          className={[
+            styles.detailActivityFilterBtn,
+            activeFilter === filter.key ? styles.detailActivityFilterBtnActive : ''
+          ].filter(Boolean).join(' ')}
+          onClick={() => onChange(filter.key)}
         >
-          Xem thêm
+          {getFilterButtonLabel(filter, discussionCount, activityCount)}
         </button>
-      ) : null}
+      ))}
     </div>
   );
 }
@@ -232,8 +219,28 @@ function ActivityCommentComposer(props: IActivityCommentComposerProps): React.Re
   );
 }
 
+function renderFeedItem(entry: ActivityFeedItem): React.ReactElement {
+  if (entry.kind === 'discussion') {
+    return (
+      <PhvbMagDetailHistoryItem
+        key={`discussion-${entry.item.Id}`}
+        item={entry.item}
+        attachments={entry.item.attachments}
+      />
+    );
+  }
+
+  return (
+    <PhvbMagDetailHistoryItem
+      key={`activity-${entry.item.Id}`}
+      item={entry.item}
+    />
+  );
+}
+
 export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps): React.ReactElement {
   const {
+    history,
     comments,
     selectedFiles,
     isSaving,
@@ -242,15 +249,37 @@ export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps
     onRemoveFile,
     onSubmitComment
   } = props;
+  const [activeFilter, setActiveFilter] = useState<ActivityFilter>('all');
 
-  const sortedComments = useMemo(() => {
-    return comments.slice().sort((left, right) => right.Id - left.Id);
-  }, [comments]);
+  const filteredItems = useMemo((): ActivityFeedItem[] => {
+    let items: ActivityFeedItem[] = [];
+
+    if (activeFilter === 'all' || activeFilter === 'discussion') {
+      items = items.concat(comments.map(item => ({ kind: 'discussion' as const, item })));
+    }
+
+    if (activeFilter === 'all' || activeFilter === 'activity') {
+      items = items.concat(history.map(item => ({ kind: 'activity' as const, item })));
+    }
+
+    return items.sort((left, right) => {
+      const leftTime = getItemTimestamp(left.item);
+      const rightTime = getItemTimestamp(right.item);
+
+      if (leftTime !== rightTime) {
+        return rightTime - leftTime;
+      }
+
+      return right.item.Id - left.item.Id;
+    });
+  }, [activeFilter, comments, history]);
+
+  const totalCount = history.length + comments.length;
 
   return (
     <PhvbMagSidebarAccordion
       title="Trao đổi & hoạt động"
-      badge={comments.length}
+      badge={totalCount}
       fillHeight
       defaultOpen
       footer={(
@@ -265,15 +294,18 @@ export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps
       )}
     >
       <div className={styles.detailActivityPanel}>
-        <div className={styles.detailActivityCount}>
-          {comments.length} hoạt động / bình luận
-        </div>
+        <ActivityFilterBar
+          activeFilter={activeFilter}
+          discussionCount={comments.length}
+          activityCount={history.length}
+          onChange={setActiveFilter}
+        />
 
         <div className={styles.detailActivityFeed}>
-          {sortedComments.length === 0 ? (
-            <p className={styles.detailWorkflowEmpty}>Chưa có trao đổi nào.</p>
+          {filteredItems.length === 0 ? (
+            <p className={styles.detailWorkflowEmpty}>{getEmptyMessage(activeFilter)}</p>
           ) : (
-            sortedComments.map(item => <ActivityCommentItem key={item.Id} item={item} />)
+            filteredItems.map(entry => renderFeedItem(entry))
           )}
         </div>
       </div>

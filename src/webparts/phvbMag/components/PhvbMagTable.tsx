@@ -44,21 +44,94 @@ const cardToneClassMap: Record<IDeadlineState['tone'], string> = {
   neutral: styles.cardNeutral
 };
 
+type WorkflowBucketKey = 'gopY' | 'thamDinh' | 'pheDuyet' | 'choBanHanh';
+type TaskMetricFilterKey = 'all' | WorkflowBucketKey;
+
+interface ITaskMetricFilterOption {
+  key: TaskMetricFilterKey;
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
+}
+
+const WORKFLOW_BUCKET_LABELS: Record<WorkflowBucketKey, string> = {
+  gopY: 'Cần góp ý',
+  thamDinh: 'Cần thẩm định',
+  pheDuyet: 'Cần phê duyệt',
+  choBanHanh: 'Chờ ban hành'
+};
+
+const WORKFLOW_BUCKET_ORDER: WorkflowBucketKey[] = ['gopY', 'thamDinh', 'pheDuyet', 'choBanHanh'];
+
+const taskMetricFilterOptions: ITaskMetricFilterOption[] = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'gopY', label: WORKFLOW_BUCKET_LABELS.gopY },
+  { key: 'thamDinh', label: WORKFLOW_BUCKET_LABELS.thamDinh},
+  { key: 'pheDuyet', label: WORKFLOW_BUCKET_LABELS.pheDuyet },
+  { key: 'choBanHanh', label: WORKFLOW_BUCKET_LABELS.choBanHanh}
+];
+
+function resolveWorkflowBucket(item: IVanBanItem): WorkflowBucketKey | undefined {
+  const status = (item.StatusApproved || '').trim();
+
+  switch (status) {
+    case REQUEST_STATUS.DANG_GOP_Y:
+      return 'gopY';
+    case REQUEST_STATUS.DANG_THAM_DINH:
+      return 'thamDinh';
+    case REQUEST_STATUS.DANG_PHE_DUYET:
+      return 'pheDuyet';
+    case REQUEST_STATUS.CHO_BAN_HANH:
+      return 'choBanHanh';
+    default:
+      return undefined;
+  }
+}
+
+function matchesTaskMetricFilter(item: IVanBanItem, filterKey: TaskMetricFilterKey): boolean {
+  if (filterKey === 'all') {
+    return true;
+  }
+
+  return resolveWorkflowBucket(item) === filterKey;
+}
+
+function getMetricCards(items: IVanBanItem[]): IMetricCard[] {
+  const counts: Record<WorkflowBucketKey, number> = {
+    gopY: 0,
+    thamDinh: 0,
+    pheDuyet: 0,
+    choBanHanh: 0
+  };
+
+  items.forEach(item => {
+    const bucket = resolveWorkflowBucket(item);
+
+    if (bucket) {
+      counts[bucket] += 1;
+    }
+  });
+
+  const toneMap: Record<WorkflowBucketKey, IMetricCard['tone']> = {
+    gopY: 'info',
+    thamDinh: 'warning',
+    pheDuyet: 'success',
+    choBanHanh: 'danger'
+  };
+
+  return WORKFLOW_BUCKET_ORDER.map(key => ({
+    key,
+    count: counts[key],
+    label: WORKFLOW_BUCKET_LABELS[key],
+    hint: 'Việc cần xử lý',
+    tone: toneMap[key]
+  }));
+}
+
 const requestStatusFilterOptions: Array<{ key: RequestStatusFilterKey; label: string }> = [
   { key: 'all', label: 'Tất cả' },
   { key: 'processing', label: 'Đang xử lý' },
   { key: 'approved', label: 'Đã ban hành' },
   { key: 'rejected', label: 'Từ chối' }
-];
-
-type TaskMetricFilterKey = 'all' | 'overdue' | 'upcoming' | 'processing' | 'released';
-
-const taskMetricFilterOptions: Array<{ key: TaskMetricFilterKey; label: string }> = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'overdue', label: 'Quá hạn' },
-  { key: 'upcoming', label: 'Sắp hạn' },
-  { key: 'processing', label: 'Đang xử lý' },
-  { key: 'released', label: 'Vừa ban hành' }
 ];
 
 function parseDate(value?: string): Date | undefined {
@@ -246,87 +319,6 @@ function getWorkflowText(item: IVanBanItem): string {
   }
 
   return `${owner} đang được hệ thống xử lý`;
-}
-
-function isOverdueTaskItem(item: IVanBanItem, today: Date): boolean {
-  const relativeDays = getRelativeDays(item, today);
-  return typeof relativeDays === 'number' && relativeDays <= 0;
-}
-
-function isUpcomingTaskItem(item: IVanBanItem, today: Date): boolean {
-  const relativeDays = getRelativeDays(item, today);
-  return typeof relativeDays === 'number' && relativeDays > 0 && relativeDays <= 2;
-}
-
-function isProcessingTaskItem(item: IVanBanItem): boolean {
-  return !isReleasedStatus(item.StatusApproved);
-}
-
-function isReleasedThisWeekTaskItem(item: IVanBanItem, today: Date): boolean {
-  if (!isReleasedStatus(item.StatusApproved)) {
-    return false;
-  }
-
-  const publishDate = parseDate(item.NgayPhatHanh);
-  if (!publishDate) {
-    return false;
-  }
-
-  const diff = Math.floor((today.getTime() - toStartOfDay(publishDate).getTime()) / DAY_IN_MS);
-  return diff >= 0 && diff <= 7;
-}
-
-function matchesTaskMetricFilter(item: IVanBanItem, filterKey: TaskMetricFilterKey, today: Date): boolean {
-  switch (filterKey) {
-    case 'overdue':
-      return isOverdueTaskItem(item, today);
-    case 'upcoming':
-      return isUpcomingTaskItem(item, today);
-    case 'processing':
-      return isProcessingTaskItem(item);
-    case 'released':
-      return isReleasedThisWeekTaskItem(item, today);
-    default:
-      return true;
-  }
-}
-
-function getMetricCards(items: IVanBanItem[], today: Date, activeTab: TabType): IMetricCard[] {
-  const overdueCount = items.filter(item => isOverdueTaskItem(item, today)).length;
-  const upcomingCount = items.filter(item => isUpcomingTaskItem(item, today)).length;
-  const processingCount = items.filter(item => isProcessingTaskItem(item)).length;
-  const releasedThisWeekCount = items.filter(item => isReleasedThisWeekTaskItem(item, today)).length;
-
-  return [
-    {
-      key: 'overdue',
-      count: overdueCount,
-      label: 'Quá hạn',
-      hint: 'Cần xử lý ngay',
-      tone: 'danger'
-    },
-    {
-      key: 'upcoming',
-      count: upcomingCount,
-      label: 'Sắp hạn',
-      hint: 'Trong 2 ngày tới',
-      tone: 'warning'
-    },
-    {
-      key: 'processing',
-      count: processingCount,
-      label: 'Đang xử lý',
-      hint: activeTab === 'YeuCauCuaToi' ? 'Yêu cầu của tôi' : 'Yêu cầu chờ duyệt',
-      tone: 'info'
-    },
-    {
-      key: 'released',
-      count: releasedThisWeekCount,
-      label: 'Vừa ban hành',
-      hint: 'Tuần này',
-      tone: 'success'
-    }
-  ];
 }
 
 function getRequestStatusState(item: IVanBanItem): { filterKey: RequestStatusFilterKey; label: string; className: string } {
@@ -671,14 +663,14 @@ function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
   const [metricFilter, setMetricFilter] = React.useState<TaskMetricFilterKey>('all');
   const isTaskTab = activeTab === 'TrangChu';
   const today = toStartOfDay(new Date());
-  const metrics = isTaskTab ? getMetricCards(items, today, activeTab) : [];
+  const metrics = isTaskTab ? getMetricCards(items) : [];
   const sectionTitle = isTaskTab ? 'Cần xử lý' : TAB_LABELS[activeTab];
   const visibleItems = React.useMemo(() => {
     if (!isTaskTab) {
       return items;
     }
 
-    return items.filter(item => matchesTaskMetricFilter(item, metricFilter, today));
+    return items.filter(item => matchesTaskMetricFilter(item, metricFilter));
   }, [isTaskTab, items, metricFilter]);
   const pagination = usePagedItems(visibleItems, [metricFilter, items, activeTab, searchQuery]);
   const { pagedItems, totalItems } = pagination;
@@ -708,16 +700,21 @@ function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
       {isTaskTab && (
         <div className={styles.requestToolBar}>
           <div className={styles.requestQuickFilters}>
-            {taskMetricFilterOptions.map(option => (
-              <button
-                key={option.key}
-                type="button"
-                className={[styles.requestQuickFilter, metricFilter === option.key ? styles.requestQuickFilterActive : ''].filter(Boolean).join(' ')}
-                onClick={() => setMetricFilter(option.key)}
-              >
-                {option.label}
-              </button>
-            ))}
+            {taskMetricFilterOptions.map(option => {
+              const IconComponent = option.icon;
+
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  className={[styles.requestQuickFilter, metricFilter === option.key ? styles.requestQuickFilterActive : ''].filter(Boolean).join(' ')}
+                  onClick={() => setMetricFilter(option.key)}
+                >
+                  {IconComponent ? <IconComponent className={styles.requestQuickFilterIcon} /> : null}
+                  <span>{option.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           <RequestSearchControls searchQuery={searchQuery} onSearchChange={onSearchChange} />

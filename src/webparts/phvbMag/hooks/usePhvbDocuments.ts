@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { SPHttpClient } from '@microsoft/sp-http';
+import type { HttpClient, SPHttpClient } from '@microsoft/sp-http';
 import { hasSharePointSiteContext, resolveListTitle } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE } from '../services/PhvbMag.error';
 import { phvbDocumentsService } from '../services/PhvbMag.service';
@@ -14,7 +14,9 @@ interface IUsePhvbDocumentsOptions {
   siteCollectionUrl: string;
   sourceSiteUrl?: string;
   listTitle?: string;
+  endPointSendMail?: string;
   spHttpClient: SPHttpClient;
+  httpClient: HttpClient;
 }
 
 interface IUsePhvbDocumentsResult {
@@ -35,7 +37,7 @@ interface IUsePhvbDocumentsResult {
 }
 
 export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDocumentsResult {
-  const { userDisplayName, userEmail, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, spHttpClient } = options;
+  const { userDisplayName, userEmail, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, endPointSendMail, spHttpClient, httpClient } = options;
   const [activeTab, setActiveTab] = useState<TabType>('TrangChu');
   const [counts, setCounts] = useState<ITabCounts>(DEFAULT_TAB_COUNTS);
   const [items, setItems] = useState<IVanBanItem[]>([]);
@@ -49,8 +51,10 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     siteCollectionUrl,
     sourceSiteUrl,
     listTitle: resolvedListTitle,
-    spHttpClient
-  }), [currentWebUrl, resolvedListTitle, siteCollectionUrl, sourceSiteUrl, spHttpClient]);
+    endPointSendMail,
+    spHttpClient,
+    httpClient
+  }), [currentWebUrl, resolvedListTitle, siteCollectionUrl, sourceSiteUrl, endPointSendMail, spHttpClient, httpClient]);
   const documentContext = useMemo(() => ({
     ...siteContext,
     userDisplayName,

@@ -21,6 +21,7 @@ import {
   shouldSkipGopYStage
 } from '../utils/PhvbMagRequestForm.utils';
 import styles from './PhvbMag.module.scss';
+import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import {
   CloseIcon,
   DeleteFileIcon,
@@ -805,7 +806,11 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                             <DocumentFileIcon />
                           </div>
                           <div className={styles.fileMetaArea}>
-                            <div className={styles.fileName}>{attachment.name}</div>
+                            <div className={styles.fileName}>
+                              <PhvbMagExternalLink href={attachment.fileUrl}>
+                                {attachment.name}
+                              </PhvbMagExternalLink>
+                            </div>
                             <div className={styles.fileSize}>{formatExistingFileMeta(attachment)}</div>
                           </div>
                           <button
@@ -883,7 +888,11 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                             <FormTemplateFileIcon />
                           </div>
                           <div className={styles.fileMetaArea}>
-                            <div className={styles.fileName}>{attachment.name}</div>
+                            <div className={styles.fileName}>
+                              <PhvbMagExternalLink href={attachment.fileUrl}>
+                                {attachment.name}
+                              </PhvbMagExternalLink>
+                            </div>
                             <div className={styles.fileSize}>{formatExistingFileMeta(attachment)}</div>
                           </div>
                           <button

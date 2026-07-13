@@ -56,3 +56,21 @@ export function buildSharePointFileOpenUrl(
 
   return appendWebViewQuery(directUrl);
 }
+
+export function openExternalUrl(url: string): void {
+  const normalized = (url || '').trim();
+
+  if (!normalized) {
+    return;
+  }
+
+  const anchor = document.createElement('a');
+  anchor.href = normalized;
+  anchor.target = '_blank';
+  anchor.rel = 'noopener noreferrer';
+  anchor.setAttribute('data-interception', 'off');
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+}

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { IAttachmentLibraryItem } from '../models/PhvbMag.models';
+import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagDetailDocumentsTabProps {
@@ -38,20 +39,16 @@ export function PhvbMagDetailDocumentsTab(props: IPhvbMagDetailDocumentsTabProps
             {files.map(file => (
               <tr key={file.id}>
                 <td>
-                  {file.fileUrl ? (
-                    <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className={styles.detailDocLink}>
-                      {file.name}
-                    </a>
-                  ) : (
-                    file.name
-                  )}
+                  <PhvbMagExternalLink href={file.fileUrl} className={styles.detailDocLink}>
+                    {file.name}
+                  </PhvbMagExternalLink>
                 </td>
                 <td className={styles.detailDocFolder}>{file.folderPath || '---'}</td>
                 <td>
                   {file.fileUrl ? (
-                    <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" className={styles.detailDocLink}>
+                    <PhvbMagExternalLink href={file.fileUrl} className={styles.detailDocLink}>
                       Mở
-                    </a>
+                    </PhvbMagExternalLink>
                   ) : (
                     '---'
                   )}

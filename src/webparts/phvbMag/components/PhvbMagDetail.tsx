@@ -1,19 +1,20 @@
 import * as React from 'react';
 import { useState } from 'react';
-import type { IRequestDetailData, TabType } from '../models/PhvbMag.models';
+import type { IBanHanhNotifyDraft, IRequestDetailData, TabType } from '../models/PhvbMag.models';
+import type { IRemindDeadlineContext } from '../utils/PhvbMagRemindDeadline.utils';
 import type { IWorkflowActionAvailability } from '../utils/PhvbMagWorkflowPermission.utils';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
 import styles from './PhvbMag.module.scss';
 import { PhvbMagDetailActivityFeed } from './PhvbMagDetailActivityFeed';
 import { PhvbMagDetailDocumentsTab } from './PhvbMagDetailDocumentsTab';
 import { PhvbMagDetailHeader } from './PhvbMagDetailHeader';
-import { PhvbMagDetailHistoryTab } from './PhvbMagDetailHistoryTab';
 import { PhvbMagDetailInfoTab } from './PhvbMagDetailInfoTab';
 import { PhvbMagDetailRightPanel } from './PhvbMagDetailRightPanel';
 import { PhvbMagDetailStepper } from './PhvbMagDetailStepper';
 import { PhvbMagDetailWorkflowSidebar } from './PhvbMagDetailWorkflowSidebar';
+import { PhvbMagRemindDeadlineDialog } from './PhvbMagRemindDeadlineDialog';
 
-type DetailTabKey = 'info' | 'documents' | 'history';
+type DetailTabKey = 'info' | 'documents' | 'workflow';
 
 interface IPhvbMagDetailProps {
   tabName: TabType;
@@ -36,17 +37,25 @@ interface IPhvbMagDetailProps {
   canPrepareBanHanh?: boolean;
   canPublishBanHanh?: boolean;
   isBanHanhSaving?: boolean;
+  isBanHanhNotifyLoading?: boolean;
   banHanhErrorMessage?: string;
-  onPrepareBanHanh?: () => Promise<boolean>;
+  banHanhNotifyDraft?: IBanHanhNotifyDraft;
+  onOpenPrepareBanHanh?: () => void;
+  onPrepareBanHanh?: (notify: IBanHanhNotifyDraft) => Promise<boolean>;
   onPublishBanHanh?: () => Promise<boolean>;
   canOpenParticipantModal?: boolean;
   onOpenParticipantModal?: () => void;
+  canRemindDeadline?: boolean;
+  remindContext?: IRemindDeadlineContext;
+  isRemindSending?: boolean;
+  remindErrorMessage?: string;
+  onSendRemindDeadline?: (selectedRecipientIds: string[]) => Promise<boolean>;
 }
 
 const DETAIL_TABS: ReadonlyArray<{ key: DetailTabKey; label: string }> = [
   { key: 'info', label: 'Thông tin' },
   { key: 'documents', label: 'Tài liệu' },
-  { key: 'history', label: 'Lịch sử' }
+  { key: 'workflow', label: 'Quy trình phê duyệt' }
 ];
 
 export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
@@ -71,21 +80,55 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     canPrepareBanHanh,
     canPublishBanHanh,
     isBanHanhSaving,
+    isBanHanhNotifyLoading,
     banHanhErrorMessage,
+    banHanhNotifyDraft,
+    onOpenPrepareBanHanh,
     onPrepareBanHanh,
     onPublishBanHanh,
     canOpenParticipantModal,
-    onOpenParticipantModal
+    onOpenParticipantModal,
+    canRemindDeadline,
+    remindContext,
+    isRemindSending,
+    remindErrorMessage,
+    onSendRemindDeadline
   } = props;
   const [activeTab, setActiveTab] = useState<DetailTabKey>('info');
+  const [isRemindDialogOpen, setIsRemindDialogOpen] = useState<boolean>(false);
   const title = data.release.Tenvanban || data.release.IdYeuCau || 'Chi tiết văn bản';
+
+  const handleRemindConfirm = async (selectedRecipientIds: string[]): Promise<void> => {
+    if (!onSendRemindDeadline || isRemindSending) {
+      return;
+    }
+
+    const succeeded = await onSendRemindDeadline(selectedRecipientIds);
+
+    if (succeeded) {
+      setIsRemindDialogOpen(false);
+    }
+  };
 
   const renderTabContent = (): React.ReactElement => {
     switch (activeTab) {
       case 'documents':
         return <PhvbMagDetailDocumentsTab attachments={data.attachments} />;
-      case 'history':
-        return <PhvbMagDetailHistoryTab history={data.history} />;
+      case 'workflow':
+        return (
+          <PhvbMagDetailWorkflowSidebar
+            layout="tab"
+            release={data.release}
+            workflowParticipants={data.workflowParticipants}
+            canOpenParticipantModal={canOpenParticipantModal}
+            onOpenParticipantModal={onOpenParticipantModal}
+            canRemindDeadline={canRemindDeadline}
+            isRemindSending={isRemindSending}
+            remindErrorMessage={remindErrorMessage}
+            isRemindDialogOpen={isRemindDialogOpen}
+            onOpenRemindDeadline={() => setIsRemindDialogOpen(true)}
+          />
+        );
       default:
         return <PhvbMagDetailInfoTab release={data.release} />;
     }
@@ -109,7 +152,10 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
         canPrepareBanHanh={canPrepareBanHanh}
         canPublishBanHanh={canPublishBanHanh}
         isBanHanhSaving={isBanHanhSaving}
+        isBanHanhNotifyLoading={isBanHanhNotifyLoading}
         banHanhErrorMessage={banHanhErrorMessage}
+        banHanhNotifyDraft={banHanhNotifyDraft}
+        onOpenPrepareBanHanh={onOpenPrepareBanHanh}
         onPrepareBanHanh={onPrepareBanHanh}
         onPublishBanHanh={onPublishBanHanh}
       />
@@ -144,28 +190,34 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
           </div>
         </div>
 
-        <PhvbMagDetailRightPanel
-          workflowSlot={(
-            <PhvbMagDetailWorkflowSidebar
-              release={data.release}
-              workflowParticipants={data.workflowParticipants}
-              canOpenParticipantModal={canOpenParticipantModal}
-              onOpenParticipantModal={onOpenParticipantModal}
-            />
-          )}
-          activitySlot={(
-            <PhvbMagDetailActivityFeed
-              comments={data.comments}
-              selectedFiles={commentSelectedFiles || []}
-              isSaving={isCommentSaving}
-              errorMessage={commentErrorMessage}
-              onAddFiles={onCommentAddFiles || (() => undefined)}
-              onRemoveFile={onCommentRemoveFile || (() => undefined)}
-              onSubmitComment={onSubmitComment || (async () => false)}
-            />
-          )}
-        />
+        <PhvbMagDetailRightPanel>
+          <PhvbMagDetailActivityFeed
+            history={data.history}
+            comments={data.comments}
+            selectedFiles={commentSelectedFiles || []}
+            isSaving={isCommentSaving}
+            errorMessage={commentErrorMessage}
+            onAddFiles={onCommentAddFiles || (() => undefined)}
+            onRemoveFile={onCommentRemoveFile || (() => undefined)}
+            onSubmitComment={onSubmitComment || (async () => false)}
+          />
+        </PhvbMagDetailRightPanel>
       </div>
+
+      <PhvbMagRemindDeadlineDialog
+        isOpen={isRemindDialogOpen}
+        isProcessing={isRemindSending}
+        errorMessage={isRemindDialogOpen ? remindErrorMessage : undefined}
+        context={remindContext}
+        onCancel={() => {
+          if (!isRemindSending) {
+            setIsRemindDialogOpen(false);
+          }
+        }}
+        onConfirm={selectedRecipientIds => {
+          handleRemindConfirm(selectedRecipientIds).catch(() => undefined);
+        }}
+      />
     </div>
   );
 }

@@ -44,17 +44,6 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     display: flex;
     flex-direction: column;
   }
-
-  .detailPage {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-
-  .detailBodySplit {
-    flex: 1 1 auto;
-    min-height: 0;
-    align-items: stretch;
-  }
 }
 
 .btnIcon {
@@ -111,7 +100,7 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   .sidebarHeader {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     margin-bottom: 32px;
 
     .sidebarBrand {
@@ -120,26 +109,6 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
       gap: 12px;
       min-width: 0;
       padding-left: 8px;
-    }
-
-    .collapseButton {
-      width: 32px;
-      height: 32px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      border: 1px solid $border-color;
-      background-color: #FFFFFF;
-      color: $text-main;
-      cursor: pointer;
-      line-height: 1;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background-color: $bg-folders;
-        color: $primary-color;
-      }
     }
 
     .logoBox {
@@ -282,13 +251,41 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     }
   }
 
+  .sidebarBottom {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+    padding-top: 16px;
+    border-top: 1px solid $border-color;
+    margin-top: 24px;
+
+    .collapseButton {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+      border-radius: 8px;
+      border: 1px solid $border-color;
+      background-color: #FFFFFF;
+      color: $text-main;
+      cursor: pointer;
+      line-height: 1;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: $bg-folders;
+        color: $primary-color;
+      }
+    }
+  }
+
   .sidebarFooter {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding-top: 16px;
-    border-top: 1px solid $border-color;
-    margin-top: 24px;
 
     .userAvatar {
       width: 28px;
@@ -332,6 +329,7 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 
     .sidebarHeader {
       margin-bottom: 24px;
+      justify-content: center;
 
       .sidebarBrand {
         padding-left: 0;
@@ -2454,15 +2452,24 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
 }
 
 .requestQuickFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1.5px solid #E8E2D9;
   background-color: #FFFFFF;
   color: $text-ink2;
-  min-height: auto;
-  padding: 3px 10px;
-  border-radius: 20px;
+  min-height: 34px;
+  padding: 6px 14px;
+  border-radius: 999px;
   @include ty-chip;
   font-family: $font-family-base;
   cursor: pointer;
+}
+
+.requestQuickFilterIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .requestQuickFilterActive {
@@ -3390,6 +3397,34 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     line-height: 1.5;
     color: $text-main;
   }
+
+  .formInput {
+    padding: 8px 11px;
+    border: 1.5px solid #E8E2D9;
+    border-radius: 8px;
+    @include ty-input;
+    outline: none;
+    background-color: #FFFFFF;
+    color: $text-ink;
+    transition: all 0.2s ease;
+    width: 100%;
+
+    &:focus {
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+    }
+
+    &::placeholder {
+      color: $text-muted;
+    }
+
+    &:disabled {
+      background-color: #F8F5EF;
+      color: $text-muted;
+      cursor: not-allowed;
+      opacity: 0.72;
+    }
+  }
 }
 
 .workflowActionDialogComment {
@@ -3464,6 +3499,472 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
     border: none;
     background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
     color: #FFFFFF;
+  }
+}
+
+.banHanhNotifyModal {
+  width: min(760px, calc(100vw - 40px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: $shadow-lg;
+  animation: scaleUp 0.2s ease;
+
+  .formInput {
+    padding: 8px 11px;
+    border: 1.5px solid #E8E2D9;
+    border-radius: 7px;
+    @include ty-input;
+    outline: none;
+    background-color: #FFFFFF;
+    color: $text-ink;
+    transition: all 0.2s ease;
+    width: 100%;
+
+    &:focus {
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+    }
+
+    &::placeholder {
+      color: $text-muted;
+    }
+
+    &:disabled {
+      background-color: #F8F5EF;
+      color: $text-muted;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.banHanhNotifyHeader {
+  background-color: $primary-color;
+  padding: 14px 20px;
+
+  h4 {
+    margin: 0;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+  }
+}
+
+.banHanhNotifyBody {
+  padding: 20px 22px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.banHanhNotifyField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: #8A7C70;
+  }
+}
+
+.banHanhNotifyTextarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 10px 12px;
+  border: 1.5px solid #E8E2D9;
+  border-radius: 8px;
+  font-family: $font-family-base;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: $text-ink;
+  resize: vertical;
+  outline: none;
+
+  &:focus {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+  }
+
+  &:disabled {
+    background-color: #F8F5EF;
+    color: $text-muted;
+  }
+}
+
+.banHanhNotifyHtmlEditor {
+  width: 100%;
+  min-height: 220px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1.5px solid #E8E2D9;
+  border-radius: 8px;
+  font-family: $font-family-base;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: $text-ink;
+  outline: none;
+  background-color: #FFFFFF;
+
+  &:focus {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+  }
+
+  &[contenteditable='false'] {
+    background-color: #F8F5EF;
+    color: $text-muted;
+    cursor: not-allowed;
+  }
+
+  p {
+    margin: 0 0 8px;
+  }
+
+  a {
+    color: $primary-color;
+    text-decoration: underline;
+  }
+}
+
+.banHanhNotifyLoading {
+  margin: 24px 0;
+  text-align: center;
+  color: $text-muted;
+  font-size: 14px;
+}
+
+.banHanhNotifyActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid $border-color;
+  background-color: $bg-folders;
+}
+
+.banHanhNotifyCancelBtn {
+  background-color: #FFFFFF;
+  border: 1.5px solid #D32F2F;
+  border-radius: 7px;
+  padding: 7px 16px;
+  color: #D32F2F;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: #FFF5F5;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.banHanhNotifySendBtn {
+  background-color: $primary-color;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 18px;
+  color: #FFFFFF;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: $primary-hover;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.remindDeadlineModal {
+  width: min(640px, calc(100vw - 40px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: $shadow-lg;
+  animation: scaleUp 0.2s ease;
+}
+
+.remindDeadlineHeader {
+  background-color: $primary-color;
+  padding: 14px 20px;
+
+  h4 {
+    margin: 0;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+  }
+}
+
+.remindDeadlineBody {
+  padding: 18px 22px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.remindDeadlineDescription {
+  margin: 0;
+  font-size: $font-size-sm;
+  color: $text-muted;
+  line-height: 1.5;
+
+  strong {
+    color: $text-ink;
+    font-weight: $font-weight-bold;
+  }
+}
+
+.remindDeadlineToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.remindDeadlineToolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.remindDeadlineToolbarBtn {
+  border: 1px solid #D9CFC4;
+  border-radius: 7px;
+  padding: 5px 12px;
+  background-color: #FFFFFF;
+  color: $text-ink;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #F8F5EF;
+    border-color: $primary-color;
+    color: $primary-color;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.remindDeadlineSelectedCount {
+  font-size: $font-size-sm;
+  color: $text-muted;
+  font-weight: $font-weight-bold;
+  white-space: nowrap;
+}
+
+.remindDeadlineSearchRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.remindDeadlineSearchInput {
+  width: 100%;
+  padding: 8px 11px;
+  border: 1.5px solid #E8E2D9;
+  border-radius: 7px;
+  @include ty-input;
+  outline: none;
+  background-color: #FFFFFF;
+  color: $text-ink;
+  transition: all 0.2s ease;
+
+  &:focus {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+  }
+
+  &::placeholder {
+    color: $text-muted;
+  }
+
+  &:disabled {
+    background-color: #F8F5EF;
+    color: $text-muted;
+    cursor: not-allowed;
+  }
+}
+
+.remindDeadlineFilterActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.remindDeadlineList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(360px, calc(100vh - 320px));
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.remindDeadlineEmpty {
+  margin: 0;
+  padding: 24px 12px;
+  text-align: center;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}
+
+.remindDeadlineRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1.5px solid #EFE5DA;
+  border-radius: 10px;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: #D9CFC4;
+    background-color: #FDFBF8;
+  }
+}
+
+.remindDeadlineRowSelected {
+  border-color: rgba(123, 76, 44, 0.45);
+  background-color: #FBF6F1;
+  box-shadow: 0 0 0 1px rgba(123, 76, 44, 0.08);
+}
+
+.remindDeadlineCheckbox {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: $primary-color;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.remindDeadlineAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: $font-weight-bold;
+  flex-shrink: 0;
+}
+
+.remindDeadlineInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.remindDeadlineName {
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  color: $text-ink;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.remindDeadlineEmail {
+  font-size: $font-size-sm;
+  color: $text-muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.remindDeadlineSubtitle {
+  font-size: 12px;
+  color: #8A7C70;
+  font-weight: $font-weight-bold;
+}
+
+.remindDeadlineError {
+  margin: 4px 0 0;
+  font-size: $font-size-sm;
+  color: #C14D56;
+}
+
+.remindDeadlineActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid $border-color;
+  background-color: $bg-folders;
+}
+
+.remindDeadlineCancelBtn {
+  background-color: #FFFFFF;
+  border: 1.5px solid #D32F2F;
+  border-radius: 7px;
+  padding: 7px 16px;
+  color: #D32F2F;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: #FFF5F5;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.remindDeadlineSendBtn {
+  background-color: $primary-color;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 18px;
+  color: #FFFFFF;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: $primary-hover;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 
@@ -3729,6 +4230,30 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   gap: 10px;
 }
 
+.workflowParticipantAddBtn {
+  flex-shrink: 0;
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: #FFFFFF;
+  border: 1px solid $border-color;
+  color: $text-main;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: $shadow-sm;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
 .workflowParticipantSearchInput {
   flex: 1;
   min-height: 38px;
@@ -3829,7 +4354,7 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   color: #C14D56;
 }
 
-.detailWorkflowAdjustParticipantsBtn {
+.detailWorkflowActionBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3844,18 +4369,36 @@ $shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
   white-space: nowrap;
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: #FBF8F4;
     border-color: rgba(123, 76, 44, 0.28);
     color: $primary-color;
   }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
-.detailWorkflowAdjustParticipantsBtnIcon {
+.detailWorkflowActionBtnIcon {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
   color: $text-ink3;
+}
+
+.detailWorkflowTabActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detailWorkflowActionError {
+  margin: 0;
+  font-size: $font-size-sm;
+  color: #C14D56;
 }
 
 @media (max-width: 900px) {
@@ -3884,23 +4427,24 @@ $detail-page-gap: 18px;
 
 .contentPaneDetail {
   padding: 20px 24px 28px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
   flex: 1 1 auto;
+  scroll-behavior: smooth;
 }
 
 .detailPage {
-  flex: 0 0 auto;
-  min-height: min-content;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: $detail-page-gap;
+  overflow: hidden;
 }
 
 .detailHeaderArea {
@@ -3914,6 +4458,7 @@ $detail-page-gap: 18px;
   grid-template-columns: minmax(0, 1fr) minmax(360px, 400px);
   gap: $detail-page-gap;
   align-items: stretch;
+  overflow: hidden;
 }
 
 .detailLeftColumn {
@@ -3921,7 +4466,8 @@ $detail-page-gap: 18px;
   flex-direction: column;
   gap: $detail-page-gap;
   min-width: 0;
-  overflow: visible;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .detailHeader {
@@ -4061,10 +4607,14 @@ $detail-page-gap: 18px;
   border-radius: 8px;
   font-size: $font-size-base2;
   font-weight: $font-weight-bold;
-  background: linear-gradient(135deg, #5C7A99 0%, #4A6680 100%);
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
   color: #FFFFFF;
   cursor: pointer;
   white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #8B5A39 0%, #7B4C2C 100%);
+  }
 
   &:disabled {
     cursor: not-allowed;
@@ -4253,86 +4803,24 @@ $detail-page-gap: 18px;
   overflow: hidden;
 }
 
-.detailRightColumnResizing {
-  user-select: none;
-  cursor: row-resize;
-}
-
-.detailWorkflowSlot,
 .detailActivitySlot {
   display: flex;
   flex-direction: column;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  height: 100%;
 
   > .detailSidebarAccordion {
     width: 100%;
     flex: 1 1 auto;
     min-height: 0;
   }
-
-  > .detailSidebarAccordionCollapsed {
-    flex: 0 0 auto;
-    min-height: auto;
-  }
-}
-
-.detailWorkflowSlot:has(> .detailSidebarAccordionCollapsed),
-.detailActivitySlot:has(> .detailSidebarAccordionCollapsed) {
-  flex: 0 0 auto !important;
-  min-height: auto;
-}
-
-.detailRightColumn:has(.detailWorkflowSlot > .detailSidebarAccordionCollapsed)
-  .detailActivitySlot:not(:has(> .detailSidebarAccordionCollapsed)) {
-  flex: 1 1 auto !important;
-}
-
-.detailRightColumn:has(.detailActivitySlot > .detailSidebarAccordionCollapsed)
-  .detailWorkflowSlot:not(:has(> .detailSidebarAccordionCollapsed)) {
-  flex: 1 1 auto !important;
-}
-
-.detailRightColumn:has(.detailSidebarAccordionCollapsed) .detailRightPanelSplitter {
-  display: none;
-}
-
-.detailActivitySlot {
-  flex: 1 1 auto;
-}
-
-.detailRightPanelSplitter {
-  flex: 0 0 10px;
-  margin: 2px 0;
-  border-radius: 999px;
-  background-color: transparent;
-  cursor: row-resize;
-  position: relative;
-  touch-action: none;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 44px;
-    height: 4px;
-    border-radius: 999px;
-    background-color: #D8CEC4;
-    transition: background-color 0.15s ease;
-  }
-
-  &:hover::before,
-  &.detailRightPanelSplitterActive::before {
-    background-color: rgba(123, 76, 44, 0.55);
-  }
 }
 
 .detailMain {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   background-color: #FFFFFF;
   border: 1px solid #E7DACB;
   border-radius: 16px;
@@ -4367,8 +4855,10 @@ $detail-page-gap: 18px;
 }
 
 .detailTabPanel {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 18px 20px 22px;
-  overflow: visible;
+  overflow-y: auto;
 }
 
 .detailInfoLayout {
@@ -4586,6 +5076,29 @@ $detail-page-gap: 18px;
   line-height: $line-height-relaxed;
 }
 
+.detailHistoryContentCollapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.detailHistoryContentToggle {
+  margin: 4px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: $primary-color;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .detailSidebarAccordionFill {
   flex: 1 1 auto;
   min-height: 0;
@@ -4747,6 +5260,80 @@ $detail-page-gap: 18px;
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.detailWorkflowTabPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.detailWorkflowTabHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detailWorkflowTabTitleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.detailWorkflowTabTitle {
+  margin: 0;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-extrabold;
+  color: $text-ink;
+}
+
+.detailWorkflowTabTitleSuffix {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $text-ink3;
+  text-transform: uppercase;
+  letter-spacing: $letter-spacing-label;
+}
+
+.detailActivityFilterBar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.detailActivityFilterBtn {
+  border: 1px solid #E7DACB;
+  background-color: #FBF8F4;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+  color: $text-ink2;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: $primary-light;
+    color: $primary-color;
+    border-color: rgba(123, 76, 44, 0.25);
+  }
+}
+
+.detailActivityFilterBtnActive {
+  background-color: $primary-color;
+  border-color: $primary-color;
+  color: #FFFFFF;
+
+  &:hover {
+    background-color: $primary-hover;
+    border-color: $primary-hover;
+    color: #FFFFFF;
+  }
 }
 
 .detailWorkflowStepList {
@@ -4914,97 +5501,10 @@ $detail-page-gap: 18px;
   gap: 10px;
 }
 
-.detailActivityCount {
-  font-size: $font-size-md;
-  font-weight: $font-weight-bold;
-  color: $text-ink3;
-}
-
 .detailActivityFeed {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.detailActivityItem {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.detailActivityAuthorRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.detailActivityAvatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
-  color: #FFFFFF;
-  font-size: $font-size-sm2;
-  font-weight: $font-weight-extrabold;
-  flex-shrink: 0;
-}
-
-.detailActivityAuthorMeta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  font-size: $font-size-md;
-  color: $text-ink2;
-
-  strong {
-    color: $text-ink;
-    font-size: $font-size-base;
-  }
-}
-
-.detailActivityBubbleClamped {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.detailActivityExpandTextBtn {
-  align-self: flex-start;
-  border: none;
-  background: transparent;
-  padding: 0;
-  color: $primary-color;
-  font-size: $font-size-md;
-  font-weight: $font-weight-bold;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
-.detailActivityBubble {
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: $font-size-base;
-  line-height: $line-height-relaxed;
-}
-
-.detailActivityBubbleEdit {
-  background-color: #FFF0E3;
-  color: #8B5E3C;
-  border: 1px solid #F1DFC2;
-}
-
-.detailActivityBubbleDefault {
-  background-color: #F3EFEB;
-  color: $text-ink2;
-  border: 1px solid #E8E2D9;
 }
 
 .detailCommentComposer {
@@ -5198,42 +5698,45 @@ $detail-page-gap: 18px;
 
 @media (max-width: 1100px) {
   .contentPaneDetail {
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   .detailPage {
-    min-height: min-content;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .detailBodySplit {
     display: flex;
     flex-direction: column;
-    min-height: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .detailLeftColumn {
     order: 1;
-    min-height: auto;
-    overflow: visible;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .detailRightColumn {
     order: 2;
-    overflow: visible;
-    flex: 0 0 auto;
-    min-height: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
   }
 
-  .detailWorkflowSlot,
   .detailActivitySlot {
-    flex: 0 0 auto;
-    min-height: auto;
-    overflow: visible;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
 
     > .detailSidebarAccordion {
-      flex: 0 0 auto;
-      min-height: auto;
+      flex: 1 1 auto;
+      min-height: 0;
     }
   }
 
@@ -5264,7 +5767,8 @@ $detail-page-gap: 18px;
   }
 
   .detailMain {
-    min-height: 360px;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 }
 

@@ -19,6 +19,7 @@ interface IPhvbMagWorkflowParticipantModalProps {
   isOpen: boolean;
   detail?: IRequestDetailData;
   directoryUsers: ReadonlyArray<IPhvbDirectoryUser>;
+  isLoadingTenantUsers?: boolean;
   isSaving?: boolean;
   errorMessage?: string;
   onClose: () => void;
@@ -32,6 +33,7 @@ interface IStageSectionProps {
   stage: WorkflowStage;
   rows: IWorkflowParticipantDraftRow[];
   directoryUsers: ReadonlyArray<IPhvbDirectoryUser>;
+  isLoadingTenantUsers?: boolean;
   allowAdd: boolean;
   onAddUser: (stage: WorkflowStage, user: IPhvbDirectoryUser) => void;
   onRemoveRow: (stage: WorkflowStage, rowKey: string) => void;
@@ -60,7 +62,7 @@ function findDirectoryUser(
 }
 
 function WorkflowParticipantStageSection(props: IStageSectionProps): React.ReactElement {
-  const { stage, rows, directoryUsers, allowAdd, onAddUser, onRemoveRow } = props;
+  const { stage, rows, directoryUsers, isLoadingTenantUsers = false, allowAdd, onAddUser, onRemoveRow } = props;
   const stageConfig = WORKFLOW_PARTICIPANT_STAGE_CONFIG[stage];
   const [query, setQuery] = useState('');
   const [selectedUserEmail, setSelectedUserEmail] = useState<string>('');
@@ -110,9 +112,10 @@ function WorkflowParticipantStageSection(props: IStageSectionProps): React.React
           <input
             type="text"
             className={styles.workflowParticipantSearchInput}
-            placeholder={`Tìm kiếm ${stageConfig.sectionLabel}...`}
+            placeholder={isLoadingTenantUsers ? 'Đang tải danh sách người dùng...' : `Tìm kiếm ${stageConfig.sectionLabel}...`}
             value={query}
             list={`phvb-participant-suggestions-${stage}`}
+            disabled={isLoadingTenantUsers}
             onChange={event => {
               setQuery(event.target.value);
               setSelectedUserEmail('');
@@ -138,9 +141,9 @@ function WorkflowParticipantStageSection(props: IStageSectionProps): React.React
           </datalist>
           <button
             type="button"
-            className={styles.btnSecondary}
+            className={styles.workflowParticipantAddBtn}
             onClick={handleAdd}
-            disabled={suggestions.length === 0 && !selectedUserEmail}
+            disabled={isLoadingTenantUsers || (suggestions.length === 0 && !selectedUserEmail)}
           >
             + Thêm
           </button>
@@ -195,6 +198,7 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
     isOpen,
     detail,
     directoryUsers,
+    isLoadingTenantUsers = false,
     isSaving = false,
     errorMessage,
     onClose,
@@ -298,6 +302,7 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
               stage={stage}
               rows={currentDraft[stage]}
               directoryUsers={directoryUsers}
+              isLoadingTenantUsers={isLoadingTenantUsers}
               allowAdd={isParticipantStageAddable(stage, detail.release.StatusApproved)}
               onAddUser={handleAddUser}
               onRemoveRow={handleRemoveRow}

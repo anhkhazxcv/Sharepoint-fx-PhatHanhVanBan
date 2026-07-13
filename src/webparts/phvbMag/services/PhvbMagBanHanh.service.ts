@@ -1,68 +1,74 @@
 import {
   DEFAULT_LIST_TITLE,
   hasSharePointSiteContext,
-  HISTORY_LIST_TITLE,
+  PHVB_ROLES,
   REQUEST_STATUS
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { toRuntimeMessage } from './PhvbMag.error';
-import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { canPrepareBanHanh, canPublishBanHanh } from '../utils/PhvbMagBanHanh.utils';
+import { validateBanHanhNotifyDraft } from '../utils/PhvbMagBanHanhNotify.utils';
+import { getRoleEmails } from '../utils/PhvbMagRole.utils';
+import { buildYeuCauBanHanhPayload, resolveSendMailDocumentInfoFromRelease } from '../utils/PhvbMagSendMail.utils';
 import { phvbRoleService } from './PhvbMagRole.service';
-import type { IPhvbDocumentContext, IPhvbLogContext, IRequestDetailData } from '../models/PhvbMag.models';
+import { phvbSendMailService } from './PhvbMagSendMail.service';
+import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
+import type {
+  IBanHanhNotifyDraft,
+  IPhvbDocumentContext,
+  IPhvbLogContext,
+  IPhvbRoleEntry,
+  IRequestDetailData,
+  ISendMailDocumentInfo,
+  IVanBanItem
+} from '../models/PhvbMag.models';
 
 const PREPARE_BAN_HANH_HISTORY_STATUS = 'Chuẩn bị ban hành';
 const PUBLISH_BAN_HANH_HISTORY_STATUS = 'Ban hành';
 
-async function createHistoryRecord(
-  context: IPhvbDocumentContext & { logContext?: IPhvbLogContext },
-  idYeuCau: string,
-  historyStatus: string,
-  comment: string,
-  department?: string
-): Promise<void> {
-  const performedAt = formatCurrentExecutionDateTime();
-  const payload: Record<string, string | boolean | number> = {
-    Title: historyStatus,
-    IDYeuCau: idYeuCau,
-    User_ThucHien: context.userDisplayName || '',
-    Email_ThucHien: context.userEmail || '',
-    PhongBan_ThucHien: department || '',
-    Ngay_ThucHien: performedAt,
-    TrangThai_ThucHien: historyStatus,
-    NoiDung: comment,
-    IsComment: false
-  };
-
-  try {
-    await phvbRepository.createItem({
-      ...context,
-      logContext: context.logContext,
-      listTitle: HISTORY_LIST_TITLE,
-      payload
-    });
-  } catch (error) {
-    const details = error instanceof Error ? error.message : '';
-    if (/IsComment/i.test(details)) {
-      const payloadWithoutIsComment = { ...payload };
-      delete payloadWithoutIsComment.IsComment;
-      await phvbRepository.createItem({
-        ...context,
-        logContext: context.logContext,
-        listTitle: HISTORY_LIST_TITLE,
-        payload: payloadWithoutIsComment
-      });
-      return;
-    }
-
-    throw error;
+function assertBanHanhMailReady(
+  context: IPhvbDocumentContext,
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  release: IVanBanItem
+): ISendMailDocumentInfo {
+  if (!(context.endPointSendMail || '').trim()) {
+    throw new Error('Chưa cấu hình endpoint gửi mail (endPointSendMail).');
   }
+
+  if (!(context.userEmail || '').trim()) {
+    throw new Error('Không xác định được email người thực hiện.');
+  }
+
+  if (!getRoleEmails(roles, PHVB_ROLES.SUPER_ADMIN).length) {
+    throw new Error('Không tìm thấy email SuperAdmin trong cấu hình vai trò.');
+  }
+
+  const documentInfo = resolveSendMailDocumentInfoFromRelease(release);
+
+  if (!(documentInfo.soVanBan || '').trim()) {
+    throw new Error('Yêu cầu chưa có số văn bản để gửi thông báo ban hành.');
+  }
+
+  if (!(documentInfo.idYeuCau || '').trim()) {
+    throw new Error('Yêu cầu chưa có mã IdYeuCau để gửi mail.');
+  }
+
+  if (!(documentInfo.tenVanBan || '').trim()) {
+    throw new Error('Yêu cầu chưa có tên văn bản để gửi mail.');
+  }
+
+  if (!(documentInfo.tomTatNoiDung || '').trim()) {
+    throw new Error('Yêu cầu chưa có tóm tắt nội dung để gửi mail.');
+  }
+
+  return documentInfo;
 }
 
 export class PhvbBanHanhService {
   public async prepareForBanHanh(
     context: IPhvbDocumentContext,
     detail: IRequestDetailData,
+    notify: IBanHanhNotifyDraft,
     logContext?: IPhvbLogContext
   ): Promise<void> {
     if (!hasSharePointSiteContext(context)) {
@@ -74,10 +80,22 @@ export class PhvbBanHanhService {
       throw new Error('Yêu cầu chưa có mã IdYeuCau.');
     }
 
+    const validationError = validateBanHanhNotifyDraft(notify);
+    if (validationError) {
+      throw new Error(validationError);
+    }
+
     const roles = await phvbRoleService.loadRoles(context);
 
     if (!canPrepareBanHanh(detail.release, roles, context.userEmail)) {
       throw new Error('Bạn không có quyền chuẩn bị ban hành cho yêu cầu này.');
+    }
+
+    const documentInfo = assertBanHanhMailReady(context, roles, detail.release);
+    const mailPayload = buildYeuCauBanHanhPayload(context.userEmail, roles, documentInfo);
+
+    if (!mailPayload) {
+      throw new Error('Không tạo được nội dung email thông báo ban hành.');
     }
 
     await phvbRepository.updateItem({
@@ -86,17 +104,25 @@ export class PhvbBanHanhService {
       listTitle: DEFAULT_LIST_TITLE,
       itemId: detail.release.Id,
       payload: {
-        StatusApproved: REQUEST_STATUS.CHO_BAN_HANH
+        StatusApproved: REQUEST_STATUS.CHO_BAN_HANH,
+        EmailNhanBanHanh: notify.recipient.trim(),
+        SubjectBanHanh: notify.subject.trim(),
+        BodyEmail: notify.body.trim()
       }
     });
 
-    await createHistoryRecord(
+    await createExecutionHistoryRecord(
       { ...context, logContext },
-      idYeuCau,
-      PREPARE_BAN_HANH_HISTORY_STATUS,
-      'Admin đã chuyển yêu cầu sang chờ ban hành.',
-      detail.release.KhoaPhongNguoiTao
+      {
+        idYeuCau,
+        historyStatus: PREPARE_BAN_HANH_HISTORY_STATUS,
+        noiDung: notify.subject.trim() || 'Admin đã chuyển yêu cầu sang chờ ban hành.',
+        department: detail.release.KhoaPhongNguoiTao,
+        isComment: false
+      }
     );
+
+    await phvbSendMailService.sendMail(context, mailPayload, logContext);
   }
 
   public async publishBanHanh(
@@ -129,12 +155,15 @@ export class PhvbBanHanhService {
       }
     });
 
-    await createHistoryRecord(
+    await createExecutionHistoryRecord(
       { ...context, logContext },
-      idYeuCau,
-      PUBLISH_BAN_HANH_HISTORY_STATUS,
-      'SuperAdmin đã ban hành văn bản.',
-      detail.release.KhoaPhongNguoiTao
+      {
+        idYeuCau,
+        historyStatus: PUBLISH_BAN_HANH_HISTORY_STATUS,
+        noiDung: 'SuperAdmin đã ban hành văn bản.',
+        department: detail.release.KhoaPhongNguoiTao,
+        isComment: false
+      }
     );
   }
 

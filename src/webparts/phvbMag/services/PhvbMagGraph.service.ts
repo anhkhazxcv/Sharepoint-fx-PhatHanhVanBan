@@ -9,6 +9,7 @@ interface IGraphUserItem {
   department?: string;
   jobTitle?: string;
   accountEnabled?: boolean;
+  userType?: string;
 }
 
 interface IGraphUsersResponse {
@@ -23,11 +24,32 @@ interface IGraphMeResponse {
   department?: string;
 }
 
+const INTERNAL_TENANT_USERS_PATH =
+  '/users?$select=id,displayName,mail,userPrincipalName,department,jobTitle,accountEnabled,userType&$filter=userType eq \'Member\'&$top=999';
+
 function normalizeEmail(item: IGraphUserItem | IGraphMeResponse): string {
   return (item.mail || item.userPrincipalName || '').trim();
 }
 
+function isInternalDirectoryUser(item: IGraphUserItem): boolean {
+  if (item.userType === 'Guest') {
+    return false;
+  }
+
+  const upn = (item.userPrincipalName || '').toLowerCase();
+
+  if (upn.indexOf('#ext#') > -1) {
+    return false;
+  }
+
+  return item.userType === 'Member' || !item.userType;
+}
+
 function mapDirectoryUser(item: IGraphUserItem): IPhvbDirectoryUser | undefined {
+  if (!isInternalDirectoryUser(item)) {
+    return undefined;
+  }
+
   const email = normalizeEmail(item);
   const displayName = item.displayName ? item.displayName.trim() : '';
 
@@ -83,10 +105,10 @@ export class PhvbMagGraphService {
     };
   }
 
-  public async loadAllUsers(msGraphClientFactory: MSGraphClientFactory): Promise<IPhvbDirectoryUser[]> {
+  public async loadInternalTenantUsers(msGraphClientFactory: MSGraphClientFactory): Promise<IPhvbDirectoryUser[]> {
     const client = await this.getClient(msGraphClientFactory);
     const usersByEmail: Record<string, IPhvbDirectoryUser> = {};
-    let nextRequestPath: string | undefined = '/users?$select=id,displayName,mail,userPrincipalName,department,jobTitle,accountEnabled&$top=999';
+    let nextRequestPath: string | undefined = INTERNAL_TENANT_USERS_PATH;
 
     while (nextRequestPath) {
       const response = await client.api(nextRequestPath).version('v1.0').get() as IGraphUsersResponse;

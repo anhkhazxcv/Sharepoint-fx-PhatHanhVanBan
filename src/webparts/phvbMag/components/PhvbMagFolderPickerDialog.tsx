@@ -10,6 +10,7 @@ import { phvbDocumentLibraryService } from '../services/PhvbMagDocumentLibrary.s
 import { ISSUANCE_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
 import { buildFolderTree, formatBanHanhDate, getFilesInFolder, getStoragePathAfterLibrary, truncateText } from '../utils/PhvbMagBanHanh.tree';
 import { PhvbMagFolderConfirmDialog } from './PhvbMagFolderConfirmDialog';
+import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagFolderPickerDialogProps {
@@ -251,14 +252,12 @@ export function PhvbMagFolderPickerDialog(props: IPhvbMagFolderPickerDialogProps
                     className={styles.folderDocCard}
                     style={{ animationDelay: `${Math.min(documentIndex, 8) * 45}ms` }}
                   >
-                    <a
+                    <PhvbMagExternalLink
                       href={document.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className={styles.folderDocCardTitle}
                     >
                       {document.name}
-                    </a>
+                    </PhvbMagExternalLink>
                     <div className={styles.folderDocCardBody}>
                       <div className={styles.folderDocCardIcon}>{getFileIconLabel(document.name)}</div>
                       <div className={styles.folderDocCardSummary}>

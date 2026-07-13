@@ -5,13 +5,24 @@ import {
   DEFAULT_LIST_TITLE,
   EXECUTION_HISTORY_STATUS,
   hasSharePointSiteContext,
-  HISTORY_LIST_TITLE,
   REQUEST_STATUS,
   WORKFLOW_PARTICIPANT_STATUS
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
+import { phvbRoleService } from './PhvbMagRole.service';
+import { phvbSendMailService } from './PhvbMagSendMail.service';
+import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from './PhvbMag.error';
 import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
+import {
+  buildXacNhanPayloadForStage,
+  buildYeuCauCapSoPayload,
+  buildYeuCauPayloadForStage,
+  getParticipantEmailsFromWorkflowItems,
+  resolveActiveWorkflowStageFromStatus,
+  resolveSendMailDocumentInfoFromRelease,
+  SEND_MAIL_APPROVAL_STATUS
+} from '../utils/PhvbMagSendMail.utils';
 import {
   areAllParticipantsConfirmed,
   getParticipantsForStage,
@@ -82,52 +93,21 @@ function resolveDocumentStatusForAction(action: WorkflowActionKey): string {
 }
 
 async function createHistoryRecord(
-  context: IPhvbDocumentContext & { logContext?: IPhvbLogContext },
+  context: IWorkflowActionOptions,
   idYeuCau: string,
   historyStatus: string,
   comment: string,
   department?: string
 ): Promise<void> {
-  const performedAt = formatCurrentExecutionDateTime();
-  const payload: Record<string, string | boolean | number> = {
-    Title: historyStatus,
-    IDYeuCau: idYeuCau,
-    User_ThucHien: context.userDisplayName || '',
-    Email_ThucHien: context.userEmail || '',
-    PhongBan_ThucHien: department || '',
-    Ngay_ThucHien: performedAt,
-    TrangThai_ThucHien: historyStatus,
-    NoiDung: comment,
-    IsComment: actionCommentIsDiscussion(historyStatus)
-  };
-
-  try {
-    await phvbRepository.createItem({
-      ...context,
-      listTitle: HISTORY_LIST_TITLE,
-      payload
-    });
-  } catch (error) {
-    const details = error instanceof Error ? error.message : '';
-    if (/IsComment/i.test(details)) {
-      const payloadWithoutIsComment = { ...payload };
-      delete payloadWithoutIsComment.IsComment;
-      await phvbRepository.createItem({
-        ...context,
-        listTitle: HISTORY_LIST_TITLE,
-        payload: payloadWithoutIsComment
-      });
-      return;
+  await createExecutionHistoryRecord(
+    { ...context, logContext: context.logContext },
+    {
+      idYeuCau,
+      historyStatus,
+      noiDung: comment,
+      department,
+      isComment: false
     }
-
-    throw error;
-  }
-}
-
-function actionCommentIsDiscussion(historyStatus: string): boolean {
-  return (
-    historyStatus === EXECUTION_HISTORY_STATUS.TU_CHOI ||
-    historyStatus === EXECUTION_HISTORY_STATUS.YEU_CAU_CHINH_SUA
   );
 }
 
@@ -205,6 +185,90 @@ async function resolveNextStatusAfterApprove(
   return resolveNextDocumentStatusAfterStageComplete(effectiveStage, participants, loaiYeuCau);
 }
 
+function isWorkflowStageStatus(status: string): boolean {
+  return (
+    status === REQUEST_STATUS.DANG_GOP_Y ||
+    status === REQUEST_STATUS.DANG_THAM_DINH ||
+    status === REQUEST_STATUS.DANG_PHE_DUYET
+  );
+}
+
+async function sendApproveWorkflowMails(
+  options: IWorkflowActionOptions,
+  stage: WorkflowStage,
+  participant: IAllUserWorkflowItem,
+  nextStatus?: string
+): Promise<void> {
+  const documentInfo = resolveSendMailDocumentInfoFromRelease(options.detail.release);
+  const participantEmail = (participant.Email_ThucHien || '').trim();
+  const xacNhanPayload = buildXacNhanPayloadForStage(
+    options.userEmail,
+    stage,
+    participantEmail,
+    SEND_MAIL_APPROVAL_STATUS.DA_XAC_NHAN,
+    documentInfo
+  );
+
+  if (xacNhanPayload) {
+    await phvbSendMailService.sendMail(options, xacNhanPayload, options.logContext);
+  }
+
+  if (!nextStatus) {
+    return;
+  }
+
+  if (nextStatus === REQUEST_STATUS.CHO_CAP_SO) {
+    const roles = await phvbRoleService.loadRoles(options);
+    const capSoPayload = buildYeuCauCapSoPayload(options.userEmail, roles, documentInfo);
+
+    if (capSoPayload) {
+      await phvbSendMailService.sendMail(options, capSoPayload, options.logContext);
+    }
+
+    return;
+  }
+
+  if (!isWorkflowStageStatus(nextStatus)) {
+    return;
+  }
+
+  const nextStage = resolveActiveWorkflowStageFromStatus(nextStatus);
+
+  if (!nextStage) {
+    return;
+  }
+
+  const yeuCauPayload = buildYeuCauPayloadForStage(
+    options.userEmail,
+    nextStage,
+    getParticipantEmailsFromWorkflowItems(nextStage, options.detail.workflowParticipants),
+    documentInfo
+  );
+
+  if (yeuCauPayload) {
+    await phvbSendMailService.sendMail(options, yeuCauPayload, options.logContext);
+  }
+}
+
+async function sendRejectWorkflowMail(
+  options: IWorkflowActionOptions,
+  stage: WorkflowStage
+): Promise<void> {
+  const documentInfo = resolveSendMailDocumentInfoFromRelease(options.detail.release);
+  const creatorEmail = (options.detail.release.EmailNguoiTao || '').trim();
+  const rejectPayload = buildXacNhanPayloadForStage(
+    options.userEmail,
+    stage,
+    creatorEmail,
+    SEND_MAIL_APPROVAL_STATUS.DA_TU_CHOI,
+    documentInfo
+  );
+
+  if (rejectPayload) {
+    await phvbSendMailService.sendMail(options, rejectPayload, options.logContext);
+  }
+}
+
 export class PhvbWorkflowActionService {
   public validateAction(
     detail: IRequestDetailData,
@@ -273,6 +337,8 @@ export class PhvbWorkflowActionService {
         await updateReleaseStatus(options, options.detail.release.Id, nextStatus);
       }
 
+      await sendApproveWorkflowMails(options, stage, participant, nextStatus);
+
       await createHistoryRecord(
         options,
         idYeuCau,
@@ -300,6 +366,7 @@ export class PhvbWorkflowActionService {
 
     await updateParticipantConfirmation(options, stage, participant, comment);
     await updateReleaseStatus(options, options.detail.release.Id, resolveDocumentStatusForAction(options.input.action));
+    await sendRejectWorkflowMail(options, stage);
     await createHistoryRecord(
       options,
       idYeuCau,

@@ -1,4 +1,4 @@
-import type { SPHttpClient } from '@microsoft/sp-http';
+import type { HttpClient, SPHttpClient } from '@microsoft/sp-http';
 
 export interface IVanBanItem {
   Id: number;
@@ -32,6 +32,9 @@ export interface IVanBanItem {
   LinkToFolderOld?: string;
   GhiChuChoThamDinh?: string;
   IsSendMailNotify?: boolean;
+  EmailNhanBanHanh?: string;
+  SubjectBanHanh?: string;
+  BodyEmail?: string;
 }
 
 export interface ILichSuThucHienItem {
@@ -125,6 +128,22 @@ export interface IPhvbRoleEntry {
   email: string;
 }
 
+export interface IMailBanHanhConfigItem {
+  folder: string;
+  email: string;
+}
+
+export interface ILabelCustomConfigItem {
+  label: string;
+  value: string;
+}
+
+export interface IBanHanhNotifyDraft {
+  recipient: string;
+  subject: string;
+  body: string;
+}
+
 export interface ICreateRequestInput {
   title: string;
   code: string;
@@ -209,12 +228,32 @@ export interface IPhvbCurrentUserProfile {
   department?: string;
 }
 
+export interface ISendMailDocumentInfo {
+  idYeuCau: string;
+  tenVanBan: string;
+  tomTatNoiDung: string;
+  soVanBan?: string;
+}
+
+export interface ISendMailPayload {
+  NguoiThucHien: string;
+  TypeSendMail: string;
+  EmailTo: string;
+  ApprovalStatus?: string;
+  IDYeuCau: string;
+  TenVanBan: string;
+  TomTatNoiDung: string;
+  SoVanBan?: string;
+}
+
 export interface IPhvbSiteContext {
   currentWebUrl: string;
   siteCollectionUrl: string;
   sourceSiteUrl?: string;
   listTitle?: string;
+  endPointSendMail?: string;
   spHttpClient: SPHttpClient;
+  httpClient: HttpClient;
 }
 
 export interface IPhvbUserContext {

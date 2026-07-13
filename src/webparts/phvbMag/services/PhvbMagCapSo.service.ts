@@ -1,60 +1,18 @@
 import {
   DEFAULT_LIST_TITLE,
   hasSharePointSiteContext,
-  HISTORY_LIST_TITLE,
   REQUEST_STATUS
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
+import { phvbRoleService } from './PhvbMagRole.service';
+import { phvbSendMailService } from './PhvbMagSendMail.service';
+import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from './PhvbMag.error';
-import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { canAssignDocumentNumber } from '../utils/PhvbMagCapSo.utils';
+import { buildXacNhanCapSoPayload, resolveSendMailDocumentInfoFromRelease, withSendMailSoVanBan } from '../utils/PhvbMagSendMail.utils';
 import type { IPhvbDocumentContext, IPhvbLogContext, IRequestDetailData } from '../models/PhvbMag.models';
 
 const CAP_SO_HISTORY_STATUS = 'Cấp số';
-
-async function createHistoryRecord(
-  context: IPhvbDocumentContext & { logContext?: IPhvbLogContext },
-  idYeuCau: string,
-  comment: string,
-  department?: string
-): Promise<void> {
-  const performedAt = formatCurrentExecutionDateTime();
-  const payload: Record<string, string | boolean | number> = {
-    Title: CAP_SO_HISTORY_STATUS,
-    IDYeuCau: idYeuCau,
-    User_ThucHien: context.userDisplayName || '',
-    Email_ThucHien: context.userEmail || '',
-    PhongBan_ThucHien: department || '',
-    Ngay_ThucHien: performedAt,
-    TrangThai_ThucHien: CAP_SO_HISTORY_STATUS,
-    NoiDung: comment,
-    IsComment: false
-  };
-
-  try {
-    await phvbRepository.createItem({
-      ...context,
-      logContext: context.logContext,
-      listTitle: HISTORY_LIST_TITLE,
-      payload
-    });
-  } catch (error) {
-    const details = error instanceof Error ? error.message : '';
-    if (/IsComment/i.test(details)) {
-      const payloadWithoutIsComment = { ...payload };
-      delete payloadWithoutIsComment.IsComment;
-      await phvbRepository.createItem({
-        ...context,
-        logContext: context.logContext,
-        listTitle: HISTORY_LIST_TITLE,
-        payload: payloadWithoutIsComment
-      });
-      return;
-    }
-
-    throw error;
-  }
-}
 
 export class PhvbCapSoService {
   public async assignDocumentNumber(
@@ -99,12 +57,27 @@ export class PhvbCapSoService {
       }
     });
 
-    await createHistoryRecord(
+    await createExecutionHistoryRecord(
       { ...context, logContext },
-      idYeuCau,
-      normalizedNumber,
-      detail.release.KhoaPhongNguoiTao
+      {
+        idYeuCau,
+        historyStatus: CAP_SO_HISTORY_STATUS,
+        noiDung: normalizedNumber,
+        department: detail.release.KhoaPhongNguoiTao,
+        isComment: false
+      }
     );
+
+    const roles = await phvbRoleService.loadRoles(context);
+    const documentInfo = withSendMailSoVanBan(
+      resolveSendMailDocumentInfoFromRelease(detail.release),
+      normalizedNumber
+    );
+    const mailPayload = buildXacNhanCapSoPayload(context.userEmail, roles, documentInfo);
+
+    if (mailPayload) {
+      await phvbSendMailService.sendMail(context, mailPayload, logContext);
+    }
   }
 
   public getRuntimeErrorMessage(error: unknown): string {

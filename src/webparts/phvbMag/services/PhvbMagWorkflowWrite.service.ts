@@ -3,12 +3,20 @@ import {
   ALL_USER_PHEDUYET_LIST_TITLE,
   ALL_USER_THAMDINH_LIST_TITLE,
   EXECUTION_HISTORY_STATUS,
-  HISTORY_LIST_TITLE,
   WORKFLOW_PARTICIPANT_STATUS
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
+import { phvbSendMailService } from './PhvbMagSendMail.service';
+import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
 import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
+import {
+  buildYeuCauPayloadForStage,
+  getParticipantEmailsFromInput,
+  resolveActiveWorkflowStageFromStatus,
+  resolveInitialSubmitStatus,
+  resolveSendMailDocumentInfoFromCreateInput
+} from '../utils/PhvbMagSendMail.utils';
 import type { ICreateRequestInput, IPhvbDirectoryUser, IPhvbLogContext, IPhvbSiteContext, SaveRequestMode } from '../models/PhvbMag.models';
 
 interface ICreateWorkflowRecordsOptions extends IPhvbSiteContext {
@@ -18,6 +26,7 @@ interface ICreateWorkflowRecordsOptions extends IPhvbSiteContext {
   creatorEmail: string;
   directoryUsers: ReadonlyArray<IPhvbDirectoryUser>;
   saveMode: SaveRequestMode;
+  isUpdate?: boolean;
   logContext?: IPhvbLogContext;
 }
 
@@ -82,25 +91,24 @@ export function buildAllUserPayload(
   };
 }
 
-function buildCreateHistoryPayload(
-  options: ICreateWorkflowRecordsOptions,
-  performedAt: string,
-  historyStatus: string
-): Record<string, string | boolean | number> {
+function resolveHistoryStatusForCreate(options: ICreateWorkflowRecordsOptions): string {
+  const isDraft = options.saveMode === 'draft';
+
+  if (options.isUpdate) {
+    return isDraft
+      ? EXECUTION_HISTORY_STATUS.CAP_NHAT_BAN_NHAP
+      : EXECUTION_HISTORY_STATUS.CAP_NHAT_YEU_CAU;
+  }
+
+  return isDraft
+    ? EXECUTION_HISTORY_STATUS.TAO_BAN_NHAP
+    : EXECUTION_HISTORY_STATUS.TAO_YEU_CAU;
+}
+
+function buildCreateHistoryNoiDung(options: ICreateWorkflowRecordsOptions): string {
   const summary = options.input.summary ? options.input.summary.trim() : '';
   const title = options.input.title ? options.input.title.trim() : '';
-
-  return {
-    Title: historyStatus,
-    IDYeuCau: options.requestReferenceId,
-    User_ThucHien: options.creatorDisplayName || '',
-    Email_ThucHien: options.creatorEmail || '',
-    PhongBan_ThucHien: options.input.department || '',
-    Ngay_ThucHien: performedAt,
-    TrangThai_ThucHien: historyStatus,
-    NoiDung: summary || title,
-    IsComment: false
-  };
+  return summary || title;
 }
 
 async function createAllUserItemsForEmails(
@@ -132,53 +140,29 @@ async function createAllUserItemsForEmails(
   }
 }
 
-async function createHistoryItemWithoutIsComment(
-  context: IPhvbSiteContext,
-  payload: Record<string, string | boolean | number>
-): Promise<void> {
-  const payloadWithoutIsComment: Record<string, string | boolean | number> = { ...payload };
-  delete payloadWithoutIsComment.IsComment;
-
-  await phvbRepository.createItem({
-    ...context,
-    listTitle: HISTORY_LIST_TITLE,
-    payload: payloadWithoutIsComment
-  });
-}
-
-async function createHistoryRecord(context: IPhvbSiteContext, payload: Record<string, string | boolean | number>): Promise<void> {
-  try {
-    await phvbRepository.createItem({
-      ...context,
-      listTitle: HISTORY_LIST_TITLE,
-      payload
-    });
-  } catch (error) {
-    const details = error instanceof Error ? error.message : '';
-    if (/IsComment/i.test(details)) {
-      await createHistoryItemWithoutIsComment(context, payload);
-      return;
-    }
-
-    throw error;
-  }
-}
-
 export class PhvbWorkflowWriteService {
   public async createWorkflowRecords(options: ICreateWorkflowRecordsOptions): Promise<void> {
-    const performedAt = formatCurrentDate();
     const isDraft = options.saveMode === 'draft';
-    const historyStatus = isDraft
-      ? EXECUTION_HISTORY_STATUS.TAO_BAN_NHAP
-      : EXECUTION_HISTORY_STATUS.TAO_YEU_CAU;
-    const historyPayload = buildCreateHistoryPayload(options, performedAt, historyStatus);
+    const historyStatus = resolveHistoryStatusForCreate(options);
 
-    await createHistoryRecord(options, historyPayload);
+    await createExecutionHistoryRecord(
+      { ...options, logContext: options.logContext },
+      {
+        idYeuCau: options.requestReferenceId,
+        historyStatus,
+        noiDung: buildCreateHistoryNoiDung(options),
+        department: options.input.department || '',
+        isComment: false,
+        userDisplayName: options.creatorDisplayName,
+        userEmail: options.creatorEmail
+      }
+    );
 
     if (isDraft) {
       return;
     }
 
+    const performedAt = formatCurrentDate();
     const directoryMap = buildDirectoryUserMap(options.directoryUsers);
     const formRules = getRequestTypeFormRules(options.input.requestType);
     const workflowTasks: Array<Promise<void>> = [];
@@ -216,6 +200,26 @@ export class PhvbWorkflowWriteService {
     );
 
     await Promise.all(workflowTasks);
+
+    const initialStatus = resolveInitialSubmitStatus(options.input);
+    const activeStage = resolveActiveWorkflowStageFromStatus(initialStatus);
+
+    if (activeStage) {
+      const documentInfo = resolveSendMailDocumentInfoFromCreateInput(
+        options.input,
+        options.requestReferenceId
+      );
+      const mailPayload = buildYeuCauPayloadForStage(
+        options.creatorEmail,
+        activeStage,
+        getParticipantEmailsFromInput(activeStage, options.input),
+        documentInfo
+      );
+
+      if (mailPayload) {
+        await phvbSendMailService.sendMail(options, mailPayload, options.logContext);
+      }
+    }
   }
 }
 

@@ -2,7 +2,8 @@ import { SPHttpClient } from '@microsoft/sp-http';
 import { ISSUANCE_LIBRARY_TITLE, TEMPLATE_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
 import { ensureSharePointResponseOk, tryAcrossCandidateSites } from '../infrastructure/SharePointHttp.utils';
 import { buildApiLogParams } from '../services/PhvbMagLog.service';
-import { escapeODataValue, getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
+import { buildSharePointFileOpenUrl } from '../infrastructure/SharePointFile.utils';
+import { escapeODataValue, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import type { IBanHanhLibraryItem, IPhvbSiteContext, ITemplateLibraryItem } from '../models/PhvbMag.models';
 
 interface ISharePointDocumentLibraryItem {
@@ -78,11 +79,11 @@ function getFileExtension(fileName: string): string {
 
 function mapBanHanhLibraryItem(item: ISharePointDocumentLibraryItem, siteUrl: string): IBanHanhLibraryItem {
   const fileRef = item.FileRef || '';
-  const origin = getSiteOrigin(siteUrl);
+  const name = item.FileLeafRef || item.Title || '';
 
   return {
     id: item.Id,
-    name: item.FileLeafRef || item.Title || '',
+    name,
     fileDirRef: item.FileDirRef || '',
     fsObjType: item.FSObjType || 0,
     fileRef,
@@ -90,20 +91,19 @@ function mapBanHanhLibraryItem(item: ISharePointDocumentLibraryItem, siteUrl: st
     ngayPhatHanh: item.NgayPhatHanh,
     hieuLucTu: item.HieuLucTu,
     lienHe: item.LienHe,
-    fileUrl: fileRef ? `${origin}${fileRef}` : ''
+    fileUrl: buildSharePointFileOpenUrl(siteUrl, { fileRef, fileName: name })
   };
 }
 
 function mapTemplateLibraryItem(item: ISharePointDocumentLibraryItem, siteUrl: string): ITemplateLibraryItem {
   const name = item.FileLeafRef || item.Title || '';
   const fileRef = item.FileRef || '';
-  const origin = getSiteOrigin(siteUrl);
 
   return {
     id: item.Id,
     name,
     fileExtension: getFileExtension(name),
-    fileUrl: fileRef ? `${origin}${fileRef}` : ''
+    fileUrl: buildSharePointFileOpenUrl(siteUrl, { fileRef, fileName: name })
   };
 }
 

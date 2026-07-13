@@ -9,16 +9,17 @@ import { usePhvbCapSo } from '../hooks/usePhvbCapSo';
 import { usePhvbComments } from '../hooks/usePhvbComments';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
 import { usePhvbDraftEdit } from '../hooks/usePhvbDraftEdit';
+import { usePhvbRemindDeadline } from '../hooks/usePhvbRemindDeadline';
 import { usePhvbRequestDetail } from '../hooks/usePhvbRequestDetail';
 import { usePhvbRoles } from '../hooks/usePhvbRoles';
 import { usePhvbWorkflowActions } from '../hooks/usePhvbWorkflowActions';
 import { usePhvbWorkflowParticipants } from '../hooks/usePhvbWorkflowParticipants';
-import type { ICreateRequestInput, IPhvbDirectoryUser, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
+import { usePhvbTenantUsers } from '../hooks/usePhvbTenantUsers';
+import type { IBanHanhNotifyDraft, ICreateRequestInput, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
 import { selectFilteredItems } from '../utils/PhvbMag.selectors';
 import { isDraftStatus } from '../utils/PhvbMagDraftEdit.utils';
 import { ToastService } from '../utils/ToastService';
-import { phvbMagGraphService } from '../services/PhvbMagGraph.service';
 import styles from './PhvbMag.module.scss';
 import type { IPhvbMagProps } from './IPhvbMagProps';
 import { PhvbMagCreateModal } from './PhvbMagCreateModal';
@@ -31,7 +32,7 @@ import { PhvbMagToolbar } from './PhvbMagToolbar';
 import { PhvbMagWorkflowParticipantModal } from './PhvbMagWorkflowParticipantModal';
 
 function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
-  const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle } = props;
+  const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, endPointSendMail } = props;
 
   const { tabName, idYeuCau, editIdYeuCau } = useParams<{ tabName: string; idYeuCau?: string; editIdYeuCau?: string }>();
   const navigate = useNavigate();
@@ -44,12 +45,18 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isDetailSidebarCollapsed, setIsDetailSidebarCollapsed] = useState<boolean>(true);
-  const [userDepartment, setUserDepartment] = useState<string>('');
-  const [approverUsers, setApproverUsers] = useState<IPhvbDirectoryUser[]>([]);
-  const [isLoadingApprovers, setIsLoadingApprovers] = useState<boolean>(true);
-  const [graphErrorMessage, setGraphErrorMessage] = useState<string | undefined>(undefined);
   const [isParticipantModalOpen, setIsParticipantModalOpen] = useState<boolean>(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
+  const [banHanhNotifyDraft, setBanHanhNotifyDraft] = useState<IBanHanhNotifyDraft | undefined>(undefined);
+
+  const {
+    tenantUsers,
+    isLoading: isLoadingTenantUsers,
+    errorMessage: tenantUsersErrorMessage,
+    currentUserDepartment
+  } = usePhvbTenantUsers({ msGraphClientFactory });
+
+  const userDepartment = currentUserDepartment || '';
 
   const defaultRequestForm = useMemo(() => {
     const form = cloneDefaultRequestForm();
@@ -63,11 +70,13 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
   const siteContext = useMemo(() => ({
     spHttpClient,
+    httpClient,
     currentWebUrl,
     siteCollectionUrl,
     sourceSiteUrl,
-    listTitle
-  }), [spHttpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle]);
+    listTitle,
+    endPointSendMail
+  }), [spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, endPointSendMail]);
 
   const departmentOptions = useMemo(() => {
     const nextDepartments = DEPARTMENT_OPTIONS.slice();
@@ -83,10 +92,12 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     userDisplayName,
     userEmail,
     spHttpClient,
+    httpClient,
     currentWebUrl,
     siteCollectionUrl,
     sourceSiteUrl,
-    listTitle
+    listTitle,
+    endPointSendMail
   });
 
   const documentContext = useMemo(() => ({
@@ -177,7 +188,9 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     canPrepare: canPrepareBanHanh,
     canPublish: canPublishBanHanh,
     isSaving: isBanHanhSaving,
+    isLoadingNotify: isBanHanhNotifyLoading,
     errorMessage: banHanhErrorMessage,
+    loadNotifyDraft,
     prepareForBanHanh,
     publishBanHanh
   } = usePhvbBanHanh({
@@ -187,10 +200,17 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     onCompleted: handleDetailStatusChanged
   });
 
-  const handlePrepareBanHanh = async (): Promise<boolean> => {
-    const succeeded = await prepareForBanHanh();
+  const handleOpenPrepareBanHanh = async (): Promise<void> => {
+    setBanHanhNotifyDraft(undefined);
+    const draft = await loadNotifyDraft();
+    setBanHanhNotifyDraft(draft);
+  };
+
+  const handlePrepareBanHanh = async (notify: IBanHanhNotifyDraft): Promise<boolean> => {
+    const succeeded = await prepareForBanHanh(notify);
 
     if (succeeded) {
+      setBanHanhNotifyDraft(undefined);
       ToastService.success('Đã chuyển yêu cầu sang Chờ ban hành.');
     }
 
@@ -208,6 +228,30 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   };
 
   const {
+    canRemind: canRemindDeadline,
+    remindContext,
+    isSending: isRemindSending,
+    errorMessage: remindErrorMessage,
+    sendReminders
+  } = usePhvbRemindDeadline({
+    documentContext,
+    detail: detailData,
+    roles,
+    tenantUsers,
+    onCompleted: handleDetailStatusChanged
+  });
+
+  const handleSendRemindDeadline = async (selectedRecipientIds: string[]): Promise<boolean> => {
+    const succeeded = await sendReminders(selectedRecipientIds);
+
+    if (succeeded) {
+      ToastService.success('Đã gửi nhắc hạn thành công.');
+    }
+
+    return succeeded;
+  };
+
+  const {
     canOpen: canOpenParticipantModal,
     isSaving: isParticipantSaving,
     errorMessage: participantErrorMessage,
@@ -215,7 +259,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   } = usePhvbWorkflowParticipants({
     documentContext,
     detail: detailData,
-    directoryUsers: approverUsers,
+    directoryUsers: tenantUsers,
     onCompleted: handleDetailStatusChanged
   });
 
@@ -246,7 +290,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     draftEdit,
     isLoading: isDraftLoading,
     errorMessage: draftEditErrorMessage
-  } = usePhvbDraftEdit(siteContext, editIdYeuCau, approverUsers);
+  } = usePhvbDraftEdit(siteContext, editIdYeuCau, tenantUsers);
 
   useEffect(() => {
     if (tabName && tabName !== activeTab) {
@@ -259,46 +303,6 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     filterType: ALL_FILTER_VALUE,
     filterDept: ALL_FILTER_VALUE
   }), [items, searchQuery]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadGraphDirectory = async (): Promise<void> => {
-      setIsLoadingApprovers(true);
-
-      try {
-        const [currentUserProfile, directoryUsers] = await Promise.all([
-          phvbMagGraphService.loadCurrentUserProfile(msGraphClientFactory),
-          phvbMagGraphService.loadAllUsers(msGraphClientFactory)
-        ]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setUserDepartment(currentUserProfile.department || '');
-        setApproverUsers(directoryUsers);
-        setGraphErrorMessage(undefined);
-      } catch {
-        if (!isMounted) {
-          return;
-        }
-
-        setApproverUsers([]);
-        setGraphErrorMessage('Không tải được Microsoft Graph. Hãy kiểm tra quyền User.Read và User.Read.All của ứng dụng.');
-      } finally {
-        if (isMounted) {
-          setIsLoadingApprovers(false);
-        }
-      }
-    };
-
-    loadGraphDirectory().catch(() => undefined);
-
-    return () => {
-      isMounted = false;
-    };
-  }, [msGraphClientFactory]);
 
   const handleSelectTab = (tab: TabType): void => {
     navigate(`/tab/${tab}`);
@@ -325,7 +329,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       ? { itemId: draftEdit.itemId, idYeuCau: draftEdit.idYeuCau }
       : undefined;
 
-    const result = await saveRequest(input, mode, approverUsers, editContext);
+    const result = await saveRequest(input, mode, tenantUsers, editContext);
 
     if (!result) {
       return false;
@@ -385,10 +389,10 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
           </div>
         )}
 
-        {graphErrorMessage && (
+        {tenantUsersErrorMessage && (
           <div className={styles.connectionBanner}>
             <strong>Microsoft Graph:</strong>
-            <span>{graphErrorMessage}</span>
+            <span>{tenantUsersErrorMessage}</span>
           </div>
         )}
 
@@ -432,9 +436,17 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
                 canPrepareBanHanh={canPrepareBanHanh}
                 canPublishBanHanh={canPublishBanHanh}
                 isBanHanhSaving={isBanHanhSaving}
+                isBanHanhNotifyLoading={isBanHanhNotifyLoading}
                 banHanhErrorMessage={banHanhErrorMessage}
+                banHanhNotifyDraft={banHanhNotifyDraft}
+                onOpenPrepareBanHanh={handleOpenPrepareBanHanh}
                 onPrepareBanHanh={handlePrepareBanHanh}
                 onPublishBanHanh={handlePublishBanHanh}
+                canRemindDeadline={canRemindDeadline}
+                remindContext={remindContext}
+                isRemindSending={isRemindSending}
+                remindErrorMessage={remindErrorMessage}
+                onSendRemindDeadline={handleSendRemindDeadline}
                 canOpenParticipantModal={canOpenParticipantModal}
                 onOpenParticipantModal={() => setIsParticipantModalOpen(true)}
               />
@@ -442,7 +454,8 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
             <PhvbMagWorkflowParticipantModal
               isOpen={isParticipantModalOpen}
               detail={detailData}
-              directoryUsers={approverUsers}
+              directoryUsers={tenantUsers}
+              isLoadingTenantUsers={isLoadingTenantUsers}
               isSaving={isParticipantSaving}
               errorMessage={participantErrorMessage}
               onClose={() => setIsParticipantModalOpen(false)}
@@ -481,7 +494,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       <PhvbMagCreateModal
         isOpen={isModalOpen}
         isSaving={isSaving}
-        isLoadingApprovers={isLoadingApprovers}
+        isLoadingApprovers={isLoadingTenantUsers}
         isEditMode={isEditRoute}
         initialExistingTaiLieu={draftEdit?.existingTaiLieuAttachments}
         initialExistingBieuMau={draftEdit?.existingBieuMauAttachments}
@@ -489,7 +502,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         documentTypes={DOCUMENT_TYPE_OPTIONS}
         departments={departmentOptions}
         siteContext={siteContext}
-        approvers={approverUsers}
+        approvers={tenantUsers}
         onClose={() => navigate(`/tab/${activeTab}`)}
         onSubmit={handleSaveRequest}
       />

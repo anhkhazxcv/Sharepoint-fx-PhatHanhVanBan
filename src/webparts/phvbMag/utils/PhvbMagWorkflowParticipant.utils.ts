@@ -221,3 +221,36 @@ function mapParticipantToDraftRow(participant: IWorkflowParticipantItem): IWorkf
     markedForRemoval: false
   };
 }
+
+export function buildParticipantChangesSummary(
+  changes: IWorkflowParticipantChanges,
+  visibleStages: WorkflowStage[],
+  resolveRemovedEmail: (participantId: number) => string | undefined
+): string {
+  const segments: string[] = [];
+
+  visibleStages.forEach(stage => {
+    const stageChanges = changes[stage];
+    const parts: string[] = [];
+
+    stageChanges.addedEmails.forEach(email => {
+      const trimmed = email.trim();
+      if (trimmed) {
+        parts.push(`+${trimmed}`);
+      }
+    });
+
+    stageChanges.removedParticipantIds.forEach(participantId => {
+      const email = (resolveRemovedEmail(participantId) || '').trim();
+      if (email) {
+        parts.push(`-${email}`);
+      }
+    });
+
+    if (parts.length > 0) {
+      segments.push(`${WORKFLOW_PARTICIPANT_STAGE_CONFIG[stage].sectionLabel}: ${parts.join('; ')}`);
+    }
+  });
+
+  return segments.join(' | ');
+}
