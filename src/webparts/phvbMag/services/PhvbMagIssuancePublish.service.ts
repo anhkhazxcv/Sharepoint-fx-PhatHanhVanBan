@@ -48,6 +48,16 @@ interface IListFormValue {
   FieldValue: string;
 }
 
+function buildMetadataAuditFields(metadataValues: IListFormValue[]): Record<string, string> {
+  return {
+    TomTatVanban: metadataValues[0].FieldValue,
+    NgayPhatHanh: metadataValues[1].FieldValue,
+    HieuLucTu: metadataValues[2].FieldValue,
+    HieuLucDen: metadataValues[3].FieldValue,
+    LienHe: metadataValues[4].FieldValue
+  };
+}
+
 const MAIN_DOCUMENT_LOAI_VAN_BAN = 'chinh';
 
 const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -444,6 +454,96 @@ export class PhvbIssuancePublishService {
       id: listItemId,
       hieuLucDen: (data.HieuLucDen || '').trim() || undefined
     };
+  }
+
+  private async resolveFolderListItemId(
+    siteUrl: string,
+    context: IIssuancePublishContext,
+    folderPath: string
+  ): Promise<number> {
+    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/ListItemAllFields?$select=Id&${buildODataParameterQuery({
+      '@folderPath': normalizeServerRelativePath(folderPath)
+    })}`;
+    const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
+    await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_GET', ISSUANCE_LIBRARY_TITLE);
+    const data = await response.json() as { Id?: number };
+    const listItemId = data.Id || 0;
+
+    if (!listItemId) {
+      throw new Error(`Không xác định được list item id cho thư mục ${folderPath}.`);
+    }
+
+    return listItemId;
+  }
+
+  private async stampListItemMetadata(
+    siteUrl: string,
+    context: IIssuancePublishContext,
+    libraryTitle: string,
+    listItemId: number,
+    metadataValues: IListFormValue[],
+    auditLogger: BanHanhPublishAuditLogger,
+    auditLabel: {
+      targetPath: string;
+      fileName?: string;
+      isFolder?: boolean;
+      isFormAttachment?: boolean;
+    }
+  ): Promise<void> {
+    const auditPayload: Record<string, unknown> = {
+      targetPath: auditLabel.targetPath,
+      fields: buildMetadataAuditFields(metadataValues)
+    };
+
+    if (auditLabel.fileName) {
+      auditPayload.fileName = auditLabel.fileName;
+    }
+
+    if (auditLabel.isFolder) {
+      auditPayload.isFolder = true;
+    }
+
+    if (auditLabel.isFormAttachment) {
+      auditPayload.isFormAttachment = true;
+    }
+
+    try {
+      await this.validateUpdateListItem(siteUrl, context, libraryTitle, listItemId, metadataValues);
+      await auditLogger.logUpdateMetadata(auditPayload, 'success');
+    } catch (error) {
+      await auditLogger.logUpdateMetadata(
+        {
+          ...auditPayload,
+          fields: metadataValues
+        },
+        'failed',
+        error instanceof Error ? error.message : String(error)
+      );
+      throw error;
+    }
+  }
+
+  private async stampDocumentFolderMetadata(
+    siteUrl: string,
+    context: IIssuancePublishContext,
+    folderPath: string,
+    metadataValues: IListFormValue[],
+    auditLogger: BanHanhPublishAuditLogger
+  ): Promise<void> {
+    const folderListItemId = await this.resolveFolderListItemId(siteUrl, context, folderPath);
+
+    await this.stampListItemMetadata(
+      siteUrl,
+      context,
+      ISSUANCE_LIBRARY_TITLE,
+      folderListItemId,
+      metadataValues,
+      auditLogger,
+      {
+        targetPath: folderPath,
+        isFolder: true
+      }
+    );
   }
 
   private async listFilesRecursive(
@@ -853,43 +953,19 @@ export class PhvbIssuancePublishService {
 
         const listItemId = await this.resolveMovedListItemId(siteUrl, context, targetPath);
 
-        try {
-          await this.validateUpdateListItem(
-            siteUrl,
-            context,
-            ISSUANCE_LIBRARY_TITLE,
-            listItemId,
-            metadataValues
-          );
-
-          await auditLogger.logUpdateMetadata(
-            {
-              fileName: formFile.name,
-              targetPath,
-              isFormAttachment: true,
-              fields: {
-                TomTatVanban: metadataValues[0].FieldValue,
-                NgayPhatHanh: metadataValues[1].FieldValue,
-                HieuLucTu: metadataValues[2].FieldValue,
-                HieuLucDen: metadataValues[3].FieldValue,
-                LienHe: metadataValues[4].FieldValue
-              }
-            },
-            'success'
-          );
-        } catch (error) {
-          await auditLogger.logUpdateMetadata(
-            {
-              fileName: formFile.name,
-              targetPath,
-              isFormAttachment: true,
-              fields: metadataValues
-            },
-            'failed',
-            error instanceof Error ? error.message : String(error)
-          );
-          throw error;
-        }
+        await this.stampListItemMetadata(
+          siteUrl,
+          context,
+          ISSUANCE_LIBRARY_TITLE,
+          listItemId,
+          metadataValues,
+          auditLogger,
+          {
+            fileName: formFile.name,
+            targetPath,
+            isFormAttachment: true
+          }
+        );
       }
 
       await this.breakFolderRoleInheritance(siteUrl, context, targetFormFolderPath);
@@ -1126,42 +1202,27 @@ export class PhvbIssuancePublishService {
         for (let copiedIndex = 0; copiedIndex < copiedFiles.length; copiedIndex += 1) {
           const copiedFile = copiedFiles[copiedIndex];
 
-          try {
-            await this.validateUpdateListItem(
-              siteUrl,
-              context,
-              ISSUANCE_LIBRARY_TITLE,
-              copiedFile.listItemId,
-              metadataValues
-            );
-
-            await auditLogger.logUpdateMetadata(
-              {
-                fileName: copiedFile.fileName,
-                targetPath: copiedFile.targetPath,
-                fields: {
-                  TomTatVanban: metadataValues[0].FieldValue,
-                  NgayPhatHanh: metadataValues[1].FieldValue,
-                  HieuLucTu: metadataValues[2].FieldValue,
-                  HieuLucDen: metadataValues[3].FieldValue,
-                  LienHe: metadataValues[4].FieldValue
-                }
-              },
-              'success'
-            );
-          } catch (error) {
-            await auditLogger.logUpdateMetadata(
-              {
-                fileName: copiedFile.fileName,
-                targetPath: copiedFile.targetPath,
-                fields: metadataValues
-              },
-              'failed',
-              error instanceof Error ? error.message : String(error)
-            );
-            throw error;
-          }
+          await this.stampListItemMetadata(
+            siteUrl,
+            context,
+            ISSUANCE_LIBRARY_TITLE,
+            copiedFile.listItemId,
+            metadataValues,
+            auditLogger,
+            {
+              fileName: copiedFile.fileName,
+              targetPath: copiedFile.targetPath
+            }
+          );
         }
+
+        await this.stampDocumentFolderMetadata(
+          siteUrl,
+          context,
+          targetFolderPath,
+          metadataValues,
+          auditLogger
+        );
 
         await this.copyAndSecureFormFolder(
           siteUrl,

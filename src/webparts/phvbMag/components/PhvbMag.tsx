@@ -36,6 +36,8 @@ import { PhvbMagWorkflowParticipantModal } from './PhvbMagWorkflowParticipantMod
 import { PhvbMagLibraryView } from './PhvbMagLibraryView';
 import { PhvbMagGuideView } from './PhvbMagGuideView';
 import { PhvbMagRecentPublishedView } from './PhvbMagRecentPublishedView';
+import { PhvbMagSavedDocumentsView } from './PhvbMagSavedDocumentsView';
+import { PhvbSavedDocumentsProvider } from '../context/PhvbMagSavedDocuments.context';
 
 function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, issuanceLibraryTitle, endPointSendMail, endPointShortUrl, roleGroupID } = props;
@@ -513,10 +515,12 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const isLibraryTab = resolvedTabName === 'ThuVienTaiLieu';
   const isGuideTab = resolvedTabName === 'HuongDan';
   const isRecentTab = resolvedTabName === 'MoiBanHanh';
+  const isSavedTab = resolvedTabName === 'DaLuu';
   const modalDefaultValues = isEditRoute && draftEdit ? draftEdit.form : defaultRequestForm;
   const isModalOpen = isCreateRoute || (isEditRoute && Boolean(draftEdit));
 
   return (
+    <PhvbSavedDocumentsProvider documentContext={documentContext} activeTab={resolvedTabName}>
     <div className={[styles.phvbContainer, isDetailRoute ? styles.phvbContainerDetail : ''].filter(Boolean).join(' ')}>
       <PhvbMagSidebar
         activeTab={activeTab}
@@ -542,12 +546,13 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
           styles.contentPane,
           activeTab === 'ViecCanLam' && !isDetailRoute ? styles.contentPaneTask : '',
           isLibraryTab && !isDetailRoute ? styles.contentPaneLibrary : '',
-          isGuideTab && !isDetailRoute ? styles.contentPaneGuide : '',
+          isGuideTab && !isDetailRoute ? styles.contentPaneRecent : '',
           isRecentTab && !isDetailRoute ? styles.contentPaneRecent : '',
+          isSavedTab && !isDetailRoute ? styles.contentPaneRecent : '',
           isDetailRoute ? styles.contentPaneDetail : ''
         ].filter(Boolean).join(' ')}
       >
-        {errorMessage && !isLibraryTab && !isGuideTab && !isRecentTab && (
+        {errorMessage && !isLibraryTab && !isGuideTab && !isRecentTab && !isSavedTab && (
           <div className={styles.connectionBanner}>
             <strong>Kết nối dữ liệu:</strong>
             <span>{errorMessage}</span>
@@ -645,6 +650,8 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
           <PhvbMagGuideView siteContext={siteContext} />
         ) : isRecentTab ? (
           <PhvbMagRecentPublishedView siteContext={siteContext} />
+        ) : isSavedTab ? (
+          <PhvbMagSavedDocumentsView documentContext={documentContext} />
         ) : (
           <>
             <PhvbMagToolbar
@@ -690,6 +697,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         onSubmit={handleSaveRequest}
       />
     </div>
+    </PhvbSavedDocumentsProvider>
   );
 }
 

@@ -6299,6 +6299,33 @@ button.libraryDocumentTitle {
   }
 }
 
+.libraryDocumentBookmarkBtnActive {
+  border-color: rgba(123, 76, 44, 0.45);
+  background-color: #FBF8F4;
+  color: $primary-color;
+}
+
+.libraryDocumentBookmarkIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.savedDocumentList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.savedDocumentItemUnavailable {
+  opacity: 0.72;
+
+  .libraryDocumentTitle {
+    color: $text-muted;
+    cursor: default;
+    text-decoration: none;
+  }
+}
+
 .libraryDocumentViews {
   display: inline-flex;
   align-items: center;
@@ -6518,64 +6545,8 @@ button.libraryDocumentTitle {
   }
 }
 
-.contentPaneGuide {
-  padding: 0;
-  gap: 0;
+.guidePdfBody {
   overflow: hidden;
-}
-
-.guideView {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  height: 100%;
-  background-color: #FCF8F4;
-}
-
-.guideHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex: 0 0 auto;
-  padding: 20px 24px 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  background-color: #FFFFFF;
-}
-
-.guideHeaderActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.guideDownloadBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background-color: #FFFFFF;
-  color: #1f1f1f;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-
-  &:hover {
-    background-color: #F7F3EE;
-  }
-}
-
-.guideBody {
-  position: relative;
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
-  flex-direction: column;
 }
 
 .guidePdfFrame {
@@ -6584,23 +6555,6 @@ button.libraryDocumentTitle {
   min-height: 0;
   border: 0;
   background-color: #EDE7E0;
-}
-
-.guideEmptyState {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px;
-  text-align: center;
-  color: #5c5c5c;
-
-  p {
-    margin: 0;
-    max-width: 420px;
-    line-height: 1.5;
-    font-size: 14px;
-  }
 }
 
 .contentPaneRecent {
@@ -6671,6 +6625,7 @@ button.libraryDocumentTitle {
   color: #1f1f1f;
   font-size: 13px;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
 
   &:hover {

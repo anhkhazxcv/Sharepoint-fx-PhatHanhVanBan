@@ -112,7 +112,7 @@ export interface IEditRequestContext {
   idYeuCau: string;
 }
 
-export type TabType = 'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'CapSo' | 'QLVanBan' | 'HuongDan';
+export type TabType = 'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'DaLuu' | 'CapSo' | 'QLVanBan' | 'HuongDan';
 
 export interface ITabCounts {
   viecCanLam: number;
@@ -192,10 +192,29 @@ export interface IBanHanhLibraryItem {
   hieuLucDen?: string;
   lienHe?: string;
   fileUrl: string;
+  uniqueId?: string;
   viewCount?: number;
   /** Folder browse: OpenItems from EffectiveBasePermissions. Search: always false. */
   canDownload?: boolean;
   downloadUrl?: string;
+}
+
+export interface ISavedDocumentItem {
+  id: number;
+  title: string;
+  userEmail: string;
+  libraryItemId: number;
+  fileRef: string;
+  fileDirRef: string;
+  uniqueId?: string;
+  notes?: string;
+  created?: string;
+}
+
+export interface ISavedDocumentDisplayItem {
+  bookmark: ISavedDocumentItem;
+  document?: IBanHanhLibraryItem;
+  isAccessible: boolean;
 }
 
 export type LibraryBrowseMode = 'all' | 'folder' | 'search';

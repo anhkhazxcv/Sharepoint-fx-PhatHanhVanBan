@@ -7,21 +7,13 @@ import type {
 } from '../models/PhvbMag.models';
 import { usePhvbLibrary } from '../hooks/usePhvbLibrary';
 import { formatBanHanhDate } from '../utils/PhvbMagBanHanh.tree';
-import {
-  formatViewCount,
-  resolveLibraryContactPerson,
-  resolveLibraryDocumentEffectiveStatus,
-  resolveLibraryFileTypeVisual
-} from '../utils/PhvbMagLibrary.utils';
-import { PhvbMagExternalLink } from './PhvbMagExternalLink';
+import { resolveLibraryContactPerson } from '../utils/PhvbMagLibrary.utils';
+import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
 import {
   CloseIcon,
-  DownloadIcon,
-  EyeIcon,
   FolderAccentIcon,
   FolderTreeChevronDownIcon,
   FolderTreeChevronRightIcon,
-  LibraryFileTypeIcon,
   PaginationNextIcon,
   PaginationPreviousIcon,
   SearchIcon,
@@ -193,77 +185,24 @@ function SearchFolderListItem(props: ISearchFolderListItemProps): React.ReactEle
 
 function DocumentListItem(props: IDocumentListItemProps): React.ReactElement {
   const { document, showDownload } = props;
-  const fileType = resolveLibraryFileTypeVisual(document.name);
-  const viewCountLabel = formatViewCount(document.viewCount);
-  const effectiveStatus = resolveLibraryDocumentEffectiveStatus(document.hieuLucTu, document.hieuLucDen);
-  const contactPerson = resolveLibraryContactPerson(document.lienHe);
   const effectiveDate = formatBanHanhDate(document.hieuLucTu) || 'Chưa xác định';
-  const summaryText = document.tomTatVanban?.trim() || 'Chưa có tóm tắt nội dung.';
-  const canShowDownload = showDownload
-    && document.canDownload === true
-    && Boolean(document.downloadUrl);
+  const contactPerson = resolveLibraryContactPerson(document.lienHe);
 
   return (
-    <article className={styles.libraryDocumentItem}>
-      <div className={styles.libraryDocumentFileType}>
-        <LibraryFileTypeIcon
-          iconName={fileType.iconName}
-          style={{ color: fileType.color }}
-        />
-      </div>
-
-      <div className={styles.libraryDocumentContent}>
-        <div className={styles.libraryDocumentTitleRow}>
-          <PhvbMagExternalLink
-            href={document.fileUrl}
-            className={styles.libraryDocumentTitle}
-          >
-            {document.name}
-          </PhvbMagExternalLink>
-
-          <div className={styles.libraryDocumentStatusGroup}>
-            {viewCountLabel ? (
-              <span className={styles.libraryDocumentViews}>
-                <EyeIcon className={styles.libraryDocumentViewsIcon} />
-                {viewCountLabel}
-              </span>
-            ) : null}
-            <span
-              className={styles.libraryDocumentStatusEffective}
-              data-status={effectiveStatus === 'expired' ? 'expired' : 'effective'}
-            >
-              {effectiveStatus === 'effective' ? 'Còn hiệu lực' : 'Hết hiệu lực'}
-            </span>
-            {canShowDownload ? (
-              <TooltipHost content="Tải xuống">
-                <PhvbMagExternalLink
-                  href={document.downloadUrl}
-                  className={styles.libraryDocumentDownloadBtn}
-                  aria-label="Tải xuống"
-                >
-                  <DownloadIcon style={{ width: 14, height: 14 }} />
-                </PhvbMagExternalLink>
-              </TooltipHost>
-            ) : null}
-          </div>
-        </div>
-
-        <TooltipHost content={summaryText}>
-          <p className={styles.libraryDocumentSummary}>
-            {summaryText}
-          </p>
-        </TooltipHost>
-
-        <div className={styles.libraryDocumentMeta}>
+    <PhvbMagLibraryDocumentCard
+      document={document}
+      showDownload={showDownload}
+      metaContent={(
+        <>
           <span className={styles.libraryDocumentContact}>
             <strong>Người liên hệ:</strong> {contactPerson}
           </span>
           <span className={styles.libraryDocumentEffectiveDate}>
             <strong>Ngày hiệu lực:</strong> {effectiveDate}
           </span>
-        </div>
-      </div>
-    </article>
+        </>
+      )}
+    />
   );
 }
 

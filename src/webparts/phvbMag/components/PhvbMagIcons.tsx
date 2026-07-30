@@ -3,6 +3,7 @@ import {
   FaBell,
   FaBookOpen,
   FaBookmark,
+  FaRegBookmark,
   FaCheck,
   FaCheckCircle,
   FaChevronDown,
@@ -84,6 +85,14 @@ export function SidebarNewReleaseIcon(props: IIconProps): React.ReactElement {
 }
 
 export function SidebarSavedIcon(props: IIconProps): React.ReactElement {
+  return <FaBookmark className={props.className} style={props.style} aria-hidden />;
+}
+
+export function BookmarkOutlineIcon(props: IIconProps): React.ReactElement {
+  return <FaRegBookmark className={props.className} style={props.style} aria-hidden />;
+}
+
+export function BookmarkFilledIcon(props: IIconProps): React.ReactElement {
   return <FaBookmark className={props.className} style={props.style} aria-hidden />;
 }
 
