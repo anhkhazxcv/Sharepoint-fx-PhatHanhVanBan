@@ -10,6 +10,7 @@ export const EXPIRED_FOLDER_PATH_MARKER = '/Expired_';
 export interface IRecentPublishedSection {
   documentFolderKey: string;
   displayPath: string;
+  displayPathFull?: string;
   documents: IBanHanhLibraryItem[];
   formDocuments: IBanHanhLibraryItem[];
   newestNgayPhatHanhMs: number;
@@ -60,6 +61,17 @@ export function resolveDocumentFolderKey(fileDirRef: string): string {
   return normalized;
 }
 
+export function resolveDocumentFolderDisplayName(documentFolderKey: string): string {
+  const normalized = normalizePath(documentFolderKey);
+  const lastSlashIndex = normalized.lastIndexOf('/');
+
+  if (lastSlashIndex === -1) {
+    return normalized;
+  }
+
+  return normalized.substring(lastSlashIndex + 1);
+}
+
 export function formatRecentPublishDate(value?: string): string {
   const parsed = parseDateOnlyToLocalMidnight(value);
 
@@ -104,7 +116,8 @@ export function groupRecentPublishedByDocumentFolder(
       const storagePath = getStoragePathAfterLibrary(documentFolderKey, libraryTitle);
       section = {
         documentFolderKey,
-        displayPath: storagePath || documentFolderKey,
+        displayPath: resolveDocumentFolderDisplayName(documentFolderKey),
+        displayPathFull: storagePath || documentFolderKey,
         documents: [],
         formDocuments: [],
         newestNgayPhatHanhMs: 0
