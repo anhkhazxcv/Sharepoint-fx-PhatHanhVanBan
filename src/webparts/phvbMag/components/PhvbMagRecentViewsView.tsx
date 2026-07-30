@@ -8,7 +8,7 @@ import type {
 import { usePhvbRecentViews } from '../context/PhvbMagRecentViews.context';
 import { formatBanHanhDate } from '../utils/PhvbMagBanHanh.tree';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
-import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
+import { PhvbMagLibraryListPageShell } from './PhvbMagLibraryListPageShell';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagRecentViewsViewProps {
@@ -59,44 +59,22 @@ export function PhvbMagRecentViewsView(props: IPhvbMagRecentViewsViewProps): Rea
   }, [loadRecentView]);
 
   return (
-    <div className={styles.recentView}>
-      <header className={styles.recentHeader}>
-        <div className={styles.pageHeading}>
-          <span className={styles.pageEyebrow}>Thư viện</span>
-          <h2>{TAB_LABELS.XemGanDay}</h2>
-          <p className={styles.recentSubtitle}>Văn bản bạn đã mở gần đây</p>
-        </div>
-        {recentCount > 0 ? (
-          <span className={styles.recentSectionCount}>{recentCount}</span>
-        ) : null}
-      </header>
-
-      <div className={styles.recentBody}>
-        <PhvbMagLoadingOverlay
-          isOpen={isLoadingRecentView}
-          message="Đang tải văn bản xem gần đây..."
-        />
-
-        {!isLoadingRecentView && errorMessage ? (
-          <div className={styles.recentEmptyState} role="alert">
-            <p>{errorMessage}</p>
-          </div>
-        ) : null}
-
-        {!isLoadingRecentView && !errorMessage && recentDisplayItems.length === 0 ? (
-          <div className={styles.recentEmptyState}>
-            <p>Chưa có văn bản nào được xem. Hãy mở Thư viện tài liệu để bắt đầu.</p>
-          </div>
-        ) : null}
-
-        {!isLoadingRecentView && !errorMessage && recentDisplayItems.length > 0 ? (
-          <div className={[styles.recentSectionList, styles.savedDocumentList].join(' ')}>
-            {recentDisplayItems.map((item: IRecentViewDisplayItem) => (
-              <RecentViewCard key={item.recentView.id} item={item} />
-            ))}
-          </div>
-        ) : null}
+    <PhvbMagLibraryListPageShell
+      eyebrow="Thư viện"
+      title={TAB_LABELS.XemGanDay}
+      subtitle="Văn bản bạn đã mở gần đây"
+      count={recentCount}
+      isLoading={isLoadingRecentView}
+      loadingMessage="Đang tải văn bản xem gần đây..."
+      errorMessage={errorMessage}
+      isEmpty={recentDisplayItems.length === 0}
+      emptyMessage="Chưa có văn bản nào được xem. Hãy mở Thư viện tài liệu để bắt đầu."
+    >
+      <div className={[styles.recentSectionList, styles.savedDocumentList].join(' ')}>
+        {recentDisplayItems.map((item: IRecentViewDisplayItem) => (
+          <RecentViewCard key={item.recentView.id} item={item} />
+        ))}
       </div>
-    </div>
+    </PhvbMagLibraryListPageShell>
   );
 }

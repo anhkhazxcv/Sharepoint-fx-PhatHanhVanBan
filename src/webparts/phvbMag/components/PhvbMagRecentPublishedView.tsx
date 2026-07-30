@@ -13,7 +13,7 @@ import {
   FolderAccentIcon
 } from './PhvbMagIcons';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
-import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
+import { PhvbMagLibraryListPageShell } from './PhvbMagLibraryListPageShell';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagRecentPublishedViewProps {
@@ -177,64 +177,44 @@ export function PhvbMagRecentPublishedView(props: IPhvbMagRecentPublishedViewPro
   };
 
   return (
-    <div className={styles.recentView}>
-      <header className={styles.recentHeader}>
-        <div className={styles.pageHeading}>
-          <span className={styles.pageEyebrow}>Thư viện</span>
-          <h2>{TAB_LABELS.MoiBanHanh}</h2>
-          <p className={styles.recentSubtitle}>
-            {`Văn bản ban hành trong ${recent.windowDays} ngày gần nhất`}
-          </p>
+    <PhvbMagLibraryListPageShell
+      eyebrow="Thư viện"
+      title={TAB_LABELS.MoiBanHanh}
+      subtitle={`Văn bản ban hành trong ${recent.windowDays} ngày gần nhất`}
+      headerActions={hasSections ? (
+        <div className={styles.recentHeaderActions}>
+          <button
+            type="button"
+            className={styles.recentHeaderActionBtn}
+            onClick={handleExpandAll}
+          >
+            Mở tất cả
+          </button>
+          <button
+            type="button"
+            className={styles.recentHeaderActionBtn}
+            onClick={handleCollapseAll}
+          >
+            Thu gọn tất cả
+          </button>
         </div>
-
-        {hasSections ? (
-          <div className={styles.recentHeaderActions}>
-            <button
-              type="button"
-              className={styles.recentHeaderActionBtn}
-              onClick={handleExpandAll}
-            >
-              Mở tất cả
-            </button>
-            <button
-              type="button"
-              className={styles.recentHeaderActionBtn}
-              onClick={handleCollapseAll}
-            >
-              Thu gọn tất cả
-            </button>
-          </div>
-        ) : null}
-      </header>
-
-      <div className={styles.recentBody}>
-        <PhvbMagLoadingOverlay isOpen={recent.isLoading} message="Đang tải văn bản mới ban hành..." />
-
-        {!recent.isLoading && recent.errorMessage ? (
-          <div className={styles.recentEmptyState} role="alert">
-            <p>{recent.errorMessage}</p>
-          </div>
-        ) : null}
-
-        {!recent.isLoading && !recent.errorMessage && recent.sections.length === 0 ? (
-          <div className={styles.recentEmptyState}>
-            <p>{`Không có văn bản mới trong ${recent.windowDays} ngày qua.`}</p>
-          </div>
-        ) : null}
-
-        {!recent.isLoading && !recent.errorMessage && recent.sections.length > 0 ? (
-          <div className={styles.recentSectionList}>
-            {recent.sections.map(section => (
-              <RecentPublishedSection
-                key={section.documentFolderKey}
-                section={section}
-                isExpanded={expandedKeys.has(section.documentFolderKey)}
-                onToggle={() => handleToggleSection(section.documentFolderKey)}
-              />
-            ))}
-          </div>
-        ) : null}
+      ) : undefined}
+      isLoading={recent.isLoading}
+      loadingMessage="Đang tải văn bản mới ban hành..."
+      errorMessage={recent.errorMessage}
+      isEmpty={recent.sections.length === 0}
+      emptyMessage={`Không có văn bản mới trong ${recent.windowDays} ngày qua.`}
+    >
+      <div className={styles.recentSectionList}>
+        {recent.sections.map(section => (
+          <RecentPublishedSection
+            key={section.documentFolderKey}
+            section={section}
+            isExpanded={expandedKeys.has(section.documentFolderKey)}
+            onToggle={() => handleToggleSection(section.documentFolderKey)}
+          />
+        ))}
       </div>
-    </div>
+    </PhvbMagLibraryListPageShell>
   );
 }

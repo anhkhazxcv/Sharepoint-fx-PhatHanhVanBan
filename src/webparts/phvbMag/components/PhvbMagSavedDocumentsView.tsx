@@ -9,8 +9,8 @@ import type {
 import { usePhvbSavedDocuments } from '../context/PhvbMagSavedDocuments.context';
 import { formatBanHanhDate } from '../utils/PhvbMagBanHanh.tree';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
+import { PhvbMagLibraryListPageShell } from './PhvbMagLibraryListPageShell';
 import { PhvbMagSaveBookmarkButton } from './PhvbMagSaveBookmarkButton';
-import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagSavedDocumentsViewProps {
@@ -85,44 +85,22 @@ export function PhvbMagSavedDocumentsView(props: IPhvbMagSavedDocumentsViewProps
   }, [loadSavedView]);
 
   return (
-    <div className={styles.recentView}>
-      <header className={styles.recentHeader}>
-        <div className={styles.pageHeading}>
-          <span className={styles.pageEyebrow}>Thư viện</span>
-          <h2>{TAB_LABELS.DaLuu}</h2>
-          <p className={styles.recentSubtitle}>Văn bản bạn đã đánh dấu</p>
-        </div>
-        {savedCount > 0 ? (
-          <span className={styles.recentSectionCount}>{savedCount}</span>
-        ) : null}
-      </header>
-
-      <div className={styles.recentBody}>
-        <PhvbMagLoadingOverlay
-          isOpen={isLoadingSavedView}
-          message="Đang tải văn bản đã lưu..."
-        />
-
-        {!isLoadingSavedView && errorMessage ? (
-          <div className={styles.recentEmptyState} role="alert">
-            <p>{errorMessage}</p>
-          </div>
-        ) : null}
-
-        {!isLoadingSavedView && !errorMessage && savedDisplayItems.length === 0 ? (
-          <div className={styles.recentEmptyState}>
-            <p>Chưa lưu văn bản nào. Hãy mở Thư viện tài liệu hoặc Mới ban hành để đánh dấu văn bản.</p>
-          </div>
-        ) : null}
-
-        {!isLoadingSavedView && !errorMessage && savedDisplayItems.length > 0 ? (
-          <div className={[styles.recentSectionList, styles.savedDocumentList].join(' ')}>
-            {savedDisplayItems.map((item: ISavedDocumentDisplayItem) => (
-              <SavedDocumentCard key={item.bookmark.id} item={item} />
-            ))}
-          </div>
-        ) : null}
+    <PhvbMagLibraryListPageShell
+      eyebrow="Thư viện"
+      title={TAB_LABELS.DaLuu}
+      subtitle="Văn bản bạn đã đánh dấu"
+      count={savedCount}
+      isLoading={isLoadingSavedView}
+      loadingMessage="Đang tải văn bản đã lưu..."
+      errorMessage={errorMessage}
+      isEmpty={savedDisplayItems.length === 0}
+      emptyMessage="Chưa lưu văn bản nào. Hãy mở Thư viện tài liệu hoặc Mới ban hành để đánh dấu văn bản."
+    >
+      <div className={[styles.recentSectionList, styles.savedDocumentList].join(' ')}>
+        {savedDisplayItems.map((item: ISavedDocumentDisplayItem) => (
+          <SavedDocumentCard key={item.bookmark.id} item={item} />
+        ))}
       </div>
-    </div>
+    </PhvbMagLibraryListPageShell>
   );
 }

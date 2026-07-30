@@ -12,7 +12,8 @@ import type {
   IRecentViewItem
 } from '../models/PhvbMag.models';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
-import { SITE_CONTEXT_ERROR_MESSAGE } from '../services/PhvbMag.error';
+import { SITE_CONTEXT_ERROR_MESSAGE, toRuntimeMessage } from '../services/PhvbMag.error';
+import { joinHydratedLibraryDocuments } from '../utils/PhvbMagHydratedDocuments.utils';
 import { phvbDocumentLibraryService } from './PhvbMagDocumentLibrary.service';
 
 const RECENT_VIEW_SELECT_FIELDS = [
@@ -35,14 +36,6 @@ interface IRecentViewListItem {
   FileDirRef?: string;
   Created?: string;
   Modified?: string;
-}
-
-function toRuntimeMessage(error: unknown, listTitle: string): string {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return `Không thể truy cập danh sách ${listTitle}.`;
 }
 
 function mapRecentViewItem(row: IRecentViewListItem): IRecentViewItem | undefined {
@@ -203,21 +196,18 @@ class PhvbMagRecentViewsService {
       context,
       libraryItemIds,
       RECENT_VIEWS_HYDRATE_CHUNK_SIZE
-    ).then((documents: IBanHanhLibraryItem[]) => {
-      const documentById: Record<number, IBanHanhLibraryItem> = {};
-      documents.forEach((document: IBanHanhLibraryItem) => {
-        documentById[document.id] = document;
-      });
-
-      return views.map((view: IRecentViewItem) => {
-        const document = documentById[view.libraryItemId];
-        return {
+    ).then((documents: IBanHanhLibraryItem[]) => (
+      joinHydratedLibraryDocuments(
+        views,
+        documents,
+        (view: IRecentViewItem) => view.libraryItemId,
+        (view: IRecentViewItem, document?: IBanHanhLibraryItem) => ({
           recentView: view,
           document,
           isAccessible: Boolean(document)
-        };
-      });
-    });
+        })
+      )
+    ));
   }
 
   public getRuntimeErrorMessage(error: unknown): string {

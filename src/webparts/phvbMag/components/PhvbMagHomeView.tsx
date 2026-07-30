@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   RECENT_PUBLISHED_HOME_FOLDER_LIMIT,
@@ -26,6 +26,7 @@ import {
   SidebarRecentViewsIcon,
   SidebarSavedIcon
 } from './PhvbMagIcons';
+import { PhvbMagHomeLibraryPreviewColumn } from './PhvbMagHomeLibraryPreviewColumn';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import styles from './PhvbMag.module.scss';
@@ -113,6 +114,26 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
   }, [loadSavedPreview, loadRecentPreview]);
 
   const isLoadingLibraryPreview = isLoadingSavedPreview || isLoadingRecentPreview;
+
+  const savedHomePreviewItems = useMemo(() => (
+    savedPreviewItems.map(item => ({
+      key: item.bookmark.id,
+      title: item.bookmark.title,
+      dateLabel: `Đã lưu: ${formatBanHanhDate(item.bookmark.created) || 'Chưa xác định'}`,
+      document: item.document,
+      isAccessible: item.isAccessible
+    }))
+  ), [savedPreviewItems]);
+
+  const recentHomePreviewItems = useMemo(() => (
+    recentPreviewItems.map(item => ({
+      key: item.recentView.id,
+      title: item.recentView.title,
+      dateLabel: `Đã xem: ${formatBanHanhDate(item.recentView.modified) || 'Chưa xác định'}`,
+      document: item.document,
+      isAccessible: item.isAccessible
+    }))
+  ), [recentPreviewItems]);
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -224,105 +245,25 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
 
         <section className={styles.homeSection}>
           <div className={styles.homeLibraryPreviewGrid}>
-            <div className={styles.homeLibraryPreviewColumn}>
-              <header className={styles.homeSectionHeader}>
-                <div className={styles.homeSectionTitleWrap}>
-                  <SidebarSavedIcon className={styles.homeSectionIcon} />
-                  <h2 className={styles.homeSectionTitle}>{TAB_LABELS.DaLuu}</h2>
-                </div>
-                <button
-                  type="button"
-                  className={styles.homeSectionMore}
-                  onClick={() => navigate('/tab/DaLuu')}
-                >
-                  Xem tất cả →
-                </button>
-              </header>
+            <PhvbMagHomeLibraryPreviewColumn
+              icon={<SidebarSavedIcon className={styles.homeSectionIcon} />}
+              title={TAB_LABELS.DaLuu}
+              viewAllPath="/tab/DaLuu"
+              emptyMessage="Chưa có văn bản nào được lưu."
+              isLoading={isLoadingLibraryPreview}
+              items={savedHomePreviewItems}
+              onNavigate={path => navigate(path)}
+            />
 
-              {!isLoadingLibraryPreview && savedPreviewItems.length === 0 ? (
-                <div className={styles.homeEmptyState}>
-                  <p>Chưa có văn bản nào được lưu.</p>
-                </div>
-              ) : null}
-
-              {!isLoadingLibraryPreview && savedPreviewItems.length > 0 ? (
-                <div className={styles.homeSavedList}>
-                  {savedPreviewItems.map(item => {
-                    if (!item.isAccessible || !item.document) {
-                      return (
-                        <article key={item.bookmark.id} className={styles.homeSavedUnavailable}>
-                          <span className={styles.homeSavedUnavailableTitle}>{item.bookmark.title}</span>
-                          <span className={styles.homeSavedUnavailableMeta}>Không còn quyền truy cập</span>
-                        </article>
-                      );
-                    }
-
-                    return (
-                      <PhvbMagLibraryDocumentCard
-                        key={item.bookmark.id}
-                        document={item.document}
-                        showDownload
-                        metaContent={(
-                          <span className={styles.homeDocRowMeta}>
-                            Đã lưu: {formatBanHanhDate(item.bookmark.created) || 'Chưa xác định'}
-                          </span>
-                        )}
-                      />
-                    );
-                  })}
-                </div>
-              ) : null}
-            </div>
-
-            <div className={styles.homeLibraryPreviewColumn}>
-              <header className={styles.homeSectionHeader}>
-                <div className={styles.homeSectionTitleWrap}>
-                  <SidebarRecentViewsIcon className={styles.homeSectionIcon} />
-                  <h2 className={styles.homeSectionTitle}>{TAB_LABELS.XemGanDay}</h2>
-                </div>
-                <button
-                  type="button"
-                  className={styles.homeSectionMore}
-                  onClick={() => navigate('/tab/XemGanDay')}
-                >
-                  Xem tất cả →
-                </button>
-              </header>
-
-              {!isLoadingLibraryPreview && recentPreviewItems.length === 0 ? (
-                <div className={styles.homeEmptyState}>
-                  <p>Chưa có văn bản nào được xem gần đây.</p>
-                </div>
-              ) : null}
-
-              {!isLoadingLibraryPreview && recentPreviewItems.length > 0 ? (
-                <div className={styles.homeSavedList}>
-                  {recentPreviewItems.map(item => {
-                    if (!item.isAccessible || !item.document) {
-                      return (
-                        <article key={item.recentView.id} className={styles.homeSavedUnavailable}>
-                          <span className={styles.homeSavedUnavailableTitle}>{item.recentView.title}</span>
-                          <span className={styles.homeSavedUnavailableMeta}>Không còn quyền truy cập</span>
-                        </article>
-                      );
-                    }
-
-                    return (
-                      <PhvbMagLibraryDocumentCard
-                        key={item.recentView.id}
-                        document={item.document}
-                        showDownload
-                        metaContent={(
-                          <span className={styles.homeDocRowMeta}>
-                            Đã xem: {formatBanHanhDate(item.recentView.modified) || 'Chưa xác định'}
-                          </span>
-                        )}
-                      />
-                    );
-                  })}
-                </div>
-              ) : null}
-            </div>
+            <PhvbMagHomeLibraryPreviewColumn
+              icon={<SidebarRecentViewsIcon className={styles.homeSectionIcon} />}
+              title={TAB_LABELS.XemGanDay}
+              viewAllPath="/tab/XemGanDay"
+              emptyMessage="Chưa có văn bản nào được xem gần đây."
+              isLoading={isLoadingLibraryPreview}
+              items={recentHomePreviewItems}
+              onNavigate={path => navigate(path)}
+            />
           </div>
 
           <PhvbMagLoadingOverlay

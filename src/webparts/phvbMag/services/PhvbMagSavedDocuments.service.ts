@@ -10,6 +10,7 @@ import { escapeODataValue, normalizeSiteUrl } from '../infrastructure/SharePoint
 import { buildApiLogParams } from '../services/PhvbMagLog.service';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { SITE_CONTEXT_ERROR_MESSAGE, toRuntimeMessage } from './PhvbMag.error';
+import { joinHydratedLibraryDocuments } from '../utils/PhvbMagHydratedDocuments.utils';
 import { phvbDocumentLibraryService } from './PhvbMagDocumentLibrary.service';
 import type {
   IBanHanhLibraryItem,
@@ -183,21 +184,18 @@ export class PhvbSavedDocumentsService {
       context,
       libraryItemIds,
       SAVED_DOCUMENTS_HYDRATE_CHUNK_SIZE
-    ).then((documents: IBanHanhLibraryItem[]) => {
-      const documentById: Record<number, IBanHanhLibraryItem> = {};
-      documents.forEach((document: IBanHanhLibraryItem) => {
-        documentById[document.id] = document;
-      });
-
-      return bookmarks.map((bookmark: ISavedDocumentItem) => {
-        const document = documentById[bookmark.libraryItemId];
-        return {
+    ).then((documents: IBanHanhLibraryItem[]) => (
+      joinHydratedLibraryDocuments(
+        bookmarks,
+        documents,
+        (bookmark: ISavedDocumentItem) => bookmark.libraryItemId,
+        (bookmark: ISavedDocumentItem, document?: IBanHanhLibraryItem) => ({
           bookmark,
           document,
           isAccessible: Boolean(document)
-        };
-      });
-    });
+        })
+      )
+    ));
   }
 
   public getRuntimeErrorMessage(error: unknown): string {
