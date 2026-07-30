@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { TAB_LABELS } from '../config/PhvbMag.configuration';
+import { GUIDE_VIEW_SUBTITLE } from '../config/PhvbMag.configuration';
 import type { IPhvbSiteContext } from '../models/PhvbMag.models';
 import { usePhvbGuide } from '../hooks/usePhvbGuide';
 import { DownloadIcon } from './PhvbMagIcons';
@@ -14,26 +14,30 @@ interface IPhvbMagGuideViewProps {
 export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElement {
   const { siteContext } = props;
   const guide = usePhvbGuide(siteContext);
-  const title = TAB_LABELS.HuongDan;
+  const iframeTitle = 'Hướng dẫn';
 
   return (
-    <div className={styles.guideView}>
-      <header className={styles.guideHeader}>
+    <div className={styles.recentView}>
+      <header className={styles.recentHeader}>
         <div className={styles.pageHeading}>
-          <span className={styles.pageEyebrow}>Trợ giúp</span>
-          <h2>{title}</h2>
+          <span className={styles.pageEyebrow}>Thư viện</span>
+          <h2>Hướng dẫn</h2>
+          <p className={styles.recentSubtitle}>{GUIDE_VIEW_SUBTITLE}</p>
         </div>
 
         {guide.pdfUrl ? (
-          <div className={styles.guideHeaderActions}>
-            <PhvbMagExternalLink href={guide.pdfUrl} className={styles.btnSecondary}>
+          <div className={styles.recentHeaderActions}>
+            <PhvbMagExternalLink
+              href={guide.pdfUrl}
+              className={styles.recentHeaderActionBtn}
+            >
               Mở tab mới
             </PhvbMagExternalLink>
             <PhvbMagExternalLink
               href={guide.pdfUrl}
               mode="download"
               downloadFileName="SoTayHuongDan.pdf"
-              className={styles.guideDownloadBtn}
+              className={styles.recentHeaderActionBtn}
               aria-label="Tải xuống sổ tay hướng dẫn"
             >
               <DownloadIcon style={{ width: 14, height: 14 }} />
@@ -43,11 +47,11 @@ export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElem
         ) : null}
       </header>
 
-      <div className={styles.guideBody}>
+      <div className={[styles.recentBody, styles.guidePdfBody].join(' ')}>
         <PhvbMagLoadingOverlay isOpen={guide.isLoading} message="Đang tải sổ tay hướng dẫn..." />
 
         {!guide.isLoading && guide.errorMessage ? (
-          <div className={styles.guideEmptyState} role="alert">
+          <div className={styles.recentEmptyState} role="alert">
             <p>{guide.errorMessage}</p>
           </div>
         ) : null}
@@ -56,7 +60,7 @@ export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElem
           <iframe
             className={styles.guidePdfFrame}
             src={guide.pdfUrl}
-            title={title}
+            title={iframeTitle}
           />
         ) : null}
       </div>
