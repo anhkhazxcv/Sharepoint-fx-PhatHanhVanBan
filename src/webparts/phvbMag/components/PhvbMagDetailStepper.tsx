@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useEffect, useRef } from 'react';
 import { getWorkflowStepFromStatus, WORKFLOW_STEPS } from '../config/PhvbMag.configuration';
+import { StepCompletedIcon } from './PhvbMagIcons';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagDetailStepperProps {
@@ -54,7 +55,7 @@ export function PhvbMagDetailStepper(props: IPhvbMagDetailStepperProps): React.R
               data-step-index={step.stepIndex}
             >
               <span className={styles.detailStepCircle}>
-                {isCompleted ? '✓' : step.stepIndex}
+                {isCompleted ? <StepCompletedIcon /> : step.stepIndex}
               </span>
               <span className={styles.detailStepLabel}>{step.label}</span>
             </div>

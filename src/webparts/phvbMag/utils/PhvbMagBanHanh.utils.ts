@@ -33,3 +33,17 @@ export function canPublishBanHanh(
     userHasRole(roles, userEmail, PHVB_ROLES.SUPER_ADMIN)
   );
 }
+
+export function canEditBanHanhNotify(
+  release: IVanBanItem,
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  userEmail?: string
+): boolean {
+  const status = (release.StatusApproved || '').trim();
+
+  return (
+    status === REQUEST_STATUS.CHO_BAN_HANH &&
+    !isRevokeRelease(release) &&
+    userHasRole(roles, userEmail, PHVB_ROLES.ADMIN)
+  );
+}

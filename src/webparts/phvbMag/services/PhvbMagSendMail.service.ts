@@ -12,8 +12,14 @@ function resolveEndpoint(context: IPhvbSiteContext): string {
 function requiresSoVanBan(typeSendMail: string): boolean {
   return (
     typeSendMail === SEND_MAIL_TYPE.XAC_NHAN_CAP_SO ||
-    typeSendMail === SEND_MAIL_TYPE.YEU_CAU_BAN_HANH
+    typeSendMail === SEND_MAIL_TYPE.YEU_CAU_BAN_HANH ||
+    typeSendMail === SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH ||
+    typeSendMail === SEND_MAIL_TYPE.TRA_LAI_ADMIN_BAN_HANH
   );
+}
+
+function requiresBanHanhEmailContent(typeSendMail: string): boolean {
+  return typeSendMail === SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH;
 }
 
 function getMissingPayloadFields(payload: ISendMailPayload): string[] {
@@ -82,6 +88,18 @@ export class PhvbSendMailService {
       console.warn(`${LOG_PREFIX} skip: missing_so_van_ban`, {
         TypeSendMail: payload.TypeSendMail,
         SoVanBan: payload.SoVanBan
+      });
+      return;
+    }
+
+    if (
+      requiresBanHanhEmailContent(payload.TypeSendMail) &&
+      (!(payload.SubjectBanHanh || '').trim() || !(payload.BodyEmail || '').trim())
+    ) {
+      console.warn(`${LOG_PREFIX} skip: missing_ban_hanh_email_content`, {
+        TypeSendMail: payload.TypeSendMail,
+        SubjectBanHanh: payload.SubjectBanHanh,
+        hasBodyEmail: Boolean((payload.BodyEmail || '').trim())
       });
       return;
     }

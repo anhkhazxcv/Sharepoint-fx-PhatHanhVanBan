@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { useState } from 'react';
-import type { IBanHanhNotifyDraft, IRequestDetailData, TabType } from '../models/PhvbMag.models';
+import { useMemo, useState } from 'react';
+import type { IBanHanhNotifyDraft, IAttachmentLibraryItem, IRequestDetailData, TabType } from '../models/PhvbMag.models';
+import type { DetailDocumentUploadKind } from '../hooks/usePhvbDetailDocuments';
 import type { IRemindDeadlineContext } from '../utils/PhvbMagRemindDeadline.utils';
 import type { IWorkflowActionAvailability } from '../utils/PhvbMagWorkflowPermission.utils';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
@@ -13,6 +14,7 @@ import { PhvbMagDetailRightPanel } from './PhvbMagDetailRightPanel';
 import { PhvbMagDetailStepper } from './PhvbMagDetailStepper';
 import { PhvbMagDetailWorkflowSidebar } from './PhvbMagDetailWorkflowSidebar';
 import { PhvbMagRemindDeadlineDialog } from './PhvbMagRemindDeadlineDialog';
+import type { BanHanhNotifyMode } from './PhvbMagBanHanhNotifyDialog';
 
 type DetailTabKey = 'info' | 'documents' | 'workflow';
 
@@ -36,13 +38,22 @@ interface IPhvbMagDetailProps {
   onAssignDocumentNumber?: (soVanBan: string) => Promise<boolean>;
   canPrepareBanHanh?: boolean;
   canPublishBanHanh?: boolean;
+  canEditBanHanhNotify?: boolean;
   isBanHanhSaving?: boolean;
   isBanHanhNotifyLoading?: boolean;
   banHanhErrorMessage?: string;
   banHanhNotifyDraft?: IBanHanhNotifyDraft;
+  banHanhNotifyMode?: BanHanhNotifyMode;
   onOpenPrepareBanHanh?: () => void;
-  onPrepareBanHanh?: (notify: IBanHanhNotifyDraft) => Promise<boolean>;
-  onPublishBanHanh?: () => Promise<boolean>;
+  onOpenPublishBanHanh?: () => void;
+  onOpenEditBanHanhNotify?: () => void;
+  onPrepareBanHanh?: (notify: IBanHanhNotifyDraft, mainDocumentId?: number) => Promise<boolean>;
+  onPublishBanHanh?: (mainDocumentId?: number) => Promise<boolean>;
+  onUpdateBanHanhNotify?: (
+    notify: IBanHanhNotifyDraft,
+    mainDocumentId?: number
+  ) => Promise<boolean>;
+  onReturnBanHanhToAdmin?: (comment: string) => Promise<boolean>;
   canOpenParticipantModal?: boolean;
   onOpenParticipantModal?: () => void;
   canRemindDeadline?: boolean;
@@ -50,6 +61,12 @@ interface IPhvbMagDetailProps {
   isRemindSending?: boolean;
   remindErrorMessage?: string;
   onSendRemindDeadline?: (selectedRecipientIds: string[]) => Promise<boolean>;
+  canManageDocuments?: boolean;
+  isDocumentMutating?: boolean;
+  documentErrorMessage?: string;
+  onUploadDocuments?: (kind: DetailDocumentUploadKind, files: FileList | File[]) => Promise<boolean>;
+  onDeleteDocument?: (file: IAttachmentLibraryItem) => Promise<boolean>;
+  onDeleteDocuments?: (files: IAttachmentLibraryItem[]) => Promise<boolean>;
 }
 
 const DETAIL_TABS: ReadonlyArray<{ key: DetailTabKey; label: string }> = [
@@ -79,24 +96,46 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     onAssignDocumentNumber,
     canPrepareBanHanh,
     canPublishBanHanh,
+    canEditBanHanhNotify,
     isBanHanhSaving,
     isBanHanhNotifyLoading,
     banHanhErrorMessage,
     banHanhNotifyDraft,
+    banHanhNotifyMode,
     onOpenPrepareBanHanh,
+    onOpenPublishBanHanh,
+    onOpenEditBanHanhNotify,
     onPrepareBanHanh,
     onPublishBanHanh,
+    onUpdateBanHanhNotify,
+    onReturnBanHanhToAdmin,
     canOpenParticipantModal,
     onOpenParticipantModal,
     canRemindDeadline,
     remindContext,
     isRemindSending,
     remindErrorMessage,
-    onSendRemindDeadline
+    onSendRemindDeadline,
+    canManageDocuments,
+    isDocumentMutating,
+    documentErrorMessage,
+    onUploadDocuments,
+    onDeleteDocument,
+    onDeleteDocuments
   } = props;
   const [activeTab, setActiveTab] = useState<DetailTabKey>('info');
   const [isRemindDialogOpen, setIsRemindDialogOpen] = useState<boolean>(false);
   const title = data.release.Tenvanban || data.release.IdYeuCau || 'Chi tiết văn bản';
+  const isFullIssuancePublish =
+    (data.release.LoaiYeuCau || '').trim() === 'Viết mới' ||
+    (data.release.LoaiYeuCau || '').trim() === 'Điều chỉnh';
+  const requireMainDocument =
+    isFullIssuancePublish && (banHanhNotifyMode === 'prepare' || banHanhNotifyMode === 'edit');
+  const mainDocumentReadOnly = isFullIssuancePublish && banHanhNotifyMode === 'publish';
+  const mainDocumentCandidates = useMemo(
+    () => data.attachments.filter(item => !item.isFormAttachment),
+    [data.attachments]
+  );
 
   const handleRemindConfirm = async (selectedRecipientIds: string[]): Promise<void> => {
     if (!onSendRemindDeadline || isRemindSending) {
@@ -113,7 +152,17 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
   const renderTabContent = (): React.ReactElement => {
     switch (activeTab) {
       case 'documents':
-        return <PhvbMagDetailDocumentsTab attachments={data.attachments} />;
+        return (
+          <PhvbMagDetailDocumentsTab
+            attachments={data.attachments}
+            canManage={canManageDocuments}
+            isMutating={isDocumentMutating}
+            errorMessage={documentErrorMessage}
+            onUploadFiles={onUploadDocuments}
+            onDeleteFile={onDeleteDocument}
+            onDeleteFiles={onDeleteDocuments}
+          />
+        );
       case 'workflow':
         return (
           <PhvbMagDetailWorkflowSidebar
@@ -151,13 +200,22 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
         onAssignDocumentNumber={onAssignDocumentNumber}
         canPrepareBanHanh={canPrepareBanHanh}
         canPublishBanHanh={canPublishBanHanh}
+        canEditBanHanhNotify={canEditBanHanhNotify}
         isBanHanhSaving={isBanHanhSaving}
         isBanHanhNotifyLoading={isBanHanhNotifyLoading}
         banHanhErrorMessage={banHanhErrorMessage}
         banHanhNotifyDraft={banHanhNotifyDraft}
+        banHanhNotifyMode={banHanhNotifyMode}
+        requireMainDocument={requireMainDocument}
+        mainDocumentReadOnly={mainDocumentReadOnly}
+        mainDocumentCandidates={mainDocumentCandidates}
         onOpenPrepareBanHanh={onOpenPrepareBanHanh}
+        onOpenPublishBanHanh={onOpenPublishBanHanh}
+        onOpenEditBanHanhNotify={onOpenEditBanHanhNotify}
         onPrepareBanHanh={onPrepareBanHanh}
         onPublishBanHanh={onPublishBanHanh}
+        onUpdateBanHanhNotify={onUpdateBanHanhNotify}
+        onReturnBanHanhToAdmin={onReturnBanHanhToAdmin}
       />
 
       <div className={styles.detailBodySplit}>

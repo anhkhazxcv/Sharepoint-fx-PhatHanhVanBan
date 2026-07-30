@@ -1,4 +1,8 @@
-import type { IBanHanhFolderNode, IBanHanhLibraryItem } from '../models/PhvbMag.models';
+import type {
+  IBanHanhFolderNode,
+  IBanHanhLibraryItem,
+  ILibraryFolderEntry
+} from '../models/PhvbMag.models';
 
 const FOLDER_TYPE = 1;
 const FILE_TYPE = 0;
@@ -37,6 +41,95 @@ function detectLibraryRootPath(folders: IBanHanhLibraryItem[]): string {
   }
 
   return segments.slice(0, -1).join('/');
+}
+
+export interface ILibraryFolderIndex {
+  libraryRootPath: string;
+  childFoldersByPath: Record<string, ILibraryFolderEntry[]>;
+  folderById: Map<number, ILibraryFolderEntry>;
+}
+
+export interface ILibraryFolderAncestorData {
+  expandedPaths: string[];
+  childFoldersByPath: Record<string, ILibraryFolderEntry[]>;
+}
+
+function isLibraryFolderItem(item: IBanHanhLibraryItem): boolean {
+  return item.fsObjType === FOLDER_TYPE && item.name.toLowerCase() !== 'forms';
+}
+
+export function buildLibraryFolderChildrenIndex(items: IBanHanhLibraryItem[]): ILibraryFolderIndex {
+  const folders = getFolderItems(items).filter(isLibraryFolderItem);
+  const libraryRootPath = detectLibraryRootPath(folders);
+  const childFoldersByPath: Record<string, ILibraryFolderEntry[]> = {};
+  const folderById = new Map<number, ILibraryFolderEntry>();
+  const entries: ILibraryFolderEntry[] = [];
+
+  folders.forEach(folder => {
+    const serverRelativePath = normalizePath(joinPath(folder.fileDirRef, folder.name));
+    const entry: ILibraryFolderEntry = {
+      id: folder.id,
+      name: folder.name,
+      serverRelativePath,
+      hasChildFolders: false
+    };
+    entries.push(entry);
+    folderById.set(folder.id, entry);
+
+    const parentPath = normalizePath(folder.fileDirRef);
+    if (!childFoldersByPath[parentPath]) {
+      childFoldersByPath[parentPath] = [];
+    }
+
+    childFoldersByPath[parentPath].push(entry);
+  });
+
+  entries.forEach(entry => {
+    entry.hasChildFolders = (childFoldersByPath[entry.serverRelativePath]?.length ?? 0) > 0;
+  });
+
+  Object.keys(childFoldersByPath).forEach(parentPath => {
+    childFoldersByPath[parentPath].sort((left, right) => left.name.localeCompare(right.name, 'vi'));
+  });
+
+  return {
+    libraryRootPath,
+    childFoldersByPath,
+    folderById
+  };
+}
+
+export function buildFolderAncestorData(
+  index: ILibraryFolderIndex,
+  folder: ILibraryFolderEntry
+): ILibraryFolderAncestorData {
+  const result: ILibraryFolderAncestorData = {
+    expandedPaths: [],
+    childFoldersByPath: {}
+  };
+
+  if (!index.libraryRootPath) {
+    return result;
+  }
+
+  const segments = folder.serverRelativePath
+    .replace(index.libraryRootPath, '')
+    .split('/')
+    .filter(Boolean);
+  let currentPath = index.libraryRootPath;
+
+  for (let indexSegment = 0; indexSegment < segments.length - 1; indexSegment += 1) {
+    currentPath = `${currentPath}/${segments[indexSegment]}`;
+    result.expandedPaths.push(currentPath);
+
+    const children = index.childFoldersByPath[currentPath];
+
+    if (children) {
+      result.childFoldersByPath[currentPath] = children;
+    }
+  }
+
+  return result;
 }
 
 export function buildFolderTree(items: IBanHanhLibraryItem[]): IBanHanhFolderNode[] {

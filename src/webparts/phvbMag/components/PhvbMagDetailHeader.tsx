@@ -2,10 +2,10 @@ import * as React from 'react';
 import { forwardRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TAB_LABELS } from '../config/PhvbMag.configuration';
-import type { IBanHanhNotifyDraft, TabType } from '../models/PhvbMag.models';
+import type { IBanHanhNotifyDraft, IAttachmentLibraryItem, TabType } from '../models/PhvbMag.models';
 import type { IWorkflowActionAvailability, WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
-import { PhvbMagBanHanhDialog } from './PhvbMagBanHanhDialog';
-import { PhvbMagBanHanhNotifyDialog } from './PhvbMagBanHanhNotifyDialog';
+import type { CommentConfirmActionKey } from '../utils/PhvbMagWorkflowActionDialog.utils';
+import { PhvbMagBanHanhNotifyDialog, type BanHanhNotifyMode, type IBanHanhNotifyConfirmOptions } from './PhvbMagBanHanhNotifyDialog';
 import { PhvbMagCapSoDialog } from './PhvbMagCapSoDialog';
 import { PhvbMagWorkflowActionDialog } from './PhvbMagWorkflowActionDialog';
 import styles from './PhvbMag.module.scss';
@@ -25,13 +25,25 @@ interface IPhvbMagDetailHeaderProps {
   onAssignDocumentNumber?: (soVanBan: string) => Promise<boolean>;
   canPrepareBanHanh?: boolean;
   canPublishBanHanh?: boolean;
+  canEditBanHanhNotify?: boolean;
   isBanHanhSaving?: boolean;
   isBanHanhNotifyLoading?: boolean;
   banHanhErrorMessage?: string;
   banHanhNotifyDraft?: IBanHanhNotifyDraft;
+  banHanhNotifyMode?: BanHanhNotifyMode;
+  requireMainDocument?: boolean;
+  mainDocumentReadOnly?: boolean;
+  mainDocumentCandidates?: ReadonlyArray<IAttachmentLibraryItem>;
   onOpenPrepareBanHanh?: () => void;
-  onPrepareBanHanh?: (notify: IBanHanhNotifyDraft) => Promise<boolean>;
-  onPublishBanHanh?: () => Promise<boolean>;
+  onOpenPublishBanHanh?: () => void;
+  onOpenEditBanHanhNotify?: () => void;
+  onPrepareBanHanh?: (notify: IBanHanhNotifyDraft, mainDocumentId?: number) => Promise<boolean>;
+  onPublishBanHanh?: (mainDocumentId?: number) => Promise<boolean>;
+  onUpdateBanHanhNotify?: (
+    notify: IBanHanhNotifyDraft,
+    mainDocumentId?: number
+  ) => Promise<boolean>;
+  onReturnBanHanhToAdmin?: (comment: string) => Promise<boolean>;
 }
 
 export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHeaderProps>(
@@ -51,31 +63,39 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       onAssignDocumentNumber,
       canPrepareBanHanh = false,
       canPublishBanHanh = false,
+      canEditBanHanhNotify = false,
       isBanHanhSaving = false,
       isBanHanhNotifyLoading = false,
       banHanhErrorMessage,
       banHanhNotifyDraft,
+      banHanhNotifyMode = 'prepare',
+      requireMainDocument = false,
+      mainDocumentReadOnly = false,
+      mainDocumentCandidates = [],
       onOpenPrepareBanHanh,
+      onOpenPublishBanHanh,
+      onOpenEditBanHanhNotify,
       onPrepareBanHanh,
-      onPublishBanHanh
+      onPublishBanHanh,
+      onUpdateBanHanhNotify,
+      onReturnBanHanhToAdmin
     } = props;
     const tabLabel = TAB_LABELS[tabName] || tabName;
-    const [pendingAction, setPendingAction] = useState<WorkflowActionKey | undefined>(undefined);
+    const [pendingAction, setPendingAction] = useState<CommentConfirmActionKey | undefined>(undefined);
     const [isCapSoDialogOpen, setIsCapSoDialogOpen] = useState<boolean>(false);
     const [isNotifyDialogOpen, setIsNotifyDialogOpen] = useState<boolean>(false);
-    const [isPublishDialogOpen, setIsPublishDialogOpen] = useState<boolean>(false);
 
     const canApprove = Boolean(availableActions?.approve);
     const canRequestRevision = Boolean(availableActions?.requestRevision);
     const canReject = Boolean(availableActions?.reject);
     const hasWorkflowActions = canApprove || canRequestRevision || canReject;
-    const hasPostApprovalActions = canAssignDocumentNumber || canPrepareBanHanh || canPublishBanHanh;
+    const hasPostApprovalActions =
+      canAssignDocumentNumber || canPrepareBanHanh || canPublishBanHanh || canEditBanHanhNotify;
     const isWorkflowDialogOpen = Boolean(pendingAction);
     const isAnyDialogOpen =
       isWorkflowDialogOpen ||
       isCapSoDialogOpen ||
-      isNotifyDialogOpen ||
-      isPublishDialogOpen;
+      isNotifyDialogOpen;
     const isBusy = isProcessing || isCapSoSaving || isBanHanhSaving || isBanHanhNotifyLoading;
 
     const openActionDialog = (action: WorkflowActionKey): void => {
@@ -95,7 +115,26 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
     };
 
     const handleDialogConfirm = async (comment: string): Promise<void> => {
-      if (!onRunAction || !pendingAction || isBusy) {
+      if (!pendingAction || isBusy) {
+        return;
+      }
+
+      if (pendingAction === 'returnBanHanhToAdmin') {
+        if (!onReturnBanHanhToAdmin) {
+          return;
+        }
+
+        const succeeded = await onReturnBanHanhToAdmin(comment);
+
+        if (succeeded) {
+          setPendingAction(undefined);
+          setIsNotifyDialogOpen(false);
+        }
+
+        return;
+      }
+
+      if (!onRunAction) {
         return;
       }
 
@@ -130,28 +169,83 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       }
     };
 
-    const handleNotifyConfirm = async (notify: IBanHanhNotifyDraft): Promise<void> => {
-      if (!onPrepareBanHanh || isBusy) {
+    const handleOpenPublish = (): void => {
+      if (isBusy) {
         return;
       }
 
-      const succeeded = await onPrepareBanHanh(notify);
+      setIsNotifyDialogOpen(true);
+
+      if (onOpenPublishBanHanh) {
+        onOpenPublishBanHanh();
+      }
+    };
+
+    const handleOpenEditNotify = (): void => {
+      if (isBusy) {
+        return;
+      }
+
+      setIsNotifyDialogOpen(true);
+
+      if (onOpenEditBanHanhNotify) {
+        onOpenEditBanHanhNotify();
+      }
+    };
+
+    const handleNotifyConfirm = async (
+      notify: IBanHanhNotifyDraft,
+      options?: IBanHanhNotifyConfirmOptions
+    ): Promise<void> => {
+      if (isBusy) {
+        return;
+      }
+
+      if (banHanhNotifyMode === 'publish') {
+        if (!onPublishBanHanh) {
+          return;
+        }
+
+        const succeeded = await onPublishBanHanh(options?.mainDocumentId);
+
+        if (succeeded) {
+          setIsNotifyDialogOpen(false);
+        }
+
+        return;
+      }
+
+      if (banHanhNotifyMode === 'edit') {
+        if (!onUpdateBanHanhNotify) {
+          return;
+        }
+
+        const succeeded = await onUpdateBanHanhNotify(notify, options?.mainDocumentId);
+
+        if (succeeded) {
+          setIsNotifyDialogOpen(false);
+        }
+
+        return;
+      }
+
+      if (!onPrepareBanHanh) {
+        return;
+      }
+
+      const succeeded = await onPrepareBanHanh(notify, options?.mainDocumentId);
 
       if (succeeded) {
         setIsNotifyDialogOpen(false);
       }
     };
 
-    const handlePublishConfirm = async (): Promise<void> => {
-      if (!onPublishBanHanh || isBusy) {
+    const handleReturnToAdmin = (): void => {
+      if (isBusy || !onReturnBanHanhToAdmin) {
         return;
       }
 
-      const succeeded = await onPublishBanHanh();
-
-      if (succeeded) {
-        setIsPublishDialogOpen(false);
-      }
+      setPendingAction('returnBanHanhToAdmin');
     };
 
     return (
@@ -161,8 +255,8 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       >
         <div className={styles.detailHeaderMain}>
           <nav className={styles.detailBreadcrumb} aria-label="Breadcrumb">
-            <Link to={`/tab/${tabName}`} className={styles.detailBreadcrumbLink}>
-              Trang chủ
+            <Link to="/tab/ViecCanLam" className={styles.detailBreadcrumbLink}>
+              {TAB_LABELS.ViecCanLam}
             </Link>
             <span className={styles.detailBreadcrumbSep}>&gt;</span>
             <Link to={`/tab/${tabName}`} className={styles.detailBreadcrumbLink}>
@@ -183,7 +277,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
             <p className={styles.detailActionError} role="alert">{capSoErrorMessage}</p>
           ) : null}
 
-          {!isNotifyDialogOpen && !isPublishDialogOpen && banHanhErrorMessage ? (
+          {!isNotifyDialogOpen && banHanhErrorMessage ? (
             <p className={styles.detailActionError} role="alert">{banHanhErrorMessage}</p>
           ) : null}
 
@@ -207,7 +301,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
                   disabled={isBusy}
                   onClick={handleOpenPrepare}
                 >
-                  Ban hành
+                  Gửi ban hành
                 </button>
               ) : null}
 
@@ -216,9 +310,20 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
                   type="button"
                   className={styles.detailActionApprove}
                   disabled={isBusy}
-                  onClick={() => setIsPublishDialogOpen(true)}
+                  onClick={handleOpenPublish}
                 >
-                  Ban hành văn bản
+                  Ban hành
+                </button>
+              ) : null}
+
+              {canEditBanHanhNotify ? (
+                <button
+                  type="button"
+                  className={styles.detailActionEdit}
+                  disabled={isBusy}
+                  onClick={handleOpenEditNotify}
+                >
+                  Chỉnh sửa nội dung ban hành
                 </button>
               ) : null}
 
@@ -262,8 +367,14 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
           isOpen={isWorkflowDialogOpen}
           action={pendingAction}
           approveLabel={approveLabel}
-          isProcessing={isProcessing}
-          errorMessage={isWorkflowDialogOpen ? errorMessage : undefined}
+          isProcessing={pendingAction === 'returnBanHanhToAdmin' ? isBanHanhSaving : isProcessing}
+          errorMessage={
+            isWorkflowDialogOpen
+              ? pendingAction === 'returnBanHanhToAdmin'
+                ? banHanhErrorMessage
+                : errorMessage
+              : undefined
+          }
           onCancel={closeActionDialog}
           onConfirm={comment => {
             handleDialogConfirm(comment).catch(() => undefined);
@@ -286,6 +397,10 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
 
         <PhvbMagBanHanhNotifyDialog
           isOpen={isNotifyDialogOpen}
+          mode={banHanhNotifyMode}
+          requireMainDocument={requireMainDocument}
+          mainDocumentReadOnly={mainDocumentReadOnly}
+          mainDocumentCandidates={mainDocumentCandidates}
           isLoading={isBanHanhNotifyLoading}
           isProcessing={isBanHanhSaving}
           errorMessage={isNotifyDialogOpen ? banHanhErrorMessage : undefined}
@@ -295,24 +410,14 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
               setIsNotifyDialogOpen(false);
             }
           }}
-          onConfirm={notify => {
-            handleNotifyConfirm(notify).catch(() => undefined);
+          onConfirm={(notify, options) => {
+            handleNotifyConfirm(notify, options).catch(() => undefined);
           }}
-        />
-
-        <PhvbMagBanHanhDialog
-          isOpen={isPublishDialogOpen}
-          action="publish"
-          isProcessing={isBanHanhSaving}
-          errorMessage={isPublishDialogOpen ? banHanhErrorMessage : undefined}
-          onCancel={() => {
-            if (!isBanHanhSaving) {
-              setIsPublishDialogOpen(false);
-            }
-          }}
-          onConfirm={() => {
-            handlePublishConfirm().catch(() => undefined);
-          }}
+          onReturnToAdmin={
+            banHanhNotifyMode === 'publish' && onReturnBanHanhToAdmin
+              ? handleReturnToAdmin
+              : undefined
+          }
         />
       </div>
     );

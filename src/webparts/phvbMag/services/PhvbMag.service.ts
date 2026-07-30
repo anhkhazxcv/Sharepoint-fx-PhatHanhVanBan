@@ -43,9 +43,8 @@ const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'Date_GopY',
   'Date_ThamDinh',
   'Date_PheDuyet',
-  'IsCreateFolderExpire',
   'ThuMucBanHanh',
-  'LinkToFolderOld',
+  'IDFolderOld',
   'GhiChuChoThamDinh',
   'IsSendMailNotify',
   'EmailNhanBanHanh',
@@ -129,7 +128,7 @@ function getUserScopedFilter(tab: TabType, userEmail: string): string | undefine
 }
 
 function isTodoTab(tab: TabType): boolean {
-  return tab === 'TrangChu';
+  return tab === 'ViecCanLam';
 }
 
 function matchesUserInField(value: string | undefined, userEmail: string): boolean {
@@ -137,6 +136,12 @@ function matchesUserInField(value: string | undefined, userEmail: string): boole
 }
 
 function isTodoItemForUser(item: IVanBanItem, userEmail: string): boolean {
+  const status = (item.StatusApproved || '').trim();
+
+  if (status === REQUEST_STATUS.BAN_HANH || status === 'Approved') {
+    return false;
+  }
+
   return (
     matchesUserInField(item.PheDuyet, userEmail) ||
     matchesUserInField(item.NguoiGopY, userEmail) ||
@@ -208,7 +213,7 @@ function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenc
     NgayPhatHanh: today,
     NgayTaoYeuCau: formatCurrentExecutionDateTime(),
     HieuLucTu: input.hieuLucTu || today,
-    HieuLucDen: input.hieuLucDen || 'Vô thời hạn',
+    HieuLucDen: (input.hieuLucDen || '').trim(),
     TomTatNoiDung: input.summary,
     NguoiTao: options.userDisplayName || '',
     EmailNguoiTao: options.userEmail || '',
@@ -245,7 +250,7 @@ export class PhvbDocumentsService {
     const [todoItems, myRequestItems, banNhapItems, qlVanBanItems, capSoItems] = await Promise.all([
       phvbRepository.fetchItems({
         ...options,
-        selectFields: ['Id', 'PheDuyet', 'NguoiGopY', 'ThamDinh'],
+        selectFields: ['Id', 'StatusApproved', 'PheDuyet', 'NguoiGopY', 'ThamDinh'],
         top: 5000
       }),
       phvbRepository.fetchItems({
@@ -274,7 +279,7 @@ export class PhvbDocumentsService {
     ]);
 
     return {
-      trangChu: filterItemsForTab(todoItems, 'TrangChu', options.userEmail).length,
+      viecCanLam: filterItemsForTab(todoItems, 'ViecCanLam', options.userEmail).length,
       yeuCauCuaToi: myRequestItems.length,
       banNhap: banNhapItems.length,
       capSo: capSoItems.length,
@@ -285,6 +290,10 @@ export class PhvbDocumentsService {
 
   public async loadTabItems(options: ILoadTabItemsOptions): Promise<IVanBanItem[]> {
     if (!hasSharePointSiteContext(options)) {
+      return [];
+    }
+
+    if (options.tab === 'ThuVienTaiLieu' || options.tab === 'MoiBanHanh' || options.tab === 'HuongDan') {
       return [];
     }
 

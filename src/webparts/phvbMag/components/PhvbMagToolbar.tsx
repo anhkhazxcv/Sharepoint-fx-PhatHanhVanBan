@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { TabType } from '../models/PhvbMag.models';
+import { CreateActionIcon } from './PhvbMagIcons';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagToolbarProps {
@@ -14,7 +15,7 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
   const { activeTab, canCreate, onOpenCreate, onOpenTemplate } = props;
 
   return (
-    <header className={[styles.contentHeader, activeTab === 'TrangChu' ? styles.contentHeaderTask : ''].filter(Boolean).join(' ')}>
+    <header className={[styles.contentHeader, activeTab === 'ViecCanLam' ? styles.contentHeaderTask : ''].filter(Boolean).join(' ')}>
       <div className={styles.pageHeading}>
         <span className={styles.pageEyebrow}>Văn bản nội bộ</span>
         <h2>{TAB_LABELS[activeTab]}</h2>
@@ -26,7 +27,10 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
         </button>
 
         <button type="button" className={styles.btnCreate} onClick={onOpenCreate} disabled={!canCreate}>
-          <span>+ Tạo yêu cầu</span>
+          <span className={styles.btnCreateContent}>
+            <CreateActionIcon />
+            Tạo yêu cầu
+          </span>
         </button>
       </div>
     </header>

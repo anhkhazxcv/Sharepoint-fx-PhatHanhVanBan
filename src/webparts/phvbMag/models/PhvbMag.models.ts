@@ -27,9 +27,8 @@ export interface IVanBanItem {
   Date_GopY?: string;
   Date_ThamDinh?: string;
   Date_PheDuyet?: string;
-  IsCreateFolderExpire?: boolean;
   ThuMucBanHanh?: string;
-  LinkToFolderOld?: string;
+  IDFolderOld?: number;
   GhiChuChoThamDinh?: string;
   IsSendMailNotify?: boolean;
   EmailNhanBanHanh?: string;
@@ -78,6 +77,7 @@ export interface IAttachmentLibraryItem {
   modified?: string;
   folderPath?: string;
   isFormAttachment?: boolean;
+  loaiVanBan?: string;
 }
 
 export interface ICommentAttachmentItem {
@@ -112,10 +112,10 @@ export interface IEditRequestContext {
   idYeuCau: string;
 }
 
-export type TabType = 'TrangChu' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'CapSo' | 'QLVanBan';
+export type TabType = 'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'CapSo' | 'QLVanBan' | 'HuongDan';
 
 export interface ITabCounts {
-  trangChu: number;
+  viecCanLam: number;
   yeuCauCuaToi: number;
   banNhap: number;
   capSo: number;
@@ -189,8 +189,39 @@ export interface IBanHanhLibraryItem {
   tomTatVanban?: string;
   ngayPhatHanh?: string;
   hieuLucTu?: string;
+  hieuLucDen?: string;
   lienHe?: string;
   fileUrl: string;
+  viewCount?: number;
+  /** Folder browse: OpenItems from EffectiveBasePermissions. Search: always false. */
+  canDownload?: boolean;
+  downloadUrl?: string;
+}
+
+export type LibraryBrowseMode = 'all' | 'folder' | 'search';
+
+export interface ILibraryFolderEntry {
+  id: number;
+  name: string;
+  serverRelativePath: string;
+  hasChildFolders: boolean;
+}
+
+export interface ILibraryPagedFilesResult {
+  items: IBanHanhLibraryItem[];
+  page: number;
+  pageSize: number;
+  totalCount?: number;
+  hasNextPage: boolean;
+  nextPageCursor?: string;
+}
+
+export interface ILibrarySearchPageResult {
+  items: IBanHanhLibraryItem[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  query: string;
 }
 
 export interface ITemplateLibraryItem {
@@ -244,6 +275,12 @@ export interface ISendMailPayload {
   TenVanBan: string;
   TomTatNoiDung: string;
   SoVanBan?: string;
+  SubjectBanHanh?: string;
+  BodyEmail?: string;
+}
+
+export interface IBanHanhPublishOptions {
+  mainDocumentId?: number;
 }
 
 export interface IPhvbSiteContext {
@@ -251,7 +288,10 @@ export interface IPhvbSiteContext {
   siteCollectionUrl: string;
   sourceSiteUrl?: string;
   listTitle?: string;
+  issuanceLibraryTitle?: string;
   endPointSendMail?: string;
+  endPointShortUrl?: string;
+  roleGroupID?: string;
   spHttpClient: SPHttpClient;
   httpClient: HttpClient;
 }
@@ -289,7 +329,7 @@ export type BadgeVariant = 'badgeTC' | 'badgeQC' | 'badgeQD' | 'badgeCS' | 'badg
 export type UniqueItemField = 'LoaiYeuCau' | 'KhoaPhongNguoiTao';
 
 export const DEFAULT_TAB_COUNTS: ITabCounts = {
-  trangChu: 0,
+  viecCanLam: 0,
   yeuCauCuaToi: 0,
   banNhap: 0,
   capSo: 0,

@@ -10,6 +10,9 @@ export interface IPhvbMagProps {
   siteCollectionUrl: string;
   sourceSiteUrl?: string;
   listTitle?: string;
+  issuanceLibraryTitle?: string;
   endPointSendMail?: string;
+  endPointShortUrl?: string;
+  roleGroupID?: string;
 }
 

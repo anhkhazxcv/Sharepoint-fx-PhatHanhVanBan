@@ -90,6 +90,10 @@ function resolveErrorMessage(error: unknown): string {
 }
 
 export class PhvbMagLogService {
+  public async writeAuditLog(context: IPhvbSiteContext, entry: IPhvbLogEntry): Promise<void> {
+    await this.writeErrorLog(context, entry);
+  }
+
   public async writeErrorLog(context: IPhvbSiteContext, entry: IPhvbLogEntry): Promise<void> {
     const candidates = getCandidateSiteUrls(context);
 

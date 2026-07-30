@@ -19,13 +19,17 @@ import { BaseClientSideWebPart, IWebPartPropertiesMetadata } from '@microsoft/sp
 import { IReadonlyTheme } from '@microsoft/sp-component-base';
 
 import * as strings from 'PhvbMagWebPartStrings';
+import { ISSUANCE_LIBRARY_TITLE, SHORT_URL_DEFAULT_ENDPOINT } from './config/PhvbMag.configuration';
 import PhvbMag from './components/PhvbMag';
 import { IPhvbMagProps } from './components/IPhvbMagProps';
 
 export interface IPhvbMagWebPartProps {
   sourceSiteUrl: string;
   listTitle: string;
+  issuanceLibraryTitle?: string;
   endPointSendMail?: string;
+  endPointShortUrl?: string;
+  roleGroupID?: string;
 }
 
 export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPartProps> {
@@ -37,7 +41,15 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
     if (!this.properties.sourceSiteUrl) {
       this.properties.sourceSiteUrl = 'https://masterisegroup.sharepoint.com/sites/test';
       this.properties.endPointSendMail = 'https://defaultabd5926f9a1b41379332b3f4e80959.23.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/f76236a31fed47b1bdcf450d97c818c8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=pzUned3r2JuDD3ZMNoYnRgQubspNIv0swynsil6UxMk';
-      //this.properties.sourceSiteUrl = 'https://masterisegroup.sharepoint.com';
+      this.properties.endPointShortUrl = SHORT_URL_DEFAULT_ENDPOINT;
+    }
+
+    if (!(this.properties.roleGroupID || '').trim()) {
+      this.properties.roleGroupID = '10';
+    }
+
+    if (!(this.properties.issuanceLibraryTitle || '').trim()) {
+      this.properties.issuanceLibraryTitle = ISSUANCE_LIBRARY_TITLE;
     }
 
     this.ensureTypographyFontLoaded();
@@ -73,7 +85,10 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
         siteCollectionUrl: this.context.pageContext.site.absoluteUrl,
         sourceSiteUrl: this.properties.sourceSiteUrl,
         listTitle: this.properties.listTitle,
-        endPointSendMail: this.properties.endPointSendMail
+        issuanceLibraryTitle: this.properties.issuanceLibraryTitle,
+        endPointSendMail: this.properties.endPointSendMail,
+        endPointShortUrl: this.properties.endPointShortUrl,
+        roleGroupID: this.properties.roleGroupID
       }
     );
 
@@ -119,9 +134,21 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
                   label: 'SharePoint source site URL',
                   description: 'Optional. Leave empty to try current web first, then site collection.'
                 }),
+                PropertyPaneTextField('issuanceLibraryTitle', {
+                  label: 'Issuance library title',
+                  description: 'Document library for Thư viện tài liệu. Default: VanBanBanHanh_Ver02.'
+                }),
                 PropertyPaneTextField('endPointSendMail', {
                   label: 'EndPoint Send Mail',
                   description: 'URL API gửi email workflow (POST JSON). Để trống nếu chưa cấu hình.'
+                }),
+                PropertyPaneTextField('endPointShortUrl', {
+                  label: 'EndPoint Short URL',
+                  description: 'URL API tạo short link (POST JSON). Mặc định masterisehomes short-urls.'
+                }),
+                PropertyPaneTextField('roleGroupID', {
+                  label: 'Role Group ID',
+                  description: 'SharePoint group ID được gán quyền Read cho thư mục Biểu Mẫu khi ban hành.'
                 })
               ]
             }

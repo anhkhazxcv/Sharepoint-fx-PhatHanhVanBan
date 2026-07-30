@@ -7,11 +7,14 @@ import {
   SidebarCollapseIcon,
   SidebarDraftIcon,
   SidebarExpandIcon,
-  //SidebarLibraryIcon,
-  SidebarMyRequestsIcon,
-  SidebarNumberingIcon,
-  //SidebarReleaseIcon,
+  SidebarHelpIcon,
   SidebarHomeIcon,
+  SidebarLibraryIcon,
+  SidebarMyRequestsIcon,
+  SidebarNewReleaseIcon,
+  SidebarNumberingIcon,
+  SidebarSavedIcon,
+  SidebarTasksIcon
 } from './PhvbMagIcons';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -26,29 +29,62 @@ interface IPhvbMagSidebarProps {
   userDisplayName: string;
   userDepartment?: string;
   showCapSoTab?: boolean;
+  showQLVanBanTab?: boolean;
 }
 
 interface INavItemProps {
-  tab: TabType;
+  tab?: TabType;
   label: string;
   icon: React.ReactNode;
   activeTab: TabType;
   isCollapsed: boolean;
-  onSelectTab: (tab: TabType) => void;
+  onSelectTab?: (tab: TabType) => void;
   badgeCount?: number;
+  disabled?: boolean;
+  soonBadge?: boolean;
 }
 
 function NavItem(props: INavItemProps): React.ReactElement {
-  const { tab, label, icon, activeTab, isCollapsed, onSelectTab, badgeCount } = props;
-  const classNames = [styles.navItem, activeTab === tab ? styles.active : '', isCollapsed ? styles.navItemCollapsed : '']
+  const {
+    tab,
+    label,
+    icon,
+    activeTab,
+    isCollapsed,
+    onSelectTab,
+    badgeCount,
+    disabled = false,
+    soonBadge = false
+  } = props;
+  const isActive = !disabled && tab !== undefined && activeTab === tab;
+  const classNames = [
+    styles.navItem,
+    isActive ? styles.active : '',
+    isCollapsed ? styles.navItemCollapsed : '',
+    disabled ? styles.navItemDisabled : ''
+  ]
     .filter(Boolean)
     .join(' ');
+  const title = disabled ? 'Sắp có' : label;
 
   return (
-    <button type="button" className={classNames} onClick={() => onSelectTab(tab)} title={label}>
+    <button
+      type="button"
+      className={classNames}
+      disabled={disabled}
+      onClick={() => {
+        if (!disabled && tab && onSelectTab) {
+          onSelectTab(tab);
+        }
+      }}
+      title={title}
+    >
       <span className={styles.iconWrapper}>{icon}</span>
       {!isCollapsed && <span className={styles.navText}>{label}</span>}
-      {badgeCount !== undefined && badgeCount > 0 && (
+      {!isCollapsed && soonBadge ? (
+        <span className={styles.navSoonBadge}>Sắp có</span>
+      ) : null}
+      {!disabled && badgeCount !== undefined && badgeCount > 0 && (
         <span className={styles.countBadge}>{badgeCount}</span>
       )}
     </button>
@@ -56,10 +92,21 @@ function NavItem(props: INavItemProps): React.ReactElement {
 }
 
 export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement {
-  const { activeTab, counts, isCollapsed, onSelectTab, onToggleCollapse, userDisplayName, userDepartment, showCapSoTab = false } = props;
+  const {
+    activeTab,
+    counts,
+    isCollapsed,
+    onSelectTab,
+    onToggleCollapse,
+    userDisplayName,
+    userDepartment,
+    showCapSoTab = false,
+    showQLVanBanTab = false
+  } = props;
   const initials = userDisplayName
     ? userDisplayName.split(' ').pop()?.substring(0, 2).toUpperCase()
     : 'MG';
+  const showAdminGroup = showCapSoTab || showQLVanBanTab;
 
   return (
     <aside className={[styles.sidebar, isCollapsed ? styles.sidebarCollapsed : ''].filter(Boolean).join(' ')}>
@@ -79,17 +126,55 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
         </div>
 
         <nav className={styles.navMenu}>
+          {!isCollapsed && <div className={styles.navGroupLabel}>MENU</div>}
+
           <NavItem
-            tab="TrangChu"
-            label={TAB_LABELS.TrangChu}
+            label="Trang chủ"
+            activeTab={activeTab}
+            isCollapsed={isCollapsed}
+            icon={<SidebarHomeIcon />}
+            disabled
+            soonBadge
+          />
+
+          <NavItem
+            tab="ThuVienTaiLieu"
+            label={TAB_LABELS.ThuVienTaiLieu}
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
-            badgeCount={counts.trangChu}
-            icon={<SidebarHomeIcon />}
+            icon={<SidebarLibraryIcon />}
           />
 
-          {!isCollapsed && <div className={styles.navGroupLabel}>YÊU CẦU</div>}
+          <NavItem
+            tab="MoiBanHanh"
+            label={TAB_LABELS.MoiBanHanh}
+            activeTab={activeTab}
+            isCollapsed={isCollapsed}
+            onSelectTab={onSelectTab}
+            icon={<SidebarNewReleaseIcon />}
+          />
+
+          <NavItem
+            label="Đã lưu"
+            activeTab={activeTab}
+            isCollapsed={isCollapsed}
+            icon={<SidebarSavedIcon />}
+            disabled
+            soonBadge
+          />
+
+          {!isCollapsed && <div className={styles.navGroupLabel}>PHÁT HÀNH VĂN BẢN</div>}
+
+          <NavItem
+            tab="ViecCanLam"
+            label={TAB_LABELS.ViecCanLam}
+            activeTab={activeTab}
+            isCollapsed={isCollapsed}
+            onSelectTab={onSelectTab}
+            badgeCount={counts.viecCanLam}
+            icon={<SidebarTasksIcon />}
+          />
 
           <NavItem
             tab="YeuCauCuaToi"
@@ -111,49 +196,43 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             icon={<SidebarDraftIcon />}
           />
 
-          {/* {!isCollapsed && <div className={styles.navGroupLabel}>THƯ VIỆN</div>}
-
-          <NavItem
-            tab="ThuVienTaiLieu"
-            label={TAB_LABELS.ThuVienTaiLieu}
-            activeTab={activeTab}
-            isCollapsed={isCollapsed}
-            onSelectTab={onSelectTab}
-            icon={<SidebarLibraryIcon />}
-          />
-
-          <NavItem
-            tab="MoiBanHanh"
-            label={TAB_LABELS.MoiBanHanh}
-            activeTab={activeTab}
-            isCollapsed={isCollapsed}
-            onSelectTab={onSelectTab}
-            badgeCount={counts.admin}
-            icon={<SidebarReleaseIcon />}
-          /> */}
-
-          {!isCollapsed && <div className={styles.navGroupLabel}>QUẢN TRỊ HỆ THỐNG</div>}
-
-          {showCapSoTab ? (
-          <NavItem
-            tab="CapSo"
-            label={TAB_LABELS.CapSo}
-            activeTab={activeTab}
-            isCollapsed={isCollapsed}
-            onSelectTab={onSelectTab}
-            badgeCount={counts.capSo}
-            icon={<SidebarNumberingIcon />}
-          />
+          {!isCollapsed && showAdminGroup ? (
+            <div className={styles.navGroupLabel}>QUẢN TRỊ HỆ THỐNG</div>
           ) : null}
 
+          {showCapSoTab ? (
+            <NavItem
+              tab="CapSo"
+              label={TAB_LABELS.CapSo}
+              activeTab={activeTab}
+              isCollapsed={isCollapsed}
+              onSelectTab={onSelectTab}
+              badgeCount={counts.capSo}
+              icon={<SidebarNumberingIcon />}
+            />
+          ) : null}
+
+          {showQLVanBanTab ? (
+            <NavItem
+              tab="QLVanBan"
+              label={TAB_LABELS.QLVanBan}
+              activeTab={activeTab}
+              isCollapsed={isCollapsed}
+              onSelectTab={onSelectTab}
+              badgeCount={counts.qlVanBan}
+              icon={<SidebarAdminIcon />}
+            />
+          ) : null}
+
+          {!isCollapsed && <div className={styles.navGroupLabel}>TRỢ GIÚP</div>}
+
           <NavItem
-            tab="QLVanBan"
-            label={TAB_LABELS.QLVanBan}
+            tab="HuongDan"
+            label={TAB_LABELS.HuongDan}
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
-            badgeCount={counts.qlVanBan}
-            icon={<SidebarAdminIcon />}
+            icon={<SidebarHelpIcon />}
           />
         </nav>
       </div>

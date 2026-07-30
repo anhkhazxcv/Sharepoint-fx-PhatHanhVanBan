@@ -5,11 +5,13 @@ import {
   buildInitialParticipantDraft,
   canRemoveWorkflowParticipant,
   getParticipantDisplayInitials,
+  getRequiredParticipantStages,
   getVisibleParticipantStages,
   isEmailAlreadyInStageDraft,
   isParticipantStageAddable,
   IWorkflowParticipantDraftRow,
   IWorkflowParticipantsByStage,
+  validatePendingWorkflowParticipants,
   WORKFLOW_PARTICIPANT_STAGE_CONFIG
 } from '../utils/PhvbMagWorkflowParticipant.utils';
 import styles from './PhvbMag.module.scss';
@@ -35,6 +37,7 @@ interface IStageSectionProps {
   directoryUsers: ReadonlyArray<IPhvbDirectoryUser>;
   isLoadingTenantUsers?: boolean;
   allowAdd: boolean;
+  required: boolean;
   onAddUser: (stage: WorkflowStage, user: IPhvbDirectoryUser) => void;
   onRemoveRow: (stage: WorkflowStage, rowKey: string) => void;
 }
@@ -62,7 +65,16 @@ function findDirectoryUser(
 }
 
 function WorkflowParticipantStageSection(props: IStageSectionProps): React.ReactElement {
-  const { stage, rows, directoryUsers, isLoadingTenantUsers = false, allowAdd, onAddUser, onRemoveRow } = props;
+  const {
+    stage,
+    rows,
+    directoryUsers,
+    isLoadingTenantUsers = false,
+    allowAdd,
+    required,
+    onAddUser,
+    onRemoveRow
+  } = props;
   const stageConfig = WORKFLOW_PARTICIPANT_STAGE_CONFIG[stage];
   const [query, setQuery] = useState('');
   const [selectedUserEmail, setSelectedUserEmail] = useState<string>('');
@@ -105,7 +117,10 @@ function WorkflowParticipantStageSection(props: IStageSectionProps): React.React
 
   return (
     <section className={styles.workflowParticipantSection}>
-      <h5 className={styles.workflowParticipantSectionTitle}>{stageConfig.sectionLabel}</h5>
+      <h5 className={styles.workflowParticipantSectionTitle}>
+        {stageConfig.sectionLabel}
+        {required ? <span className={styles.required}> *</span> : null}
+      </h5>
 
       {allowAdd ? (
         <div className={styles.workflowParticipantSearchRow}>
@@ -232,6 +247,10 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
   }
 
   const visibleStages = getVisibleParticipantStages(detail.release.LoaiYeuCau);
+  const requiredStages = getRequiredParticipantStages(
+    detail.release.StatusApproved,
+    detail.release.LoaiYeuCau
+  );
   const displayedError = localErrorMessage || errorMessage;
 
   const handleAddUser = (stage: WorkflowStage, user: IPhvbDirectoryUser): void => {
@@ -249,6 +268,7 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
       markedForRemoval: false
     };
 
+    setLocalErrorMessage(undefined);
     setCurrentDraft(previous => ({
       ...previous,
       [stage]: [...previous[stage], nextRow]
@@ -256,6 +276,7 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
   };
 
   const handleRemoveRow = (stage: WorkflowStage, rowKey: string): void => {
+    setLocalErrorMessage(undefined);
     setCurrentDraft(previous => ({
       ...previous,
       [stage]: previous[stage].map(row => {
@@ -278,6 +299,17 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
 
   const handleSave = async (): Promise<void> => {
     setLocalErrorMessage(undefined);
+    const validationError = validatePendingWorkflowParticipants(
+      currentDraft,
+      detail.release.StatusApproved,
+      detail.release.LoaiYeuCau
+    );
+
+    if (validationError) {
+      setLocalErrorMessage(validationError);
+      return;
+    }
+
     const succeeded = await onSave(initialDraft, currentDraft);
 
     if (succeeded) {
@@ -304,6 +336,7 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
               directoryUsers={directoryUsers}
               isLoadingTenantUsers={isLoadingTenantUsers}
               allowAdd={isParticipantStageAddable(stage, detail.release.StatusApproved)}
+              required={requiredStages.indexOf(stage) > -1}
               onAddUser={handleAddUser}
               onRemoveRow={handleRemoveRow}
             />

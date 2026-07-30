@@ -10,6 +10,7 @@ import {
   getVisibleParticipantStages,
   IWorkflowParticipantChanges,
   IWorkflowParticipantsByStage,
+  validatePendingWorkflowParticipants,
   WORKFLOW_PARTICIPANT_STAGE_CONFIG
 } from '../utils/PhvbMagWorkflowParticipant.utils';
 import { toRuntimeMessage } from './PhvbMag.error';
@@ -35,6 +36,16 @@ export class PhvbWorkflowParticipantService {
     const requestReferenceId = (options.detail.release.IdYeuCau || '').trim();
     if (!requestReferenceId) {
       throw new Error('Không tìm thấy mã yêu cầu để cập nhật người tham gia.');
+    }
+
+    const validationError = validatePendingWorkflowParticipants(
+      options.finalDraft,
+      options.detail.release.StatusApproved,
+      options.detail.release.LoaiYeuCau
+    );
+
+    if (validationError) {
+      throw new Error(validationError);
     }
 
     const visibleStages = getVisibleParticipantStages(options.detail.release.LoaiYeuCau);

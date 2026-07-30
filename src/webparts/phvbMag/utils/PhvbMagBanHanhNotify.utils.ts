@@ -133,7 +133,7 @@ export function buildBanHanhSubject(release: IVanBanItem): string {
   return `${prefix} ${titleVi} / Announcement of ${titleEn} Issuance`.trim();
 }
 
-function getLabelValue(
+export function getLabelValue(
   labelConfig: ReadonlyArray<ILabelCustomConfigItem>,
   labelKey: string
 ): string {
@@ -243,6 +243,37 @@ export function buildBanHanhNotifyDraft(
   };
 
   return draft;
+}
+
+export function buildBanHanhNotifyDraftFromSavedRelease(release: IVanBanItem): IBanHanhNotifyDraft {
+  return {
+    recipient: (release.EmailNhanBanHanh || '').trim(),
+    subject: (release.SubjectBanHanh || '').trim(),
+    body: (release.BodyEmail || '').trim()
+  };
+}
+
+function replaceAllTokens(template: string, token: string, value: string): string {
+  let result = template;
+  let searchFrom = 0;
+  let nextIndex = result.indexOf(token, searchFrom);
+
+  while (nextIndex > -1) {
+    result = `${result.substring(0, nextIndex)}${value}${result.substring(nextIndex + token.length)}`;
+    searchFrom = nextIndex + value.length;
+    nextIndex = result.indexOf(token, searchFrom);
+  }
+
+  return result;
+}
+
+export function replaceBanHanhLinkTokens(
+  body: string,
+  links: { linkFile: string; linkTatCaTaiLieu: string }
+): string {
+  const normalizedBody = body || '';
+  const withFileLink = replaceAllTokens(normalizedBody, '{{LinkFile}}', (links.linkFile || '').trim());
+  return replaceAllTokens(withFileLink, '{{LinkTatCaTaiLieu}}', (links.linkTatCaTaiLieu || '').trim());
 }
 
 export function validateBanHanhNotifyDraft(draft: IBanHanhNotifyDraft): string | undefined {

@@ -315,4 +315,64 @@ export function buildYeuCauBanHanhPayload(
   );
 }
 
+export function buildTraLaiAdminBanHanhPayload(
+  nguoiThucHien: string,
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  documentInfo: ISendMailDocumentInfo,
+  comment?: string
+): ISendMailPayload | undefined {
+  const basePayload = buildAdminSuperAdminPayload(
+    nguoiThucHien,
+    SEND_MAIL_TYPE.TRA_LAI_ADMIN_BAN_HANH,
+    roles,
+    PHVB_ROLES.ADMIN,
+    documentInfo
+  );
+  const normalizedComment = (comment || '').trim();
+
+  if (!basePayload) {
+    return undefined;
+  }
+
+  if (!normalizedComment) {
+    return basePayload;
+  }
+
+  return {
+    ...basePayload,
+    ApprovalStatus: normalizedComment
+  };
+}
+
+export function buildXacNhanBanHanhPayload(
+  nguoiThucHien: string,
+  release: IVanBanItem,
+  resolvedBody: string
+): ISendMailPayload | undefined {
+  const documentInfo = resolveSendMailDocumentInfoFromRelease(release);
+  const emailTo = (release.EmailNhanBanHanh || '').trim();
+  const subject = (release.SubjectBanHanh || '').trim();
+  const body = (resolvedBody || '').trim();
+  const normalizedSoVanBan = (documentInfo.soVanBan || '').trim();
+
+  const basePayload = buildSendMailPayload(
+    nguoiThucHien,
+    SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH,
+    emailTo,
+    undefined,
+    documentInfo
+  );
+
+  if (!basePayload || !subject || !body || !normalizedSoVanBan) {
+    return undefined;
+  }
+
+  return {
+    ...basePayload,
+    SoVanBan: normalizedSoVanBan,
+    SubjectBanHanh: subject,
+    BodyEmail: body
+  };
+}
+
 export { SEND_MAIL_APPROVAL_STATUS };

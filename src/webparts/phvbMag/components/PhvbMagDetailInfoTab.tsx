@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { Pin20Regular } from '@fluentui/react-icons';
 import type { IVanBanItem } from '../models/PhvbMag.models';
+import { NotePinIcon } from './PhvbMagIcons';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagDetailInfoTabProps {
@@ -63,7 +63,7 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
 
       <section className={styles.detailInfoNoteCallout} aria-label="Ghi chú cho cấp TĐ / PD">
         <div className={styles.detailInfoNoteHeader}>
-          <Pin20Regular className={styles.detailInfoNoteIcon} aria-hidden="true" />
+          <NotePinIcon className={styles.detailInfoNoteIcon} />
           <span className={styles.detailInfoNoteTitle}>GHI CHÚ CHO CẤP TĐ / PD</span>
         </div>
         <div className={styles.detailInfoNoteBody}>

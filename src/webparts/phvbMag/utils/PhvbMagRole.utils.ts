@@ -1,3 +1,4 @@
+import { PHVB_ROLES } from '../config/PhvbMag.configuration';
 import type { IPhvbRoleEntry } from '../models/PhvbMag.models';
 
 export function normalizeRoleEmail(email?: string): string {
@@ -32,6 +33,27 @@ export function userHasAnyRole(
   roleNames: ReadonlyArray<string>
 ): boolean {
   return roleNames.some(role => userHasRole(roles, userEmail, role));
+}
+
+export function canAccessCapSoTab(
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  userEmail?: string
+): boolean {
+  return userHasAnyRole(roles, userEmail, [
+    PHVB_ROLES.DC,
+    PHVB_ROLES.ADMIN,
+    PHVB_ROLES.SUPER_ADMIN
+  ]);
+}
+
+export function canAccessQLVanBanTab(
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  userEmail?: string
+): boolean {
+  return userHasAnyRole(roles, userEmail, [
+    PHVB_ROLES.ADMIN,
+    PHVB_ROLES.SUPER_ADMIN
+  ]);
 }
 
 export function getRoleEmails(roles: ReadonlyArray<IPhvbRoleEntry>, role: string): string[] {

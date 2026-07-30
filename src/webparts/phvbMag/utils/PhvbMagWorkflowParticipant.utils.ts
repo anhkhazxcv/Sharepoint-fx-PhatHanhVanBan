@@ -91,6 +91,45 @@ export function isParticipantStageAddable(stage: WorkflowStage, statusApproved?:
   return stageIndex >= currentIndex;
 }
 
+export function getRequiredParticipantStages(
+  statusApproved?: string,
+  loaiYeuCau?: string
+): WorkflowStage[] {
+  const visibleStages = getVisibleParticipantStages(loaiYeuCau);
+  const currentStage = resolveWorkflowStageFromStatus(statusApproved);
+
+  if (currentStage === 'none') {
+    return visibleStages;
+  }
+
+  const currentIndex = WORKFLOW_STAGE_ORDER.indexOf(currentStage);
+  return visibleStages.filter(stage => WORKFLOW_STAGE_ORDER.indexOf(stage) >= currentIndex);
+}
+
+export function validatePendingWorkflowParticipants(
+  draft: IWorkflowParticipantsByStage,
+  statusApproved?: string,
+  loaiYeuCau?: string
+): string | undefined {
+  const requiredStages = getRequiredParticipantStages(statusApproved, loaiYeuCau);
+
+  for (let index = 0; index < requiredStages.length; index += 1) {
+    const stage = requiredStages[index];
+    const hasPendingParticipant = draft[stage].some(row =>
+      !row.markedForRemoval &&
+      Boolean(row.email.trim()) &&
+      isWorkflowParticipantUnconfirmed(row.status)
+    );
+
+    if (!hasPendingParticipant) {
+      const participantLabel = WORKFLOW_PARTICIPANT_STAGE_CONFIG[stage].sectionLabel.toLowerCase();
+      return `Vui lòng giữ lại ít nhất một ${participantLabel} chưa xác nhận.`;
+    }
+  }
+
+  return undefined;
+}
+
 export function groupParticipantsByStage(
   workflowParticipants: ReadonlyArray<IWorkflowParticipantItem>
 ): IWorkflowParticipantsByStage {

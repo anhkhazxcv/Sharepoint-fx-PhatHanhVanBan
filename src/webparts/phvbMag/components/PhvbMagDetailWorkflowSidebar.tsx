@@ -6,7 +6,7 @@ import {
   findCurrentWorkflowStepIndex
 } from '../utils/PhvbMagWorkflowTimeline.utils';
 import { canOpenWorkflowParticipantModal } from '../utils/PhvbMagWorkflowParticipant.utils';
-import { ClockAlarm20Regular, Person20Regular } from '@fluentui/react-icons';
+import { RemindDeadlineIcon, WorkflowParticipantIcon } from './PhvbMagIcons';
 import { PhvbMagDetailWorkflowStepCard } from './PhvbMagDetailWorkflowStepCard';
 import { PhvbMagSidebarAccordion } from './PhvbMagSidebarAccordion';
 import styles from './PhvbMag.module.scss';
@@ -86,7 +86,7 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
       className={styles.detailWorkflowActionBtn}
       onClick={onOpenParticipantModal}
     >
-      <Person20Regular className={styles.detailWorkflowActionBtnIcon} aria-hidden="true" />
+      <WorkflowParticipantIcon className={styles.detailWorkflowActionBtnIcon} />
       Điều chỉnh người tham gia
     </button>
   ) : null;
@@ -98,7 +98,7 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
       disabled={isRemindSending}
       onClick={onOpenRemindDeadline}
     >
-      <ClockAlarm20Regular className={styles.detailWorkflowActionBtnIcon} aria-hidden="true" />
+      <RemindDeadlineIcon className={styles.detailWorkflowActionBtnIcon} />
       Nhắc hạn
     </button>
   ) : null;

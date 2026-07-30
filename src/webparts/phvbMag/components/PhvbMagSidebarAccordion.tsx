@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useState } from 'react';
+import { AccordionChevronIcon } from './PhvbMagIcons';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagSidebarAccordionProps {
@@ -74,12 +75,9 @@ export function PhvbMagSidebarAccordion(props: IPhvbMagSidebarAccordionProps): R
               {headerActions}
             </span>
           ) : null}
-          <span
-            className={[
-              styles.detailSidebarAccordionChevron,
-              isOpen && !compact ? styles.detailSidebarAccordionChevronOpen : ''
-            ].filter(Boolean).join(' ')}
-            aria-hidden="true"
+          <AccordionChevronIcon
+            className={styles.detailSidebarAccordionChevron}
+            isOpen={isOpen && !compact}
           />
         </span>
       </button>

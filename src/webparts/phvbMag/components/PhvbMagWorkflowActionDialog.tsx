@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
+import type { CommentConfirmActionKey } from '../utils/PhvbMagWorkflowActionDialog.utils';
 import {
+  getWorkflowActionCommentPlaceholder,
   getWorkflowActionDialogConfirmButtonClassName,
   getWorkflowActionDialogConfirmLabel,
   getWorkflowActionDialogMessage,
@@ -13,7 +14,7 @@ import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagWorkflowActionDialogProps {
   isOpen: boolean;
-  action?: WorkflowActionKey;
+  action?: CommentConfirmActionKey;
   approveLabel?: string;
   isProcessing?: boolean;
   errorMessage?: string;
@@ -46,11 +47,7 @@ export function PhvbMagWorkflowActionDialog(props: IPhvbMagWorkflowActionDialogP
   }
 
   const isCommentRequired = isWorkflowActionCommentRequired(action);
-  const commentPlaceholder = !isCommentRequired
-    ? 'Nhập ghi chú (tuỳ chọn)...'
-    : action === 'requestRevision'
-      ? 'Nhập lý do yêu cầu chỉnh sửa...'
-      : 'Nhập lý do từ chối...';
+  const commentPlaceholder = getWorkflowActionCommentPlaceholder(action);
   const confirmLabel = getWorkflowActionDialogConfirmLabel(action, approveLabel);
   const confirmButtonVariant = getWorkflowActionDialogConfirmButtonClassName(action);
   const confirmButtonClassName = confirmButtonVariant === 'reject'

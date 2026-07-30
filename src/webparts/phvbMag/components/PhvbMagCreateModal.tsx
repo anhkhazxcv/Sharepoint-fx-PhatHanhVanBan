@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { useEffect, useState, useRef } from 'react';
-import { Lightbulb20Regular } from '@fluentui/react-icons';
 import type { IAttachmentLibraryItem, ICreateRequestInput, IPhvbDirectoryUser, IPhvbSiteContext, ISelectedBanHanhFolder, SaveRequestMode } from '../models/PhvbMag.models';
 import { DRAFT_DOCUMENT_ACCEPT, FORM_ATTACHMENT_ACCEPT, ISSUANCE_LIBRARY_TITLE, SLA_OPTIONS } from '../config/PhvbMag.configuration';
 import { getParentStoragePathAfterLibrary, getStoragePathAfterLibrary } from '../utils/PhvbMagBanHanh.tree';
@@ -32,6 +31,7 @@ import {
   ModalCreateIcon,
   RemoveTagIcon,
   SubmitRequestIcon,
+  SummaryHintIcon,
   UploadDocumentIcon,
   UploadFormIcon
 } from './PhvbMagIcons';
@@ -617,7 +617,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
               <div className={styles.formGroup}>
                 <label className={styles.fieldLabel}>LOẠI YÊU CẦU</label>
                 <div className={styles.requestTypeGroup}>
-                  {(['Viết mới', 'Điều chỉnh', 'Thu hồi'] as const).map(type => (
+                  {(['Viết mới', 'Điều chỉnh'] as const).map(type => (
                     <button
                       key={type}
                       type="button"
@@ -643,7 +643,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                       disabled={isIssueNotify}
                     />
                     <span className={styles.createEmailNotifyLabel}>
-                      {isIssueNotify ? 'Tự động gửi thông báo khi ban hành' : 'Gửi thông báo thu hồi đến CBNV'}
+                      {isIssueNotify ? 'Thông báo khi ban hành (bắt buộc)' : 'Gửi thông báo thu hồi đến CBNV'}
                     </span>
                   </label>
                   {!isIssueNotify}
@@ -755,7 +755,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 </label>
                 {!isRevoke && (
                   <div className={styles.createSummaryHintCallout}>
-                    <Lightbulb20Regular className={styles.createSummaryHintIcon} aria-hidden="true" />
+                    <SummaryHintIcon className={styles.createSummaryHintIcon} />
                     <p className={styles.createSummaryHintText}>
                       Đây là nội dung mô tả được hiển thị trên Intranet. Ghi chú nội bộ cho cấp thẩm định/phê duyệt vui lòng điền ở phần Ghi chú cho cấp TĐ/PD bên dưới.
                     </p>

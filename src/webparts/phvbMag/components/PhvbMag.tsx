@@ -3,10 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS, PHVB_ROLES } from '../config/PhvbMag.configuration';
+import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS, PHVB_ROLES, resolveIssuanceLibraryTitle } from '../config/PhvbMag.configuration';
 import { usePhvbBanHanh } from '../hooks/usePhvbBanHanh';
 import { usePhvbCapSo } from '../hooks/usePhvbCapSo';
 import { usePhvbComments } from '../hooks/usePhvbComments';
+import { usePhvbDetailDocuments, type DetailDocumentUploadKind } from '../hooks/usePhvbDetailDocuments';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
 import { usePhvbDraftEdit } from '../hooks/usePhvbDraftEdit';
 import { usePhvbRemindDeadline } from '../hooks/usePhvbRemindDeadline';
@@ -15,13 +16,15 @@ import { usePhvbRoles } from '../hooks/usePhvbRoles';
 import { usePhvbWorkflowActions } from '../hooks/usePhvbWorkflowActions';
 import { usePhvbWorkflowParticipants } from '../hooks/usePhvbWorkflowParticipants';
 import { usePhvbTenantUsers } from '../hooks/usePhvbTenantUsers';
-import type { IBanHanhNotifyDraft, ICreateRequestInput, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
+import type { IAttachmentLibraryItem, IBanHanhNotifyDraft, ICreateRequestInput, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
+import { canAccessCapSoTab, canAccessQLVanBanTab } from '../utils/PhvbMagRole.utils';
 import { selectFilteredItems } from '../utils/PhvbMag.selectors';
 import { isDraftStatus } from '../utils/PhvbMagDraftEdit.utils';
 import { ToastService } from '../utils/ToastService';
 import styles from './PhvbMag.module.scss';
 import type { IPhvbMagProps } from './IPhvbMagProps';
+import type { BanHanhNotifyMode } from './PhvbMagBanHanhNotifyDialog';
 import { PhvbMagCreateModal } from './PhvbMagCreateModal';
 import { PhvbMagDetail } from './PhvbMagDetail';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
@@ -30,9 +33,12 @@ import { PhvbMagTable } from './PhvbMagTable';
 import { PhvbMagTemplateModal } from './PhvbMagTemplateModal';
 import { PhvbMagToolbar } from './PhvbMagToolbar';
 import { PhvbMagWorkflowParticipantModal } from './PhvbMagWorkflowParticipantModal';
+import { PhvbMagLibraryView } from './PhvbMagLibraryView';
+import { PhvbMagGuideView } from './PhvbMagGuideView';
+import { PhvbMagRecentPublishedView } from './PhvbMagRecentPublishedView';
 
 function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
-  const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, endPointSendMail } = props;
+  const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, issuanceLibraryTitle, endPointSendMail, endPointShortUrl, roleGroupID } = props;
 
   const { tabName, idYeuCau, editIdYeuCau } = useParams<{ tabName: string; idYeuCau?: string; editIdYeuCau?: string }>();
   const navigate = useNavigate();
@@ -48,6 +54,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const [isParticipantModalOpen, setIsParticipantModalOpen] = useState<boolean>(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [banHanhNotifyDraft, setBanHanhNotifyDraft] = useState<IBanHanhNotifyDraft | undefined>(undefined);
+  const [banHanhNotifyMode, setBanHanhNotifyMode] = useState<BanHanhNotifyMode>('prepare');
 
   const {
     tenantUsers,
@@ -75,8 +82,11 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     siteCollectionUrl,
     sourceSiteUrl,
     listTitle,
-    endPointSendMail
-  }), [spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, endPointSendMail]);
+    issuanceLibraryTitle: resolveIssuanceLibraryTitle(issuanceLibraryTitle),
+    endPointSendMail,
+    endPointShortUrl,
+    roleGroupID
+  }), [spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, issuanceLibraryTitle, endPointSendMail, endPointShortUrl, roleGroupID]);
 
   const departmentOptions = useMemo(() => {
     const nextDepartments = DEPARTMENT_OPTIONS.slice();
@@ -108,18 +118,24 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
   const {
     roles,
+    isLoading: isRolesLoading,
     hasRole
   } = usePhvbRoles({
     siteContext,
     userEmail
   });
+  const canAccessCapSo = canAccessCapSoTab(roles, userEmail);
+  const canAccessQLVanBan = canAccessQLVanBanTab(roles, userEmail);
+  const isProtectedRouteBlocked =
+    (tabName === 'CapSo' && (isRolesLoading || !canAccessCapSo)) ||
+    (tabName === 'QLVanBan' && (isRolesLoading || !canAccessQLVanBan));
 
   const {
     data: detailData,
     isLoading: isDetailLoading,
     errorMessage: detailErrorMessage,
     refetch: refetchDetail
-  } = usePhvbRequestDetail(siteContext, idYeuCau);
+  } = usePhvbRequestDetail(siteContext, isProtectedRouteBlocked ? undefined : idYeuCau);
 
   const handleDetailStatusChanged = useCallback((): void => {
     refetchDetail();
@@ -187,12 +203,16 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const {
     canPrepare: canPrepareBanHanh,
     canPublish: canPublishBanHanh,
+    canEdit: canEditBanHanhNotify,
     isSaving: isBanHanhSaving,
     isLoadingNotify: isBanHanhNotifyLoading,
     errorMessage: banHanhErrorMessage,
     loadNotifyDraft,
+    loadSavedNotifyDraft,
     prepareForBanHanh,
-    publishBanHanh
+    updateBanHanhNotify,
+    publishBanHanh,
+    returnBanHanhToAdmin
   } = usePhvbBanHanh({
     documentContext,
     detail: detailData,
@@ -200,14 +220,48 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     onCompleted: handleDetailStatusChanged
   });
 
+  const {
+    canManage: canManageDocuments,
+    isMutating: isDocumentMutating,
+    errorMessage: documentErrorMessage,
+    uploadFiles: uploadDetailDocuments,
+    deleteFile: deleteDetailDocument,
+    deleteFiles: deleteDetailDocuments
+  } = usePhvbDetailDocuments({
+    documentContext,
+    detail: detailData,
+    roles,
+    onCompleted: () => {
+      refetchDetail();
+    }
+  });
+
   const handleOpenPrepareBanHanh = async (): Promise<void> => {
+    setBanHanhNotifyMode('prepare');
     setBanHanhNotifyDraft(undefined);
     const draft = await loadNotifyDraft();
     setBanHanhNotifyDraft(draft);
   };
 
-  const handlePrepareBanHanh = async (notify: IBanHanhNotifyDraft): Promise<boolean> => {
-    const succeeded = await prepareForBanHanh(notify);
+  const handleOpenPublishBanHanh = async (): Promise<void> => {
+    setBanHanhNotifyMode('publish');
+    setBanHanhNotifyDraft(undefined);
+    const draft = await loadSavedNotifyDraft();
+    setBanHanhNotifyDraft(draft);
+  };
+
+  const handleOpenEditBanHanhNotify = async (): Promise<void> => {
+    setBanHanhNotifyMode('edit');
+    setBanHanhNotifyDraft(undefined);
+    const draft = await loadSavedNotifyDraft();
+    setBanHanhNotifyDraft(draft);
+  };
+
+  const handlePrepareBanHanh = async (
+    notify: IBanHanhNotifyDraft,
+    mainDocumentId?: number
+  ): Promise<boolean> => {
+    const succeeded = await prepareForBanHanh(notify, mainDocumentId);
 
     if (succeeded) {
       setBanHanhNotifyDraft(undefined);
@@ -217,11 +271,74 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     return succeeded;
   };
 
-  const handlePublishBanHanh = async (): Promise<boolean> => {
-    const succeeded = await publishBanHanh();
+  const handleUpdateBanHanhNotify = async (
+    notify: IBanHanhNotifyDraft,
+    mainDocumentId?: number
+  ): Promise<boolean> => {
+    const succeeded = await updateBanHanhNotify(notify, mainDocumentId);
 
     if (succeeded) {
+      setBanHanhNotifyDraft(undefined);
+      ToastService.success('Đã cập nhật nội dung ban hành.');
+    }
+
+    return succeeded;
+  };
+
+  const handlePublishBanHanh = async (mainDocumentId?: number): Promise<boolean> => {
+    const succeeded = await publishBanHanh(mainDocumentId);
+
+    if (succeeded) {
+      setBanHanhNotifyDraft(undefined);
       ToastService.success('Đã ban hành văn bản thành công.');
+    }
+
+    return succeeded;
+  };
+
+  const handleReturnBanHanhToAdmin = async (comment: string): Promise<boolean> => {
+    const succeeded = await returnBanHanhToAdmin(comment);
+
+    if (succeeded) {
+      setBanHanhNotifyDraft(undefined);
+      ToastService.success('Đã trả yêu cầu về Admin.');
+    }
+
+    return succeeded;
+  };
+
+  const handleUploadDocuments = async (
+    kind: DetailDocumentUploadKind,
+    files: FileList | File[]
+  ): Promise<boolean> => {
+    const succeeded = await uploadDetailDocuments(kind, files);
+
+    if (succeeded) {
+      ToastService.success('Đã thêm tài liệu thành công.');
+    }
+
+    return succeeded;
+  };
+
+  const handleDeleteDocument = async (file: IAttachmentLibraryItem): Promise<boolean> => {
+    const succeeded = await deleteDetailDocument(file);
+
+    if (succeeded) {
+      ToastService.success('Đã xóa tài liệu thành công.');
+    }
+
+    return succeeded;
+  };
+
+  const handleDeleteDocuments = async (files: IAttachmentLibraryItem[]): Promise<boolean> => {
+    const succeeded = await deleteDetailDocuments(files);
+
+    if (succeeded) {
+      ToastService.success(
+        files.length > 1
+          ? `Đã xóa ${files.length} tài liệu thành công.`
+          : 'Đã xóa tài liệu thành công.'
+      );
     }
 
     return succeeded;
@@ -290,13 +407,43 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     draftEdit,
     isLoading: isDraftLoading,
     errorMessage: draftEditErrorMessage
-  } = usePhvbDraftEdit(siteContext, editIdYeuCau, tenantUsers);
+  } = usePhvbDraftEdit(
+    siteContext,
+    isProtectedRouteBlocked ? undefined : editIdYeuCau,
+    tenantUsers
+  );
 
   useEffect(() => {
+    if (isRolesLoading) {
+      return;
+    }
+
+    const isUnauthorizedTab =
+      (tabName === 'CapSo' && !canAccessCapSo) ||
+      (tabName === 'QLVanBan' && !canAccessQLVanBan);
+
+    if (isUnauthorizedTab) {
+      navigate('/tab/ViecCanLam', { replace: true });
+      return;
+    }
+
     if (tabName && tabName !== activeTab) {
       setActiveTab(tabName as TabType);
     }
-  }, [tabName, activeTab, setActiveTab]);
+
+    if (location.pathname.indexOf('/tab/ThuVienTaiLieu') === 0 && activeTab !== 'ThuVienTaiLieu') {
+      setActiveTab('ThuVienTaiLieu');
+    }
+  }, [
+    tabName,
+    activeTab,
+    setActiveTab,
+    isRolesLoading,
+    canAccessCapSo,
+    canAccessQLVanBan,
+    navigate,
+    location.pathname
+  ]);
 
   const processedItems = useMemo(() => selectFilteredItems(items, {
     searchQuery,
@@ -305,6 +452,11 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   }), [items, searchQuery]);
 
   const handleSelectTab = (tab: TabType): void => {
+    if (tab === 'ThuVienTaiLieu') {
+      navigate('/tab/ThuVienTaiLieu/all');
+      return;
+    }
+
     navigate(`/tab/${tab}`);
   };
 
@@ -351,7 +503,16 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     return true;
   };
 
-  const resolvedTabName = (tabName as TabType) || activeTab;
+  const resolvedTabName = useMemo((): TabType => {
+    if (location.pathname.indexOf('/tab/ThuVienTaiLieu') === 0) {
+      return 'ThuVienTaiLieu';
+    }
+
+    return ((tabName as TabType) || activeTab);
+  }, [activeTab, location.pathname, tabName]);
+  const isLibraryTab = resolvedTabName === 'ThuVienTaiLieu';
+  const isGuideTab = resolvedTabName === 'HuongDan';
+  const isRecentTab = resolvedTabName === 'MoiBanHanh';
   const modalDefaultValues = isEditRoute && draftEdit ? draftEdit.form : defaultRequestForm;
   const isModalOpen = isCreateRoute || (isEditRoute && Boolean(draftEdit));
 
@@ -372,17 +533,21 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         }}
         userDisplayName={userDisplayName}
         userDepartment={userDepartment}
-        showCapSoTab={hasRole(PHVB_ROLES.DC)}
+        showCapSoTab={canAccessCapSo}
+        showQLVanBanTab={canAccessQLVanBan}
       />
 
       <main
         className={[
           styles.contentPane,
-          activeTab === 'TrangChu' && !isDetailRoute ? styles.contentPaneTask : '',
+          activeTab === 'ViecCanLam' && !isDetailRoute ? styles.contentPaneTask : '',
+          isLibraryTab && !isDetailRoute ? styles.contentPaneLibrary : '',
+          isGuideTab && !isDetailRoute ? styles.contentPaneGuide : '',
+          isRecentTab && !isDetailRoute ? styles.contentPaneRecent : '',
           isDetailRoute ? styles.contentPaneDetail : ''
         ].filter(Boolean).join(' ')}
       >
-        {errorMessage && (
+        {errorMessage && !isLibraryTab && !isGuideTab && !isRecentTab && (
           <div className={styles.connectionBanner}>
             <strong>Kết nối dữ liệu:</strong>
             <span>{errorMessage}</span>
@@ -435,13 +600,19 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
                 onAssignDocumentNumber={handleAssignDocumentNumber}
                 canPrepareBanHanh={canPrepareBanHanh}
                 canPublishBanHanh={canPublishBanHanh}
+                canEditBanHanhNotify={canEditBanHanhNotify}
                 isBanHanhSaving={isBanHanhSaving}
                 isBanHanhNotifyLoading={isBanHanhNotifyLoading}
                 banHanhErrorMessage={banHanhErrorMessage}
                 banHanhNotifyDraft={banHanhNotifyDraft}
+                banHanhNotifyMode={banHanhNotifyMode}
                 onOpenPrepareBanHanh={handleOpenPrepareBanHanh}
+                onOpenPublishBanHanh={handleOpenPublishBanHanh}
+                onOpenEditBanHanhNotify={handleOpenEditBanHanhNotify}
                 onPrepareBanHanh={handlePrepareBanHanh}
                 onPublishBanHanh={handlePublishBanHanh}
+                onUpdateBanHanhNotify={handleUpdateBanHanhNotify}
+                onReturnBanHanhToAdmin={handleReturnBanHanhToAdmin}
                 canRemindDeadline={canRemindDeadline}
                 remindContext={remindContext}
                 isRemindSending={isRemindSending}
@@ -449,6 +620,12 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
                 onSendRemindDeadline={handleSendRemindDeadline}
                 canOpenParticipantModal={canOpenParticipantModal}
                 onOpenParticipantModal={() => setIsParticipantModalOpen(true)}
+                canManageDocuments={canManageDocuments}
+                isDocumentMutating={isDocumentMutating}
+                documentErrorMessage={documentErrorMessage}
+                onUploadDocuments={handleUploadDocuments}
+                onDeleteDocument={handleDeleteDocument}
+                onDeleteDocuments={handleDeleteDocuments}
               />
             )}
             <PhvbMagWorkflowParticipantModal
@@ -462,6 +639,12 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
               onSave={handleSaveParticipants}
             />
           </>
+        ) : isLibraryTab ? (
+          <PhvbMagLibraryView documentContext={documentContext} />
+        ) : isGuideTab ? (
+          <PhvbMagGuideView siteContext={siteContext} />
+        ) : isRecentTab ? (
+          <PhvbMagRecentPublishedView siteContext={siteContext} />
         ) : (
           <>
             <PhvbMagToolbar
@@ -514,13 +697,16 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/tab/ViecCanLam/*" element={<Navigate to="/tab/TrangChu" replace />} />
+        <Route path="/tab/TrangChu/*" element={<Navigate to="/tab/ViecCanLam" replace />} />
+        <Route path="/tab/TrangChu" element={<Navigate to="/tab/ViecCanLam" replace />} />
+        <Route path="/tab/ThuVienTaiLieu/*" element={<PhvbMagInner {...props} />} />
+        <Route path="/tab/ThuVienTaiLieu" element={<Navigate to="/tab/ThuVienTaiLieu/all" replace />} />
         <Route path="/tab/:tabName" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/detail/:idYeuCau" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/edit/:editIdYeuCau" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/create" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/item/:itemId" element={<Navigate to="../" replace />} />
-        <Route path="*" element={<Navigate to="/tab/TrangChu" replace />} />
+        <Route path="*" element={<Navigate to="/tab/ViecCanLam" replace />} />
       </Routes>
       <ToastContainer />
     </HashRouter>

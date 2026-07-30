@@ -3,7 +3,7 @@ import { REQUEST_STATUS, TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { IVanBanItem, TabType } from '../models/PhvbMag.models';
 import { getBadgeVariant, getRequestStatusDisplayForItem, getSummaryPreview, type RequestStatusFilterKey } from '../utils/PhvbMag.selectors';
 import styles from './PhvbMag.module.scss';
-import { SearchIcon } from './PhvbMagIcons';
+import { PaginationNextIcon, PaginationPreviousIcon, SearchIcon } from './PhvbMagIcons';
 
 interface IPhvbMagTableProps {
   activeTab: TabType;
@@ -14,11 +14,6 @@ interface IPhvbMagTableProps {
   onSelectItem: (item: IVanBanItem) => void;
 }
 
-interface IDeadlineState {
-  tone: 'danger' | 'warning' | 'success' | 'info' | 'neutral';
-  label: string;
-}
-
 interface IMetricCard {
   key: string;
   count: number;
@@ -27,21 +22,11 @@ interface IMetricCard {
   tone: 'danger' | 'warning' | 'success' | 'info';
 }
 
-const DAY_IN_MS: number = 24 * 60 * 60 * 1000;
-
 const metricToneClassMap: Record<IMetricCard['tone'], string> = {
   danger: styles.metricDanger,
   warning: styles.metricWarning,
   success: styles.metricSuccess,
   info: styles.metricInfo
-};
-
-const cardToneClassMap: Record<IDeadlineState['tone'], string> = {
-  danger: styles.cardDanger,
-  warning: styles.cardWarning,
-  success: styles.cardSuccess,
-  info: styles.cardInfo,
-  neutral: styles.cardNeutral
 };
 
 type WorkflowBucketKey = 'gopY' | 'thamDinh' | 'pheDuyet' | 'choBanHanh';
@@ -95,6 +80,35 @@ function matchesTaskMetricFilter(item: IVanBanItem, filterKey: TaskMetricFilterK
   return resolveWorkflowBucket(item) === filterKey;
 }
 
+interface IWorkflowQuickFiltersProps {
+  filterKey: TaskMetricFilterKey;
+  onFilterChange: (key: TaskMetricFilterKey) => void;
+}
+
+function WorkflowQuickFilters(props: IWorkflowQuickFiltersProps): React.ReactElement {
+  const { filterKey, onFilterChange } = props;
+
+  return (
+    <div className={styles.requestQuickFilters}>
+      {taskMetricFilterOptions.map(option => {
+        const IconComponent = option.icon;
+
+        return (
+          <button
+            key={option.key}
+            type="button"
+            className={[styles.requestQuickFilter, filterKey === option.key ? styles.requestQuickFilterActive : ''].filter(Boolean).join(' ')}
+            onClick={() => onFilterChange(option.key)}
+          >
+            {IconComponent ? <IconComponent className={styles.requestQuickFilterIcon} /> : null}
+            <span>{option.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function getMetricCards(items: IVanBanItem[]): IMetricCard[] {
   const counts: Record<WorkflowBucketKey, number> = {
     gopY: 0,
@@ -133,95 +147,6 @@ const requestStatusFilterOptions: Array<{ key: RequestStatusFilterKey; label: st
   { key: 'approved', label: 'Đã ban hành' },
   { key: 'rejected', label: 'Từ chối' }
 ];
-
-function parseDate(value?: string): Date | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  const normalized = value.trim();
-  if (!normalized) {
-    return undefined;
-  }
-
-  const viDateMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(normalized);
-  if (viDateMatch) {
-    const parsedDate = new Date(Number(viDateMatch[3]), Number(viDateMatch[2]) - 1, Number(viDateMatch[1]));
-    return isNaN(parsedDate.getTime()) ? undefined : parsedDate;
-  }
-
-  const parsedDate = new Date(normalized);
-  return isNaN(parsedDate.getTime()) ? undefined : parsedDate;
-}
-
-function toStartOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function resolveReferenceDate(item: IVanBanItem): Date | undefined {
-  return (
-    parseDate(item.Date_ThamDinh) ||
-    parseDate(item.Date_PheDuyet) ||
-    parseDate(item.Date_GopY) ||
-    parseDate(item.HieuLucTu) ||
-    parseDate(item.NgayPhatHanh) ||
-    parseDate(item.NgayTaoYeuCau)
-  );
-}
-
-function getRelativeDays(item: IVanBanItem, today: Date): number | undefined {
-  const referenceDate = resolveReferenceDate(item);
-
-  if (!referenceDate) {
-    return undefined;
-  }
-
-  return Math.ceil((toStartOfDay(referenceDate).getTime() - today.getTime()) / DAY_IN_MS);
-}
-
-function getDeadlineState(item: IVanBanItem, today: Date): IDeadlineState {
-  const relativeDays = getRelativeDays(item, today);
-
-  if (typeof relativeDays === 'number') {
-    if (relativeDays < 0) {
-      return {
-        tone: 'danger',
-        label: Math.abs(relativeDays) === 1 ? 'Quá hạn' : `Quá hạn ${Math.abs(relativeDays)} ngày`
-      };
-    }
-
-    if (relativeDays === 0) {
-      return {
-        tone: 'danger',
-        label: 'Cần xử lý ngay'
-      };
-    }
-
-    if (relativeDays <= 2) {
-      return {
-        tone: 'warning',
-        label: `Còn ${relativeDays} ngày`
-      };
-    }
-
-    return {
-      tone: isReleasedStatus(item.StatusApproved) ? 'info' : 'success',
-      label: `Còn ${relativeDays} ngày`
-    };
-  }
-
-  if (isReleasedStatus(item.StatusApproved)) {
-    return {
-      tone: 'info',
-      label: REQUEST_STATUS.BAN_HANH
-    };
-  }
-
-  return {
-    tone: 'neutral',
-    label: 'Đang xử lý'
-  };
-}
 
 function isReleasedStatus(status?: string): boolean {
   return status === 'Approved' || status === REQUEST_STATUS.BAN_HANH || status === REQUEST_STATUS.CHO_BAN_HANH;
@@ -498,11 +423,23 @@ function ListPager(props: IListPagerProps): React.ReactElement {
 
         <span className={styles.requestRangeText}>{rangeStart}-{rangeEnd}/{totalItems}</span>
 
-        <button type="button" className={styles.requestPageButton} onClick={onPreviousPage} disabled={currentPage <= 1}>
-          ‹
+        <button
+          type="button"
+          className={styles.requestPageButton}
+          onClick={onPreviousPage}
+          disabled={currentPage <= 1}
+          aria-label="Trang trước"
+        >
+          <PaginationPreviousIcon />
         </button>
-        <button type="button" className={styles.requestPageButton} onClick={onNextPage} disabled={currentPage >= totalPages}>
-          ›
+        <button
+          type="button"
+          className={styles.requestPageButton}
+          onClick={onNextPage}
+          disabled={currentPage >= totalPages}
+          aria-label="Trang sau"
+        >
+          <PaginationNextIcon />
         </button>
       </div>
     </div>
@@ -513,28 +450,38 @@ interface IRequestBoardTableProps extends IPhvbMagTableProps {
   boardTitle: string;
   countSuffix: string;
   showStatusFilters?: boolean;
+  showWorkflowFilters?: boolean;
   emptyMessage?: string;
 }
 
-const REQUEST_BOARD_TABS: Record<'YeuCauCuaToi' | 'BanNhap' | 'CapSo' | 'QLVanBan', { countSuffix: string; showStatusFilters: boolean; emptyMessage: string }> = {
+const REQUEST_BOARD_TABS: Record<'YeuCauCuaToi' | 'BanNhap' | 'CapSo' | 'QLVanBan', {
+  countSuffix: string;
+  showStatusFilters: boolean;
+  showWorkflowFilters: boolean;
+  emptyMessage: string;
+}> = {
   YeuCauCuaToi: {
     countSuffix: 'yêu cầu',
     showStatusFilters: true,
+    showWorkflowFilters: false,
     emptyMessage: 'Không có yêu cầu phù hợp với bộ lọc hiện tại.'
   },
   BanNhap: {
     countSuffix: 'bản nháp',
     showStatusFilters: false,
+    showWorkflowFilters: false,
     emptyMessage: 'Không có bản nháp phù hợp với bộ lọc hiện tại.'
   },
   CapSo: {
     countSuffix: 'hồ sơ',
     showStatusFilters: false,
+    showWorkflowFilters: false,
     emptyMessage: 'Không có hồ sơ phù hợp với bộ lọc hiện tại.'
   },
   QLVanBan: {
     countSuffix: 'văn bản',
     showStatusFilters: false,
+    showWorkflowFilters: true,
     emptyMessage: 'Không có văn bản phù hợp với bộ lọc hiện tại.'
   }
 };
@@ -549,19 +496,26 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
     boardTitle,
     countSuffix,
     showStatusFilters = false,
+    showWorkflowFilters = false,
     emptyMessage = 'Không có dữ liệu phù hợp với bộ lọc hiện tại.'
   } = props;
   const [statusFilter, setStatusFilter] = React.useState<RequestStatusFilterKey>('all');
+  const [workflowFilter, setWorkflowFilter] = React.useState<TaskMetricFilterKey>('all');
+  const hasQuickFilters = showStatusFilters || showWorkflowFilters;
 
   const filteredItems = React.useMemo(() => items.filter(item => {
-    if (!showStatusFilters || statusFilter === 'all') {
-      return true;
+    if (showStatusFilters && statusFilter !== 'all' && getRequestStatusState(item).filterKey !== statusFilter) {
+      return false;
     }
 
-    return getRequestStatusState(item).filterKey === statusFilter;
-  }), [items, showStatusFilters, statusFilter]);
+    if (showWorkflowFilters && !matchesTaskMetricFilter(item, workflowFilter)) {
+      return false;
+    }
 
-  const pagination = usePagedItems(filteredItems, [statusFilter, searchQuery, showStatusFilters]);
+    return true;
+  }), [items, showStatusFilters, statusFilter, showWorkflowFilters, workflowFilter]);
+
+  const pagination = usePagedItems(filteredItems, [statusFilter, workflowFilter, searchQuery, showStatusFilters, showWorkflowFilters]);
   const { pagedItems, totalItems } = pagination;
 
   return (
@@ -573,7 +527,7 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
         </div>
       </div>
 
-      <div className={[styles.requestToolBar, !showStatusFilters ? styles.requestToolBarSearchOnly : ''].filter(Boolean).join(' ')}>
+      <div className={[styles.requestToolBar, !hasQuickFilters ? styles.requestToolBarSearchOnly : ''].filter(Boolean).join(' ')}>
         {showStatusFilters && (
           <div className={styles.requestQuickFilters}>
             {requestStatusFilterOptions.map(option => (
@@ -587,6 +541,10 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
               </button>
             ))}
           </div>
+        )}
+
+        {showWorkflowFilters && (
+          <WorkflowQuickFilters filterKey={workflowFilter} onFilterChange={setWorkflowFilter} />
         )}
 
         <RequestSearchControls searchQuery={searchQuery} onSearchChange={onSearchChange} />
@@ -661,8 +619,7 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
 function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
   const { activeTab, items, isLoading, searchQuery, onSearchChange, onSelectItem } = props;
   const [metricFilter, setMetricFilter] = React.useState<TaskMetricFilterKey>('all');
-  const isTaskTab = activeTab === 'TrangChu';
-  const today = toStartOfDay(new Date());
+  const isTaskTab = activeTab === 'ViecCanLam';
   const metrics = isTaskTab ? getMetricCards(items) : [];
   const sectionTitle = isTaskTab ? 'Cần xử lý' : TAB_LABELS[activeTab];
   const visibleItems = React.useMemo(() => {
@@ -699,24 +656,7 @@ function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
 
       {isTaskTab && (
         <div className={styles.requestToolBar}>
-          <div className={styles.requestQuickFilters}>
-            {taskMetricFilterOptions.map(option => {
-              const IconComponent = option.icon;
-
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  className={[styles.requestQuickFilter, metricFilter === option.key ? styles.requestQuickFilterActive : ''].filter(Boolean).join(' ')}
-                  onClick={() => setMetricFilter(option.key)}
-                >
-                  {IconComponent ? <IconComponent className={styles.requestQuickFilterIcon} /> : null}
-                  <span>{option.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
+          <WorkflowQuickFilters filterKey={metricFilter} onFilterChange={setMetricFilter} />
           <RequestSearchControls searchQuery={searchQuery} onSearchChange={onSearchChange} />
         </div>
       )}
@@ -743,18 +683,15 @@ function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
           <div className={styles.taskList}>
             {pagedItems.map(item => {
               const summaryPreview = getSummaryPreview(item.TomTatNoiDung, 120);
-              const deadline = getDeadlineState(item, today);
               const stageLabel = getStageLabel(item);
-              const cardToneClassName = cardToneClassMap[deadline.tone];
 
               return (
-                <article key={item.Id} className={[styles.taskCard, cardToneClassName].join(' ')} onClick={() => onSelectItem(item)}>
+                <article key={item.Id} className={[styles.taskCard, styles.cardNeutral].join(' ')} onClick={() => onSelectItem(item)}>
                   <div className={styles.taskCardAccent} />
 
                   <div className={styles.taskCardBody}>
                     <div className={styles.taskCardTitleRow}>
                       <h4 className={styles.taskCardTitle}>{item.Tenvanban || 'Chưa có tên văn bản'}</h4>
-                      <div className={[styles.taskDeadline, cardToneClassName].join(' ')}>{deadline.label}</div>
                     </div>
 
                     <p className={styles.taskCardDescription}>{getWorkflowText(item)}</p>
@@ -809,6 +746,7 @@ export function PhvbMagTable(props: IPhvbMagTableProps): React.ReactElement {
         boardTitle={TAB_LABELS[activeTab]}
         countSuffix={boardConfig.countSuffix}
         showStatusFilters={boardConfig.showStatusFilters}
+        showWorkflowFilters={boardConfig.showWorkflowFilters}
         emptyMessage={boardConfig.emptyMessage}
       />
     );

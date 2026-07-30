@@ -54,8 +54,15 @@ export const SEND_MAIL_TYPE = {
   XAC_NHAN_PHE_DUYET: 'XAC_NHAN_PHE_DUYET',
   YEU_CAU_CAP_SO: 'YEU_CAU_CAP_SO',
   XAC_NHAN_CAP_SO: 'XAC_NHAN_CAP_SO',
-  YEU_CAU_BAN_HANH: 'YEU_CAU_BAN_HANH'
+  YEU_CAU_BAN_HANH: 'YEU_CAU_BAN_HANH',
+  XAC_NHAN_BAN_HANH: 'XAC_NHAN_BAN_HANH',
+  TRA_LAI_ADMIN_BAN_HANH: 'TRA_LAI_ADMIN_BAN_HANH'
 } as const;
+
+export const SHORT_URL_TAGS = ['mas_phvb'] as const;
+export const SHORT_URL_CODE_LENGTH = 9;
+export const SHORT_URL_API_KEY_LABEL = 'apiKeyShortLink';
+export const SHORT_URL_DEFAULT_ENDPOINT = 'https://s.masterisehomes.com/rest/v3/short-urls';
 
 export type SendMailType = typeof SEND_MAIL_TYPE[keyof typeof SEND_MAIL_TYPE];
 
@@ -119,14 +126,18 @@ export const WORKFLOW_PARTICIPANT_STATUS = {
 } as const;
 
 export const TAB_LABELS: Record<TabType, string> = {
-  TrangChu: 'Trang chủ',
+  ViecCanLam: 'Việc cần làm',
   YeuCauCuaToi: 'Yêu cầu của tôi',
   BanNhap: 'Bản nháp',
   ThuVienTaiLieu: 'Thư viện tài liệu',
   MoiBanHanh: 'Mới ban hành',
   CapSo: 'DC cấp số',
-  QLVanBan: 'QL văn bản'
+  QLVanBan: 'QL văn bản',
+  HuongDan: 'Hướng dẫn sử dụng hệ thống và biểu mẫu'
 };
+
+/** Label trong lstConfigLabelCustom — Value = URL HTTPS tới file PDF sổ tay. */
+export const GUIDE_PDF_URL_LABEL = 'urlSoTayHuongDan';
 
 export const DOCUMENT_TYPE_OPTIONS: ReadonlyArray<string> = [
   'Tiêu chuẩn',
@@ -240,6 +251,17 @@ export function cloneDefaultRequestForm(): ICreateRequestInput {
 export function resolveListTitle(listTitle?: string): string {
   return listTitle && listTitle.trim() ? listTitle.trim() : DEFAULT_LIST_TITLE;
 }
+
+export function resolveIssuanceLibraryTitle(issuanceLibraryTitle?: string): string {
+  return issuanceLibraryTitle && issuanceLibraryTitle.trim()
+    ? issuanceLibraryTitle.trim()
+    : ISSUANCE_LIBRARY_TITLE;
+}
+
+export const LIBRARY_FILES_PAGE_SIZE = 20;
+export const LIBRARY_SEARCH_PAGE_SIZE = 20;
+export const LIBRARY_CACHE_STALE_MS = 5 * 60 * 1000;
+export const LIBRARY_PAGE_CACHE_LIMIT = 20;
 
 export function hasSharePointSiteContext(context: Pick<IPhvbSiteContext, 'currentWebUrl' | 'siteCollectionUrl' | 'sourceSiteUrl'>): boolean {
   return Boolean((context.sourceSiteUrl && context.sourceSiteUrl.trim()) || context.currentWebUrl || context.siteCollectionUrl);

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { DRAFT_DOCUMENT_ACCEPT } from '../config/PhvbMag.configuration';
 import type { ICommentWithAttachments, ILichSuThucHienItem } from '../models/PhvbMag.models';
+import { parseExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { DeleteFileIcon, UploadDocumentIcon } from './PhvbMagIcons';
 import { PhvbMagDetailHistoryItem } from './PhvbMagDetailHistoryItem';
 import { PhvbMagSidebarAccordion } from './PhvbMagSidebarAccordion';
@@ -31,13 +32,21 @@ const ACTIVITY_FILTERS: ReadonlyArray<{ key: ActivityFilter; label: string }> = 
 ];
 
 function getItemTimestamp(item: ILichSuThucHienItem): number {
-  const raw = item.Ngay_ThucHien || item.Created;
-  if (!raw) {
-    return 0;
+  const createdRaw = (item.Created || '').trim();
+  if (createdRaw) {
+    const createdParsed = Date.parse(createdRaw);
+    if (!isNaN(createdParsed)) {
+      return createdParsed;
+    }
+
+    const createdDate = parseExecutionDateTime(createdRaw);
+    if (createdDate) {
+      return createdDate.getTime();
+    }
   }
 
-  const parsed = Date.parse(raw);
-  return isNaN(parsed) ? 0 : parsed;
+  const performedDate = parseExecutionDateTime(item.Ngay_ThucHien);
+  return performedDate ? performedDate.getTime() : 0;
 }
 
 function getFilterButtonLabel(
@@ -118,6 +127,7 @@ function ActivityCommentComposer(props: IActivityCommentComposerProps): React.Re
   } = props;
   const [commentText, setCommentText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const canSubmit = commentText.trim().length > 0 && !isSaving;
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -136,25 +146,49 @@ function ActivityCommentComposer(props: IActivityCommentComposerProps): React.Re
     }
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
+  const handleCommentKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (event.key !== 'Enter') {
+      return;
+    }
 
-      if (canSubmit) {
-        handleSubmit().catch(() => undefined);
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      const textarea = textareaRef.current;
+
+      if (!textarea) {
+        return;
       }
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const nextValue = `${commentText.slice(0, start)}\n${commentText.slice(end)}`;
+
+      setCommentText(nextValue);
+
+      window.requestAnimationFrame(() => {
+        textarea.selectionStart = start + 1;
+        textarea.selectionEnd = start + 1;
+      });
+      return;
+    }
+
+    event.preventDefault();
+
+    if (canSubmit) {
+      handleSubmit().catch(() => undefined);
     }
   };
 
   return (
     <div className={styles.detailCommentComposer}>
       <textarea
+        ref={textareaRef}
         placeholder="Viết bình luận..."
         rows={3}
         value={commentText}
         disabled={isSaving}
         onChange={event => setCommentText(event.target.value)}
-        onKeyDown={handleKeyDown}
+        onKeyDown={handleCommentKeyDown}
       />
 
       <div className={styles.detailCommentFilePicker}>
