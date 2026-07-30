@@ -1,6 +1,8 @@
 import * as React from 'react';
 import type { IBanHanhLibraryItem } from '../models/PhvbMag.models';
+import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
+import { PhvbMagSkeleton } from './PhvbMagSkeleton';
 import styles from './PhvbMag.module.scss';
 
 export interface IPhvbMagHomeLibraryPreviewItem {
@@ -48,10 +50,12 @@ export function PhvbMagHomeLibraryPreviewColumn(props: IPhvbMagHomeLibraryPrevie
         </button>
       </header>
 
+      {isLoading ? (
+        <PhvbMagSkeleton variant="card" count={3} />
+      ) : null}
+
       {!isLoading && items.length === 0 ? (
-        <div className={styles.homeEmptyState}>
-          <p>{emptyMessage}</p>
-        </div>
+        <PhvbMagEmptyState message={emptyMessage} />
       ) : null}
 
       {!isLoading && items.length > 0 ? (

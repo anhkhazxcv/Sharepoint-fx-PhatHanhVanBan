@@ -1,0 +1,24 @@
+// Enterprise UI design tokens — spacing, radius, surfaces
+$space-1: 4px;
+$space-2: 8px;
+$space-3: 12px;
+$space-4: 16px;
+$space-5: 24px;
+$space-6: 32px;
+
+$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 14px;
+
+$surface-card: #FFFFFF;
+$surface-muted: #FAF6F0;
+$border-subtle: #EFECE6;
+$shadow-card: 0 2px 8px rgba(123, 76, 44, 0.03);
+
+$focus-ring-color: rgba(123, 76, 44, 0.35);
+$focus-ring-width: 2px;
+
+@mixin phvb-focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 $focus-ring-width $focus-ring-color;
+}

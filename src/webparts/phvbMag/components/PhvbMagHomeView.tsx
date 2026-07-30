@@ -20,15 +20,20 @@ import { formatRecentPublishDate } from '../utils/PhvbMagRecentPublished.utils';
 import {
   CloseIcon,
   FolderAccentIcon,
+  HomeCategoryIcon,
+  HomeTrendingIcon,
   SearchIcon,
   SidebarHelpIcon,
   SidebarNewReleaseIcon,
   SidebarRecentViewsIcon,
   SidebarSavedIcon
 } from './PhvbMagIcons';
+import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagHomeLibraryPreviewColumn } from './PhvbMagHomeLibraryPreviewColumn';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
+import { PhvbMagSectionShell } from './PhvbMagSectionShell';
+import { PhvbMagSkeleton } from './PhvbMagSkeleton';
 import styles from './PhvbMag.module.scss';
 
 const HOME_GUIDE_DISMISS_KEY = 'phvb-home-guide-dismissed';
@@ -63,13 +68,7 @@ function HomeCategoryTile(props: IHomeCategoryTileProps): React.ReactElement {
 }
 
 function HomeCategorySkeleton(): React.ReactElement {
-  return (
-    <div className={styles.homeCategorySkeletonGrid} aria-hidden="true">
-      {[0, 1, 2, 3].map(index => (
-        <div key={index} className={styles.homeCategorySkeletonTile} />
-      ))}
-    </div>
-  );
+  return <PhvbMagSkeleton variant="tile" count={4} className={styles.homeCategorySkeletonGrid} />;
 }
 
 export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElement {
@@ -212,12 +211,10 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
         ) : null}
 
         {showCategoriesSection ? (
-          <section className={styles.homeSection}>
-            <header className={styles.homeSectionHeader}>
-              <div className={styles.homeSectionTitleWrap}>
-                <span className={styles.homeSectionEmoji} aria-hidden="true">📂</span>
-                <h2 className={styles.homeSectionTitle}>Danh mục</h2>
-              </div>
+          <PhvbMagSectionShell
+            title="Danh mục"
+            icon={<HomeCategoryIcon className={styles.homeSectionIcon} />}
+            action={(
               <button
                 type="button"
                 className={styles.homeSectionMore}
@@ -225,8 +222,8 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
               >
                 Xem tất cả →
               </button>
-            </header>
-
+            )}
+          >
             {homeCategories.isLoading ? <HomeCategorySkeleton /> : null}
 
             {!homeCategories.isLoading && homeCategories.categories.length > 0 ? (
@@ -240,10 +237,10 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
                 ))}
               </div>
             ) : null}
-          </section>
+          </PhvbMagSectionShell>
         ) : null}
 
-        <section className={styles.homeSection}>
+        <PhvbMagSectionShell title="Văn bản của bạn">
           <div className={styles.homeLibraryPreviewGrid}>
             <PhvbMagHomeLibraryPreviewColumn
               icon={<SidebarSavedIcon className={styles.homeSectionIcon} />}
@@ -265,22 +262,12 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
               onNavigate={path => navigate(path)}
             />
           </div>
+        </PhvbMagSectionShell>
 
-          <PhvbMagLoadingOverlay
-            isOpen={isLoadingLibraryPreview}
-            message="Đang tải văn bản đã lưu và xem gần đây..."
-          />
-        </section>
-
-        <section className={styles.homeSection}>
-          <header className={styles.homeSectionHeader}>
-            <div className={styles.homeSectionTitleWrap}>
-              <SidebarNewReleaseIcon className={styles.homeSectionIcon} />
-              <h2 className={styles.homeSectionTitle}>Mới ban hành ({homeData.windowDays} ngày)</h2>
-              {homeData.folderCount > 0 ? (
-                <span className={styles.homeSectionCount}>{homeData.folderCount}</span>
-              ) : null}
-            </div>
+        <PhvbMagSectionShell
+          title={`Mới ban hành (${homeData.windowDays} ngày)`}
+          icon={<SidebarNewReleaseIcon className={styles.homeSectionIcon} />}
+          action={(
             <button
               type="button"
               className={styles.homeSectionMore}
@@ -288,20 +275,16 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
             >
               Xem tất cả →
             </button>
-          </header>
-
+          )}
+        >
           <PhvbMagLoadingOverlay isOpen={homeData.isLoadingRecent} message="Đang tải văn bản mới ban hành..." />
 
           {!homeData.isLoadingRecent && homeData.errorMessage ? (
-            <div className={styles.homeEmptyState} role="alert">
-              <p>{homeData.errorMessage}</p>
-            </div>
+            <PhvbMagEmptyState message={homeData.errorMessage} role="alert" />
           ) : null}
 
           {!homeData.isLoadingRecent && !homeData.errorMessage && homeData.sections.length === 0 ? (
-            <div className={styles.homeEmptyState}>
-              <p>Không có văn bản mới trong {homeData.windowDays} ngày qua.</p>
-            </div>
+            <PhvbMagEmptyState message={`Không có văn bản mới trong ${homeData.windowDays} ngày qua.`} />
           ) : null}
 
           {!homeData.isLoadingRecent && !homeData.errorMessage && homeData.sections.length > 0 ? (
@@ -333,14 +316,12 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
               })}
             </div>
           ) : null}
-        </section>
+        </PhvbMagSectionShell>
 
-        <section className={styles.homeSection}>
-          <header className={styles.homeSectionHeader}>
-            <div className={styles.homeSectionTitleWrap}>
-              <span className={styles.homeSectionEmoji} aria-hidden="true">🔥</span>
-              <h2 className={styles.homeSectionTitle}>Đọc nhiều nhất</h2>
-            </div>
+        <PhvbMagSectionShell
+          title="Đọc nhiều nhất"
+          icon={<HomeTrendingIcon className={styles.homeSectionIcon} />}
+          action={(
             <button
               type="button"
               className={styles.homeSectionMore}
@@ -348,20 +329,16 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
             >
               Xem tất cả →
             </button>
-          </header>
-
+          )}
+        >
           <PhvbMagLoadingOverlay isOpen={homeData.isLoadingMostViewed} message="Đang tải văn bản đọc nhiều..." />
 
           {!homeData.isLoadingMostViewed && homeData.mostViewedErrorMessage ? (
-            <div className={styles.homeEmptyState} role="alert">
-              <p>{homeData.mostViewedErrorMessage}</p>
-            </div>
+            <PhvbMagEmptyState message={homeData.mostViewedErrorMessage} role="alert" />
           ) : null}
 
           {!homeData.isLoadingMostViewed && !homeData.mostViewedErrorMessage && homeData.mostViewed.length === 0 ? (
-            <div className={styles.homeEmptyState}>
-              <p>Chưa có dữ liệu lượt xem.</p>
-            </div>
+            <PhvbMagEmptyState message="Chưa có dữ liệu lượt xem." />
           ) : null}
 
           {!homeData.isLoadingMostViewed && !homeData.mostViewedErrorMessage && homeData.mostViewed.length > 0 ? (
@@ -376,7 +353,7 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
               ))}
             </div>
           ) : null}
-        </section>
+        </PhvbMagSectionShell>
       </div>
     </div>
   );

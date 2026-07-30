@@ -1,5 +1,7 @@
 import * as React from 'react';
+import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
+import { PhvbMagPageHeader } from './PhvbMagPageHeader';
 import styles from './PhvbMag.module.scss';
 
 export interface IPhvbMagLibraryListPageShellProps {
@@ -33,33 +35,24 @@ export function PhvbMagLibraryListPageShell(props: IPhvbMagLibraryListPageShellP
 
   return (
     <div className={styles.recentView}>
-      <header className={styles.recentHeader}>
-        <div className={styles.pageHeading}>
-          <span className={styles.pageEyebrow}>{eyebrow}</span>
-          <h2>{title}</h2>
-          <p className={styles.recentSubtitle}>{subtitle}</p>
-        </div>
-
-        {headerActions ? (
-          headerActions
-        ) : count !== undefined && count > 0 ? (
-          <span className={styles.recentSectionCount}>{count}</span>
-        ) : null}
-      </header>
+      <PhvbMagPageHeader
+        eyebrow={eyebrow}
+        title={title}
+        subtitle={subtitle}
+        count={count}
+        headerActions={headerActions}
+        className={styles.recentHeader}
+      />
 
       <div className={styles.recentBody}>
         <PhvbMagLoadingOverlay isOpen={isLoading} message={loadingMessage} />
 
         {!isLoading && errorMessage ? (
-          <div className={styles.recentEmptyState} role="alert">
-            <p>{errorMessage}</p>
-          </div>
+          <PhvbMagEmptyState message={errorMessage} role="alert" />
         ) : null}
 
         {!isLoading && !errorMessage && isEmpty ? (
-          <div className={styles.recentEmptyState}>
-            <p>{emptyMessage}</p>
-          </div>
+          <PhvbMagEmptyState message={emptyMessage} />
         ) : null}
 
         {!isLoading && !errorMessage && !isEmpty ? children : null}

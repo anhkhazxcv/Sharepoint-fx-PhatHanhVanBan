@@ -3,8 +3,10 @@ import { GUIDE_VIEW_SUBTITLE } from '../config/PhvbMag.configuration';
 import type { IPhvbSiteContext } from '../models/PhvbMag.models';
 import { usePhvbGuide } from '../hooks/usePhvbGuide';
 import { DownloadIcon } from './PhvbMagIcons';
+import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
+import { PhvbMagPageHeader } from './PhvbMagPageHeader';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagGuideViewProps {
@@ -18,14 +20,12 @@ export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElem
 
   return (
     <div className={styles.recentView}>
-      <header className={styles.recentHeader}>
-        <div className={styles.pageHeading}>
-          <span className={styles.pageEyebrow}>Thư viện</span>
-          <h2>Hướng dẫn</h2>
-          <p className={styles.recentSubtitle}>{GUIDE_VIEW_SUBTITLE}</p>
-        </div>
-
-        {guide.pdfUrl ? (
+      <PhvbMagPageHeader
+        eyebrow="Thư viện"
+        title="Hướng dẫn"
+        subtitle={GUIDE_VIEW_SUBTITLE}
+        className={styles.recentHeader}
+        headerActions={guide.pdfUrl ? (
           <div className={styles.recentHeaderActions}>
             <PhvbMagExternalLink
               href={guide.pdfUrl}
@@ -44,16 +44,14 @@ export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElem
               <span>Tải xuống</span>
             </PhvbMagExternalLink>
           </div>
-        ) : null}
-      </header>
+        ) : undefined}
+      />
 
       <div className={[styles.recentBody, styles.guidePdfBody].join(' ')}>
         <PhvbMagLoadingOverlay isOpen={guide.isLoading} message="Đang tải sổ tay hướng dẫn..." />
 
         {!guide.isLoading && guide.errorMessage ? (
-          <div className={styles.recentEmptyState} role="alert">
-            <p>{guide.errorMessage}</p>
-          </div>
+          <PhvbMagEmptyState message={guide.errorMessage} role="alert" />
         ) : null}
 
         {!guide.isLoading && !guide.errorMessage && guide.pdfUrl ? (

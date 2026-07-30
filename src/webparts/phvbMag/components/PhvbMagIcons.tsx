@@ -21,6 +21,7 @@ import {
   FaFilePdf,
   FaFilePowerpoint,
   FaFileWord,
+  FaFire,
   FaFolder,
   FaFolderOpen,
   FaHome,
@@ -90,6 +91,14 @@ export function SidebarSavedIcon(props: IIconProps): React.ReactElement {
 
 export function SidebarRecentViewsIcon(props: IIconProps): React.ReactElement {
   return <FaEye className={props.className} style={props.style} aria-hidden />;
+}
+
+export function HomeCategoryIcon(props: IIconProps): React.ReactElement {
+  return <FaFolder className={props.className} style={props.style} aria-hidden />;
+}
+
+export function HomeTrendingIcon(props: IIconProps): React.ReactElement {
+  return <FaFire className={props.className} style={props.style} aria-hidden />;
 }
 
 export function BookmarkOutlineIcon(props: IIconProps): React.ReactElement {

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { REQUEST_STATUS, TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { IVanBanItem, TabType } from '../models/PhvbMag.models';
 import { getBadgeVariant, getRequestStatusDisplayForItem, getSummaryPreview, type RequestStatusFilterKey } from '../utils/PhvbMag.selectors';
+import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import styles from './PhvbMag.module.scss';
 import { PaginationNextIcon, PaginationPreviousIcon, SearchIcon } from './PhvbMagIcons';
 
@@ -562,9 +563,7 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
           ))}
         </div>
       ) : totalItems === 0 ? (
-        <div className={styles.emptyState}>
-          <p>{emptyMessage}</p>
-        </div>
+        <PhvbMagEmptyState message={emptyMessage} />
       ) : (
         <>
           <div className={styles.requestTableWrap}>
@@ -675,9 +674,7 @@ function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
           ))}
         </div>
       ) : totalItems === 0 ? (
-        <div className={styles.emptyState}>
-          <p>Không có dữ liệu phù hợp với bộ lọc hiện tại.</p>
-        </div>
+        <PhvbMagEmptyState message="Không có dữ liệu phù hợp với bộ lọc hiện tại." />
       ) : (
         <>
           <div className={styles.taskList}>

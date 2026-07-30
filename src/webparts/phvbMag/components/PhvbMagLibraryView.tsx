@@ -8,7 +8,10 @@ import type {
 import { usePhvbLibrary } from '../hooks/usePhvbLibrary';
 import { formatBanHanhDate } from '../utils/PhvbMagBanHanh.tree';
 import { resolveLibraryContactPerson } from '../utils/PhvbMagLibrary.utils';
+import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
+import { PhvbMagPageHeader } from './PhvbMagPageHeader';
+import { PhvbMagSkeleton } from './PhvbMagSkeleton';
 import {
   CloseIcon,
   FolderAccentIcon,
@@ -237,6 +240,9 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
     && !library.isResolvingFolder
     && (itemCountOnPage > 0 || canGoPrevious || canGoNext || library.page > 1);
   const isFolderPaneVisible = library.isFolderPaneVisible;
+  const breadcrumbLabel = library.isSearchMode
+    ? `Tìm kiếm: ${library.submittedQuery || library.draftQuery}`
+    : (library.selectedFolder?.name || 'Tất cả thư mục');
 
   const applySidebarUnits = React.useCallback((units: number): void => {
     const nextUnits = clampSidebarUnits(units);
@@ -339,13 +345,13 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
         <>
           <aside className={styles.folderPane}>
             <div className={styles.folderPaneHeader}>
-              <h4>THƯ VIỆN TÀI LIỆU</h4>
+              <h4>Thư viện tài liệu</h4>
             </div>
 
             <div className={styles.folderList}>
-              {library.isLoadingFolders && (
-                <div className={styles.libraryStatusMessage}>Đang tải thư mục...</div>
-              )}
+              {library.isLoadingFolders ? (
+                <PhvbMagSkeleton variant="line" count={6} />
+              ) : null}
 
               {!library.isLoadingFolders && library.rootFolders.map(folder => (
                 <FolderTreeNode
@@ -383,6 +389,20 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
       ) : null}
 
       <section className={styles.libraryContentPane}>
+        <PhvbMagPageHeader
+          eyebrow="Thư viện"
+          title="Thư viện tài liệu"
+          subtitle="Duyệt thư mục và tìm kiếm văn bản nội bộ"
+          className={styles.libraryPageHeader}
+          headerActions={(
+            <ol className={styles.libraryBreadcrumb} aria-label="Vị trí hiện tại">
+              <li>Thư viện</li>
+              <li><strong>{breadcrumbLabel}</strong></li>
+            </ol>
+          )}
+        />
+
+        <div className={styles.libraryContentPaneBody}>
         <div className={`${styles.librarySearchBar} ${library.isSearchMode ? styles.librarySearchBarActive : ''}`}>
           {library.isSearchMode ? (
             <TooltipHost content="Thoát tìm kiếm">
@@ -445,19 +465,19 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
           </div>
         ) : null}
 
-        <div className={styles.libraryDocumentList}>
+        <div className={styles.libraryDocumentList} aria-live="polite">
           {(library.isLoadingDocuments || library.isResolvingFolder) && (
-            <div className={styles.libraryStatusMessage}>Đang tải tài liệu...</div>
+            <PhvbMagSkeleton variant="card" count={5} />
           )}
 
           {!library.isLoadingDocuments && !library.isResolvingFolder && library.documents.length === 0 && (
-            <div className={styles.libraryStatusMessage}>
-              {library.isSearchMode
+            <PhvbMagEmptyState
+              message={library.isSearchMode
                 ? 'Không tìm thấy kết quả phù hợp.'
                 : (library.selectedFolder
                   ? 'Không có tài liệu trong mục này.'
                   : 'Chọn thư mục bên trái hoặc tìm kiếm tài liệu.')}
-            </div>
+            />
           )}
 
           {!library.isLoadingDocuments && !library.isResolvingFolder && library.documents.map(document => (
@@ -502,6 +522,7 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
             </div>
           </div>
         ) : null}
+        </div>
       </section>
     </div>
   );
