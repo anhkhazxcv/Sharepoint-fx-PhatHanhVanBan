@@ -46,13 +46,13 @@ function getListItemsEndpoint(siteUrl: string, listTitle: string): string {
   return `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(listTitle)}')/items`;
 }
 
-function buildSavedDocumentsQuery(userEmail: string): string {
+function buildSavedDocumentsQuery(userEmail: string, top: number = SAVED_DOCUMENTS_TOP): string {
   const normalizedEmail = escapeODataValue(userEmail.trim().toLowerCase());
   return [
     `$select=${SAVED_DOCUMENT_SELECT_FIELDS.join(',')}`,
     `$filter=UserEmail eq '${normalizedEmail}'`,
     `$orderby=Created desc`,
-    `$top=${SAVED_DOCUMENTS_TOP}`
+    `$top=${top}`
   ].join('&');
 }
 
@@ -98,7 +98,8 @@ function buildSavedDocumentPayload(
 export class PhvbSavedDocumentsService {
   public loadUserBookmarks(
     context: IPhvbSiteContext,
-    userEmail: string
+    userEmail: string,
+    top: number = SAVED_DOCUMENTS_TOP
   ): Promise<ISavedDocumentItem[]> {
     if (!hasSharePointSiteContext(context)) {
       return Promise.reject(new Error(SITE_CONTEXT_ERROR_MESSAGE));
@@ -111,7 +112,7 @@ export class PhvbSavedDocumentsService {
     }
 
     return tryAcrossCandidateSites(context, async (siteUrl: string) => {
-      const requestUrl = `${getListItemsEndpoint(siteUrl, SAVED_DOCUMENTS_LIST_TITLE)}?${buildSavedDocumentsQuery(normalizedEmail)}`;
+      const requestUrl = `${getListItemsEndpoint(siteUrl, SAVED_DOCUMENTS_LIST_TITLE)}?${buildSavedDocumentsQuery(normalizedEmail, top)}`;
       const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
       await ensureSharePointResponseOk(
         response,

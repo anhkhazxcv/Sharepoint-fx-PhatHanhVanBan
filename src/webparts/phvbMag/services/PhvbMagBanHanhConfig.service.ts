@@ -1,6 +1,10 @@
 import {
   CONFIG_LABEL_CUSTOM_LIST_TITLE,
-  CONFIG_MAIL_BAN_HANH_LIST_TITLE
+  CONFIG_MAIL_BAN_HANH_LIST_TITLE,
+  RECENT_PUBLISHED_WINDOW_DAYS_DEFAULT,
+  RECENT_PUBLISHED_WINDOW_DAYS_LABEL,
+  RECENT_PUBLISHED_WINDOW_DAYS_MAX,
+  RECENT_PUBLISHED_WINDOW_DAYS_MIN
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { toRuntimeMessage } from './PhvbMag.error';
@@ -45,6 +49,28 @@ function mapLabelCustomItem(item: ISharePointLabelCustomItem): ILabelCustomConfi
   }
 
   return { label, value };
+}
+
+function clampRecentPublishedWindowDays(value: number): number {
+  if (value < RECENT_PUBLISHED_WINDOW_DAYS_MIN) {
+    return RECENT_PUBLISHED_WINDOW_DAYS_MIN;
+  }
+
+  if (value > RECENT_PUBLISHED_WINDOW_DAYS_MAX) {
+    return RECENT_PUBLISHED_WINDOW_DAYS_MAX;
+  }
+
+  return value;
+}
+
+function parseRecentPublishedWindowDays(rawValue?: string): number {
+  const parsed = parseInt((rawValue || '').trim(), 10);
+
+  if (!parsed || isNaN(parsed)) {
+    return RECENT_PUBLISHED_WINDOW_DAYS_DEFAULT;
+  }
+
+  return clampRecentPublishedWindowDays(parsed);
 }
 
 export class PhvbBanHanhConfigService {
@@ -92,6 +118,22 @@ export class PhvbBanHanhConfigService {
     }
 
     return items.slice();
+  }
+
+  public async getRecentPublishedWindowDays(context: IPhvbSiteContext): Promise<number> {
+    const configItems = await this.loadLabelCustomConfig(context);
+    let matchValue: string | undefined;
+
+    for (let index = 0; index < configItems.length; index += 1) {
+      const item = configItems[index];
+
+      if (item.label === RECENT_PUBLISHED_WINDOW_DAYS_LABEL) {
+        matchValue = item.value;
+        break;
+      }
+    }
+
+    return parseRecentPublishedWindowDays(matchValue);
   }
 
   private async fetchMailBanHanhConfig(context: IPhvbSiteContext): Promise<IMailBanHanhConfigItem[]> {

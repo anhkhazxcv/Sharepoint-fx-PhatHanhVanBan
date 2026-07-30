@@ -10,7 +10,24 @@ export const LOG_LIST_TITLE = 'Log';
 export const PHVB_ROLE_LIST_TITLE = 'PHVB_Role';
 export const CONFIG_MAIL_BAN_HANH_LIST_TITLE = 'lstConfigMailBanHanh';
 export const CONFIG_LABEL_CUSTOM_LIST_TITLE = 'lstConfigLabelCustom';
+/** Label trong lstConfigLabelCustom — Value = số ngày cửa sổ Mới ban hành (vd. 7). */
+export const RECENT_PUBLISHED_WINDOW_DAYS_LABEL = 'soNgayMoiBanHanh';
+export const RECENT_PUBLISHED_WINDOW_DAYS_DEFAULT = 7;
+export const RECENT_PUBLISHED_WINDOW_DAYS_MIN = 1;
+export const RECENT_PUBLISHED_WINDOW_DAYS_MAX = 90;
+export const RECENT_PUBLISHED_FOLDER_TOP = 50;
+export const RECENT_PUBLISHED_HOME_FOLDER_LIMIT = 3;
+export const RECENT_PUBLISHED_FILE_BATCH_TOP = 500;
+export const MOST_VIEWED_LIMIT = 5;
+export const HOME_LIBRARY_PREVIEW_LIMIT = 5;
+export const HOME_CATEGORIES_LIST_TITLE = 'lstDanhMucTrangChu';
+export const HOME_CATEGORIES_QUERY_TOP = 50;
+export const HOME_CATEGORIES_TOP = 24;
+export const HOME_CATEGORY_DEFAULT_ICON = '📁';
 export const SAVED_DOCUMENTS_LIST_TITLE = 'lstVanBanDaLuu';
+export const RECENT_VIEWS_LIST_TITLE = 'lstVanBanXemGanDay';
+export const RECENT_VIEWS_TOP = 50;
+export const RECENT_VIEWS_HYDRATE_CHUNK_SIZE = 25;
 export const COMMENT_HISTORY_STATUS = 'Bình luận';
 export const ALL_USER_GOPY_LIST_TITLE = 'AllUser_GopY';
 export const ALL_USER_THAMDINH_LIST_TITLE = 'AllUser_ThamDinh';
@@ -127,12 +144,14 @@ export const WORKFLOW_PARTICIPANT_STATUS = {
 } as const;
 
 export const TAB_LABELS: Record<TabType, string> = {
+  TrangChu: 'Trang chủ',
   ViecCanLam: 'Việc cần làm',
   YeuCauCuaToi: 'Yêu cầu của tôi',
   BanNhap: 'Bản nháp',
   ThuVienTaiLieu: 'Thư viện tài liệu',
   MoiBanHanh: 'Mới ban hành',
   DaLuu: 'Đã lưu',
+  XemGanDay: 'Xem gần đây',
   CapSo: 'DC cấp số',
   QLVanBan: 'QL văn bản',
   HuongDan: 'Hướng dẫn sử dụng hệ thống và biểu mẫu'

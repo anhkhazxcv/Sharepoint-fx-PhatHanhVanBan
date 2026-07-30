@@ -13,6 +13,7 @@ import {
   SidebarMyRequestsIcon,
   SidebarNewReleaseIcon,
   SidebarNumberingIcon,
+  SidebarRecentViewsIcon,
   SidebarSavedIcon,
   SidebarTasksIcon
 } from './PhvbMagIcons';
@@ -129,12 +130,12 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
           {!isCollapsed && <div className={styles.navGroupLabel}>MENU</div>}
 
           <NavItem
+            tab="TrangChu"
             label="Trang chủ"
             activeTab={activeTab}
             isCollapsed={isCollapsed}
+            onSelectTab={onSelectTab}
             icon={<SidebarHomeIcon />}
-            disabled
-            soonBadge
           />
 
           <NavItem
@@ -162,6 +163,15 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
             icon={<SidebarSavedIcon />}
+          />
+
+          <NavItem
+            tab="XemGanDay"
+            label={TAB_LABELS.XemGanDay}
+            activeTab={activeTab}
+            isCollapsed={isCollapsed}
+            onSelectTab={onSelectTab}
+            icon={<SidebarRecentViewsIcon />}
           />
 
           {!isCollapsed && <div className={styles.navGroupLabel}>PHÁT HÀNH VĂN BẢN</div>}

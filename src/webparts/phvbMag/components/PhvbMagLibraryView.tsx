@@ -192,6 +192,7 @@ function DocumentListItem(props: IDocumentListItemProps): React.ReactElement {
     <PhvbMagLibraryDocumentCard
       document={document}
       showDownload={showDownload}
+      trackRecentView
       metaContent={(
         <>
           <span className={styles.libraryDocumentContact}>

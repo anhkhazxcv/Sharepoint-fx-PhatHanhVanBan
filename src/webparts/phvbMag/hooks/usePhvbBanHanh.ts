@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { phvbBanHanhConfigService } from '../services/PhvbMagBanHanhConfig.service';
 import { phvbBanHanhService } from '../services/PhvbMagBanHanh.service';
+import { phvbDocumentLibraryService } from '../services/PhvbMagDocumentLibrary.service';
 import { createFlowRunId } from '../services/PhvbMagLog.service';
 import { canEditBanHanhNotify, canPrepareBanHanh, canPublishBanHanh } from '../utils/PhvbMagBanHanh.utils';
 import { buildBanHanhNotifyDraft, buildBanHanhNotifyDraftFromSavedRelease, validateBanHanhNotifyDraft } from '../utils/PhvbMagBanHanhNotify.utils';
@@ -230,6 +231,8 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
         { mainDocumentId },
         logContext
       );
+
+      phvbDocumentLibraryService.clearHomeDataCache();
 
       if (onCompleted) {
         onCompleted();

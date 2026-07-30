@@ -112,7 +112,7 @@ export interface IEditRequestContext {
   idYeuCau: string;
 }
 
-export type TabType = 'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'DaLuu' | 'CapSo' | 'QLVanBan' | 'HuongDan';
+export type TabType = 'TrangChu' | 'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'DaLuu' | 'XemGanDay' | 'CapSo' | 'QLVanBan' | 'HuongDan';
 
 export interface ITabCounts {
   viecCanLam: number;
@@ -136,6 +136,30 @@ export interface IMailBanHanhConfigItem {
 export interface ILabelCustomConfigItem {
   label: string;
   value: string;
+}
+
+export type HomeCategoryLinkType = 'TatCa' | 'ThuMuc';
+
+export interface IHomeCategoryItem {
+  id: number;
+  title: string;
+  icon: string;
+  linkType: HomeCategoryLinkType;
+  folderId?: number;
+  subtitle?: string;
+  sortOrder: number;
+}
+
+export interface IRecentPublishedFolder {
+  id: number;
+  name: string;
+  fileDirRef: string;
+  fileRef: string;
+  ngayPhatHanh?: string;
+  tomTatVanban?: string;
+  hieuLucTu?: string;
+  hieuLucDen?: string;
+  lienHe?: string;
 }
 
 export interface IBanHanhNotifyDraft {
@@ -213,6 +237,23 @@ export interface ISavedDocumentItem {
 
 export interface ISavedDocumentDisplayItem {
   bookmark: ISavedDocumentItem;
+  document?: IBanHanhLibraryItem;
+  isAccessible: boolean;
+}
+
+export interface IRecentViewItem {
+  id: number;
+  title: string;
+  userEmail: string;
+  libraryItemId: number;
+  fileRef: string;
+  fileDirRef: string;
+  created?: string;
+  modified?: string;
+}
+
+export interface IRecentViewDisplayItem {
+  recentView: IRecentViewItem;
   document?: IBanHanhLibraryItem;
   isAccessible: boolean;
 }

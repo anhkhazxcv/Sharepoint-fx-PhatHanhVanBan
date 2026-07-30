@@ -88,6 +88,10 @@ export function SidebarSavedIcon(props: IIconProps): React.ReactElement {
   return <FaBookmark className={props.className} style={props.style} aria-hidden />;
 }
 
+export function SidebarRecentViewsIcon(props: IIconProps): React.ReactElement {
+  return <FaEye className={props.className} style={props.style} aria-hidden />;
+}
+
 export function BookmarkOutlineIcon(props: IIconProps): React.ReactElement {
   return <FaRegBookmark className={props.className} style={props.style} aria-hidden />;
 }

@@ -182,7 +182,9 @@ export function PhvbMagRecentPublishedView(props: IPhvbMagRecentPublishedViewPro
         <div className={styles.pageHeading}>
           <span className={styles.pageEyebrow}>Thư viện</span>
           <h2>{TAB_LABELS.MoiBanHanh}</h2>
-          <p className={styles.recentSubtitle}>Văn bản ban hành trong 7 ngày gần nhất</p>
+          <p className={styles.recentSubtitle}>
+            {`Văn bản ban hành trong ${recent.windowDays} ngày gần nhất`}
+          </p>
         </div>
 
         {hasSections ? (
@@ -216,7 +218,7 @@ export function PhvbMagRecentPublishedView(props: IPhvbMagRecentPublishedViewPro
 
         {!recent.isLoading && !recent.errorMessage && recent.sections.length === 0 ? (
           <div className={styles.recentEmptyState}>
-            <p>Không có văn bản mới trong 7 ngày qua.</p>
+            <p>{`Không có văn bản mới trong ${recent.windowDays} ngày qua.`}</p>
           </div>
         ) : null}
 

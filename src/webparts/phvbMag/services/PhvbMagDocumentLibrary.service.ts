@@ -1,7 +1,12 @@
 import { SPHttpClient } from '@microsoft/sp-http';
 import {
+  ATTACHMENT_FORM_SUBFOLDER,
+  LIBRARY_CACHE_STALE_MS,
   LIBRARY_FILES_PAGE_SIZE,
   LIBRARY_SEARCH_PAGE_SIZE,
+  MOST_VIEWED_LIMIT,
+  RECENT_PUBLISHED_FILE_BATCH_TOP,
+  RECENT_PUBLISHED_FOLDER_TOP,
   resolveIssuanceLibraryTitle,
   TEMPLATE_LIBRARY_TITLE
 } from '../config/PhvbMag.configuration';
@@ -12,11 +17,17 @@ import {
 } from '../infrastructure/SharePointFile.utils';
 import { escapeODataValue, getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { buildApiLogParams } from '../services/PhvbMagLog.service';
-import { buildLibrarySearchKql } from '../utils/PhvbMagLibrary.utils';
+import {
+  buildLibrarySearchAbsolutePath,
+  buildLibrarySearchKql,
+  escapeKqlText,
+  resolveLibraryDocumentEffectiveStatus
+} from '../utils/PhvbMagLibrary.utils';
+import { buildLibraryFolderChildrenIndex } from '../utils/PhvbMagBanHanh.tree';
 import {
   getRecentPublishedStartDate,
   isExpiredArchivePath,
-  RECENT_PUBLISHED_TOP,
+  isRecentPublishedFolderCandidate,
   toODataDateTimeLiteral
 } from '../utils/PhvbMagRecentPublished.utils';
 import type {
@@ -24,6 +35,7 @@ import type {
   ILibraryPagedFilesResult,
   ILibrarySearchPageResult,
   IPhvbSiteContext,
+  IRecentPublishedFolder,
   ITemplateLibraryItem
 } from '../models/PhvbMag.models';
 
@@ -66,6 +78,10 @@ interface ISharePointSearchRequest {
   StartRow?: number;
   SelectProperties: string[];
   TrimDuplicates: boolean;
+  SortList?: Array<{
+    Property: string;
+    Direction: number;
+  }>;
 }
 
 interface ISharePointSearchPostBody {
@@ -118,7 +134,12 @@ const BAN_HANH_FOLDER_SELECT_FIELDS: ReadonlyArray<string> = [
   'FileLeafRef',
   'FileDirRef',
   'FSObjType',
-  'FileRef'
+  'FileRef',
+  'NgayPhatHanh',
+  'TomTatVanban',
+  'HieuLucTu',
+  'HieuLucDen',
+  'LienHe'
 ];
 
 const TEMPLATE_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -146,6 +167,34 @@ const SEARCH_POST_JSON_HEADERS = {
   Accept: 'application/json;odata=nometadata',
   'Content-Type': 'application/json;odata=nometadata'
 };
+
+const RECENT_PUBLISHED_FOLDER_FILTER_CHUNK_SIZE = 20;
+const MOST_VIEWED_SEARCH_SELECT_PROPERTIES = [
+  'Path',
+  'Filename',
+  'Title',
+  'ListItemID',
+  'IsDocument',
+  'ViewsLifeTime',
+  'HitHighlightedSummary'
+];
+
+interface IRecentPublishedDataCacheEntry {
+  windowDays: number;
+  folders: IRecentPublishedFolder[];
+  items: IBanHanhLibraryItem[];
+  fetchedAt: number;
+}
+
+interface IMostViewedCacheEntry {
+  items: IBanHanhLibraryItem[];
+  fetchedAt: number;
+}
+
+let recentPublishedDataCache: IRecentPublishedDataCacheEntry | undefined;
+let recentPublishedDataPromise: Promise<IRecentPublishedDataCacheEntry> | undefined;
+let mostViewedCache: IMostViewedCacheEntry | undefined;
+let mostViewedPromise: Promise<IMostViewedCacheEntry> | undefined;
 
 function getLibraryTitle(context: IPhvbSiteContext): string {
   return resolveIssuanceLibraryTitle(context.issuanceLibraryTitle);
@@ -277,6 +326,79 @@ function mapTemplateLibraryItem(item: ISharePointDocumentLibraryItem, siteUrl: s
   };
 }
 
+function mapRecentPublishedFolder(item: ISharePointDocumentLibraryItem): IRecentPublishedFolder | undefined {
+  const fileDirRef = normalizeServerRelativePath(item.FileDirRef || '');
+  const name = (item.FileLeafRef || item.Title || '').trim();
+  const fileRef = normalizeServerRelativePath(item.FileRef || '');
+
+  if (!fileDirRef || !name || !fileRef || !isRecentPublishedFolderCandidate(fileDirRef, name)) {
+    return undefined;
+  }
+
+  return {
+    id: item.Id,
+    name,
+    fileDirRef,
+    fileRef,
+    ngayPhatHanh: item.NgayPhatHanh,
+    tomTatVanban: item.TomTatVanban,
+    hieuLucTu: item.HieuLucTu,
+    hieuLucDen: item.HieuLucDen,
+    lienHe: item.LienHe
+  };
+}
+
+function escapeODataStringLiteral(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+function buildRecentPublishedFileDirRefFilter(folderPaths: string[]): string | undefined {
+  const clauses: string[] = [];
+
+  folderPaths.forEach(folderPath => {
+    const normalizedFolderPath = normalizeServerRelativePath(folderPath);
+
+    if (!normalizedFolderPath) {
+      return;
+    }
+
+    clauses.push(`FileDirRef eq '${escapeODataStringLiteral(normalizedFolderPath)}'`);
+    clauses.push(`FileDirRef eq '${escapeODataStringLiteral(`${normalizedFolderPath}/${ATTACHMENT_FORM_SUBFOLDER}`)}'`);
+  });
+
+  if (clauses.length === 0) {
+    return undefined;
+  }
+
+  return clauses.join(' or ');
+}
+
+function isHomeDataCacheFresh(entry: IRecentPublishedDataCacheEntry | undefined, windowDays: number): boolean {
+  if (!entry) {
+    return false;
+  }
+
+  return entry.windowDays === windowDays
+    && Date.now() - entry.fetchedAt < LIBRARY_CACHE_STALE_MS;
+}
+
+function isMostViewedCacheFresh(entry: IMostViewedCacheEntry | undefined): boolean {
+  if (!entry) {
+    return false;
+  }
+
+  return Date.now() - entry.fetchedAt < LIBRARY_CACHE_STALE_MS;
+}
+
+function buildMostViewedSearchKql(siteUrl: string, libraryRootPath: string): string {
+  const absolutePath = buildLibrarySearchAbsolutePath(siteUrl, libraryRootPath);
+  const pathClause = absolutePath
+    ? `Path:"${escapeKqlText(absolutePath)}/*"`
+    : '*';
+
+  return `${pathClause} AND IsDocument:1 NOT Path:"*Expired_*"`;
+}
+
 function mapFileApiItem(item: ISharePointFileApiItem, siteUrl: string): IBanHanhLibraryItem | undefined {
   const listItem = item.ListItemAllFields;
 
@@ -330,6 +452,10 @@ function buildSearchPostBody(options: {
   selectProperties: ReadonlyArray<string>;
   startRow?: number;
   trimDuplicates?: boolean;
+  sortList?: Array<{
+    Property: string;
+    Direction: number;
+  }>;
 }): string {
   const request: ISharePointSearchRequest = {
     Querytext: options.queryText,
@@ -340,6 +466,10 @@ function buildSearchPostBody(options: {
 
   if (options.startRow !== undefined && options.startRow > 0) {
     request.StartRow = options.startRow;
+  }
+
+  if (options.sortList && options.sortList.length > 0) {
+    request.SortList = options.sortList.slice();
   }
 
   const body: ISharePointSearchPostBody = { request };
@@ -473,33 +603,242 @@ export class PhvbDocumentLibraryService {
     );
   }
 
-  public loadRecentPublishedDocuments(context: IPhvbSiteContext): Promise<IBanHanhLibraryItem[]> {
+  public loadRecentPublishedFolders(
+    context: IPhvbSiteContext,
+    windowDays: number
+  ): Promise<IRecentPublishedFolder[]> {
     const libraryTitle = getLibraryTitle(context);
-    const startDateLiteral = toODataDateTimeLiteral(getRecentPublishedStartDate());
+    const startDateLiteral = toODataDateTimeLiteral(getRecentPublishedStartDate(windowDays));
 
     return loadDocumentLibraryItems(
       context,
       libraryTitle,
       {
-        selectFields: RECENT_PUBLISHED_SELECT_FIELDS,
-        filter: `FSObjType eq 0 and NgayPhatHanh ge ${startDateLiteral}`,
-        top: RECENT_PUBLISHED_TOP,
+        selectFields: BAN_HANH_FOLDER_SELECT_FIELDS,
+        filter: `FSObjType eq 1 and NgayPhatHanh ge ${startDateLiteral}`,
+        top: RECENT_PUBLISHED_FOLDER_TOP,
         orderBy: 'NgayPhatHanh desc,Id desc'
       },
-      (item, siteUrl) => mapBanHanhLibraryItem(item, siteUrl, {
-        uniqueId: item.UniqueId,
-        canDownload: hasOpenItemsPermission(item.EffectiveBasePermissions)
-      }),
-      'Unable to load recently published documents.'
-    ).then(items =>
-      items.filter(item =>
+      item => mapRecentPublishedFolder(item),
+      'Unable to load recently published folders.'
+    ).then(folders =>
+      folders.filter((folder): folder is IRecentPublishedFolder => Boolean(folder))
+    );
+  }
+
+  private loadRecentPublishedFilesForFolders(
+    context: IPhvbSiteContext,
+    folderPaths: string[]
+  ): Promise<IBanHanhLibraryItem[]> {
+    const libraryTitle = getLibraryTitle(context);
+    const normalizedPaths = folderPaths
+      .map(path => normalizeServerRelativePath(path))
+      .filter(path => Boolean(path));
+
+    if (normalizedPaths.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    const chunks: string[][] = [];
+    for (let index = 0; index < normalizedPaths.length; index += RECENT_PUBLISHED_FOLDER_FILTER_CHUNK_SIZE) {
+      chunks.push(normalizedPaths.slice(index, index + RECENT_PUBLISHED_FOLDER_FILTER_CHUNK_SIZE));
+    }
+
+    const chunkPromises = chunks.map(chunk => {
+      const dirRefFilter = buildRecentPublishedFileDirRefFilter(chunk);
+
+      if (!dirRefFilter) {
+        return Promise.resolve([] as IBanHanhLibraryItem[]);
+      }
+
+      return loadDocumentLibraryItems(
+        context,
+        libraryTitle,
+        {
+          selectFields: RECENT_PUBLISHED_SELECT_FIELDS,
+          filter: `FSObjType eq 0 and (${dirRefFilter})`,
+          top: RECENT_PUBLISHED_FILE_BATCH_TOP,
+          orderBy: 'FileDirRef,FileLeafRef'
+        },
+        (item, siteUrl) => mapBanHanhLibraryItem(item, siteUrl, {
+          uniqueId: item.UniqueId,
+          canDownload: hasOpenItemsPermission(item.EffectiveBasePermissions)
+        }),
+        'Unable to load recently published documents.'
+      );
+    });
+
+    return Promise.all(chunkPromises).then(chunkResults => {
+      const merged: IBanHanhLibraryItem[] = [];
+
+      chunkResults.forEach(items => {
+        items.forEach(item => {
+          if (
+            item.fsObjType === 0
+            && Boolean(item.name)
+            && Boolean(item.fileRef)
+            && !isExpiredArchivePath(item.fileDirRef)
+            && !isExpiredArchivePath(item.fileRef)
+          ) {
+            merged.push(item);
+          }
+        });
+      });
+
+      return merged;
+    });
+  }
+
+  public loadRecentPublishedData(
+    context: IPhvbSiteContext,
+    windowDays: number
+  ): Promise<{ folders: IRecentPublishedFolder[]; items: IBanHanhLibraryItem[] }> {
+    if (isHomeDataCacheFresh(recentPublishedDataCache, windowDays)) {
+      return Promise.resolve({
+        folders: recentPublishedDataCache!.folders.slice(),
+        items: recentPublishedDataCache!.items.slice()
+      });
+    }
+
+    if (!recentPublishedDataPromise) {
+      recentPublishedDataPromise = this.fetchRecentPublishedData(context, windowDays).then(entry => {
+        recentPublishedDataCache = entry;
+        return entry;
+      });
+    }
+
+    const pendingPromise = recentPublishedDataPromise;
+
+    return pendingPromise.then(entry => {
+      if (recentPublishedDataPromise === pendingPromise) {
+        recentPublishedDataPromise = undefined;
+      }
+
+      return {
+        folders: entry.folders.slice(),
+        items: entry.items.slice()
+      };
+    });
+  }
+
+  private fetchRecentPublishedData(
+    context: IPhvbSiteContext,
+    windowDays: number
+  ): Promise<IRecentPublishedDataCacheEntry> {
+    return this.loadRecentPublishedFolders(context, windowDays).then(folders =>
+      this.loadRecentPublishedFilesForFolders(
+        context,
+        folders.map(folder => folder.fileRef)
+      ).then(items => ({
+        windowDays,
+        folders,
+        items,
+        fetchedAt: Date.now()
+      }))
+    );
+  }
+
+  public loadRecentPublishedDocuments(
+    context: IPhvbSiteContext,
+    windowDays: number
+  ): Promise<IBanHanhLibraryItem[]> {
+    return this.loadRecentPublishedData(context, windowDays).then(data => data.items);
+  }
+
+  public loadMostViewedDocuments(
+    context: IPhvbSiteContext,
+    limit: number = MOST_VIEWED_LIMIT
+  ): Promise<IBanHanhLibraryItem[]> {
+    if (isMostViewedCacheFresh(mostViewedCache)) {
+      return Promise.resolve(mostViewedCache!.items.slice(0, limit));
+    }
+
+    if (!mostViewedPromise) {
+      mostViewedPromise = this.fetchMostViewedDocuments(context, limit).then(entry => {
+        mostViewedCache = entry;
+        return entry;
+      });
+    }
+
+    const pendingPromise = mostViewedPromise;
+
+    return pendingPromise.then(entry => {
+      if (mostViewedPromise === pendingPromise) {
+        mostViewedPromise = undefined;
+      }
+
+      return entry.items.slice(0, limit);
+    });
+  }
+
+  private fetchMostViewedDocuments(
+    context: IPhvbSiteContext,
+    limit: number
+  ): Promise<IMostViewedCacheEntry> {
+    const libraryTitle = getLibraryTitle(context);
+
+    return tryAcrossCandidateSites(context, async (siteUrl: string) => {
+      const folders = await this.loadBanHanhLibraryFolders(context);
+      const folderIndex = buildLibraryFolderChildrenIndex(folders);
+      const libraryRootPath = folderIndex.libraryRootPath;
+
+      const queryText = buildMostViewedSearchKql(siteUrl, libraryRootPath);
+      const body = buildSearchPostBody({
+        queryText,
+        rowLimit: Math.max(limit * 3, limit),
+        selectProperties: MOST_VIEWED_SEARCH_SELECT_PROPERTIES,
+        trimDuplicates: true,
+        sortList: [{ Property: 'ViewsLifeTime', Direction: 1 }]
+      });
+      const data = await executeSharePointSearchPost(context, siteUrl, body, {
+        listName: libraryTitle,
+        httpMethod: 'SP_POST'
+      });
+      const rows = getSearchResultRows(data);
+      const viewCountById: Record<number, number | undefined> = {};
+      const itemIds: number[] = [];
+
+      rows.forEach(cells => {
+        const listItemIdValue = parseSearchCellValue(cells, 'ListItemID');
+        const listItemId = parseInt(listItemIdValue, 10);
+
+        if (!listItemId || isNaN(listItemId)) {
+          return;
+        }
+
+        itemIds.push(listItemId);
+        viewCountById[listItemId] = parseSearchViewCount(parseSearchCellValue(cells, 'ViewsLifeTime'));
+      });
+
+      const hydratedItems = await hydrateLibraryItemsByIds(
+        context,
+        libraryTitle,
+        siteUrl,
+        itemIds,
+        viewCountById
+      );
+
+      const effectiveItems = hydratedItems.filter(item =>
         item.fsObjType === 0
         && Boolean(item.name)
         && Boolean(item.fileRef)
         && !isExpiredArchivePath(item.fileDirRef)
         && !isExpiredArchivePath(item.fileRef)
-      )
-    );
+        && resolveLibraryDocumentEffectiveStatus(item.hieuLucTu, item.hieuLucDen) === 'effective'
+      );
+
+      return {
+        items: effectiveItems.slice(0, limit),
+        fetchedAt: Date.now()
+      };
+    }, 'Unable to load most viewed documents.');
+  }
+
+  public clearHomeDataCache(): void {
+    recentPublishedDataCache = undefined;
+    recentPublishedDataPromise = undefined;
+    mostViewedCache = undefined;
+    mostViewedPromise = undefined;
   }
 
   public loadBanHanhLibraryFolders(context: IPhvbSiteContext): Promise<IBanHanhLibraryItem[]> {

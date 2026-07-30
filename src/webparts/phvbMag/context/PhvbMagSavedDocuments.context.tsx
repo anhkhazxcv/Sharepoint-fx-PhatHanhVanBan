@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { HOME_LIBRARY_PREVIEW_LIMIT } from '../config/PhvbMag.configuration';
 import type {
   IBanHanhLibraryItem,
   IPhvbDocumentContext,
@@ -10,7 +11,7 @@ import type {
 import { phvbSavedDocumentsService } from '../services/PhvbMagSavedDocuments.service';
 import { ToastService } from '../utils/ToastService';
 
-const BOOKMARK_RELATED_TABS: TabType[] = ['ThuVienTaiLieu', 'MoiBanHanh', 'DaLuu'];
+const BOOKMARK_RELATED_TABS: TabType[] = ['TrangChu', 'ThuVienTaiLieu', 'MoiBanHanh', 'DaLuu'];
 
 interface IBookmarkIndex {
   bookmarkIdByLibraryItemId: Record<number, number>;
@@ -22,9 +23,12 @@ interface IPhvbSavedDocumentsContextValue {
   errorMessage?: string;
   savedCount: number;
   savedDisplayItems: ISavedDocumentDisplayItem[];
+  savedPreviewItems: ISavedDocumentDisplayItem[];
   isLoadingSavedView: boolean;
+  isLoadingSavedPreview: boolean;
   ensureLoaded: () => void;
   loadSavedView: () => Promise<void>;
+  loadSavedPreview: () => Promise<void>;
   isSaved: (libraryItemId: number) => boolean;
   isPending: (libraryItemId: number) => boolean;
   toggleSave: (document: IBanHanhLibraryItem) => Promise<void>;
@@ -78,11 +82,14 @@ export function PhvbSavedDocumentsProvider(props: IPhvbSavedDocumentsProviderPro
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [savedDisplayItems, setSavedDisplayItems] = useState<ISavedDocumentDisplayItem[]>([]);
+  const [savedPreviewItems, setSavedPreviewItems] = useState<ISavedDocumentDisplayItem[]>([]);
   const [isLoadingSavedView, setIsLoadingSavedView] = useState<boolean>(false);
+  const [isLoadingSavedPreview, setIsLoadingSavedPreview] = useState<boolean>(false);
 
   const hasLoadedRef = useRef<boolean>(false);
   const loadPromiseRef = useRef<Promise<void> | undefined>(undefined);
   const savedViewPromiseRef = useRef<Promise<void> | undefined>(undefined);
+  const savedPreviewPromiseRef = useRef<Promise<void> | undefined>(undefined);
 
   const applyBookmarks = useCallback((nextBookmarks: ISavedDocumentItem[]) => {
     setBookmarks(nextBookmarks);
@@ -159,6 +166,38 @@ export function PhvbSavedDocumentsProvider(props: IPhvbSavedDocumentsProviderPro
     return promise;
   }, [applyBookmarks, documentContext, userEmail]);
 
+  const loadSavedPreview = useCallback(async (): Promise<void> => {
+    if (savedPreviewPromiseRef.current) {
+      return savedPreviewPromiseRef.current;
+    }
+
+    setIsLoadingSavedPreview(true);
+
+    const promise = phvbSavedDocumentsService.loadUserBookmarks(
+      documentContext,
+      userEmail,
+      HOME_LIBRARY_PREVIEW_LIMIT
+    )
+      .then((nextBookmarks: ISavedDocumentItem[]) => {
+        setErrorMessage(undefined);
+        return phvbSavedDocumentsService.hydrateSavedDocuments(documentContext, nextBookmarks);
+      })
+      .then((items: ISavedDocumentDisplayItem[]) => {
+        setSavedPreviewItems(items);
+      })
+      .catch((error: unknown) => {
+        setSavedPreviewItems([]);
+        setErrorMessage(phvbSavedDocumentsService.getRuntimeErrorMessage(error));
+      })
+      .then(() => {
+        setIsLoadingSavedPreview(false);
+        savedPreviewPromiseRef.current = undefined;
+      });
+
+    savedPreviewPromiseRef.current = promise;
+    return promise;
+  }, [documentContext, userEmail]);
+
   React.useEffect(() => {
     if (BOOKMARK_RELATED_TABS.indexOf(activeTab) === -1) {
       return;
@@ -171,8 +210,10 @@ export function PhvbSavedDocumentsProvider(props: IPhvbSavedDocumentsProviderPro
     hasLoadedRef.current = false;
     loadPromiseRef.current = undefined;
     savedViewPromiseRef.current = undefined;
+    savedPreviewPromiseRef.current = undefined;
     applyBookmarks([]);
     setSavedDisplayItems([]);
+    setSavedPreviewItems([]);
     setErrorMessage(undefined);
   }, [applyBookmarks, documentContext.currentWebUrl, documentContext.siteCollectionUrl, documentContext.sourceSiteUrl, userEmail]);
 
@@ -275,9 +316,12 @@ export function PhvbSavedDocumentsProvider(props: IPhvbSavedDocumentsProviderPro
     errorMessage,
     savedCount: bookmarks.length,
     savedDisplayItems,
+    savedPreviewItems,
     isLoadingSavedView,
+    isLoadingSavedPreview,
     ensureLoaded,
     loadSavedView,
+    loadSavedPreview,
     isSaved,
     isPending,
     toggleSave
@@ -286,10 +330,13 @@ export function PhvbSavedDocumentsProvider(props: IPhvbSavedDocumentsProviderPro
     ensureLoaded,
     errorMessage,
     isLoading,
+    isLoadingSavedPreview,
     isLoadingSavedView,
     isPending,
     isSaved,
+    loadSavedPreview,
     loadSavedView,
+    savedPreviewItems,
     savedDisplayItems,
     toggleSave
   ]);

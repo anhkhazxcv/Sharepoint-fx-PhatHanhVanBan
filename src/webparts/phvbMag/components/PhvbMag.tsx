@@ -21,6 +21,7 @@ import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils
 import { canAccessCapSoTab, canAccessQLVanBanTab } from '../utils/PhvbMagRole.utils';
 import { selectFilteredItems } from '../utils/PhvbMag.selectors';
 import { isDraftStatus } from '../utils/PhvbMagDraftEdit.utils';
+import { resolveTabFromPathname } from '../utils/PhvbMagRoute.utils';
 import { ToastService } from '../utils/ToastService';
 import styles from './PhvbMag.module.scss';
 import type { IPhvbMagProps } from './IPhvbMagProps';
@@ -37,7 +38,10 @@ import { PhvbMagLibraryView } from './PhvbMagLibraryView';
 import { PhvbMagGuideView } from './PhvbMagGuideView';
 import { PhvbMagRecentPublishedView } from './PhvbMagRecentPublishedView';
 import { PhvbMagSavedDocumentsView } from './PhvbMagSavedDocumentsView';
+import { PhvbMagRecentViewsView } from './PhvbMagRecentViewsView';
+import { PhvbMagHomeView } from './PhvbMagHomeView';
 import { PhvbSavedDocumentsProvider } from '../context/PhvbMagSavedDocuments.context';
+import { PhvbRecentViewsProvider } from '../context/PhvbMagRecentViews.context';
 
 function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, issuanceLibraryTitle, endPointSendMail, endPointShortUrl, roleGroupID } = props;
@@ -429,12 +433,10 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       return;
     }
 
-    if (tabName && tabName !== activeTab) {
-      setActiveTab(tabName as TabType);
-    }
+    const routeTab = resolveTabFromPathname(location.pathname, tabName, activeTab);
 
-    if (location.pathname.indexOf('/tab/ThuVienTaiLieu') === 0 && activeTab !== 'ThuVienTaiLieu') {
-      setActiveTab('ThuVienTaiLieu');
+    if (routeTab !== activeTab) {
+      setActiveTab(routeTab);
     }
   }, [
     tabName,
@@ -506,24 +508,23 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   };
 
   const resolvedTabName = useMemo((): TabType => {
-    if (location.pathname.indexOf('/tab/ThuVienTaiLieu') === 0) {
-      return 'ThuVienTaiLieu';
-    }
-
-    return ((tabName as TabType) || activeTab);
+    return resolveTabFromPathname(location.pathname, tabName, activeTab);
   }, [activeTab, location.pathname, tabName]);
   const isLibraryTab = resolvedTabName === 'ThuVienTaiLieu';
   const isGuideTab = resolvedTabName === 'HuongDan';
   const isRecentTab = resolvedTabName === 'MoiBanHanh';
   const isSavedTab = resolvedTabName === 'DaLuu';
+  const isRecentViewsTab = resolvedTabName === 'XemGanDay';
+  const isHomeTab = resolvedTabName === 'TrangChu';
   const modalDefaultValues = isEditRoute && draftEdit ? draftEdit.form : defaultRequestForm;
   const isModalOpen = isCreateRoute || (isEditRoute && Boolean(draftEdit));
 
   return (
+    <PhvbRecentViewsProvider documentContext={documentContext} activeTab={resolvedTabName}>
     <PhvbSavedDocumentsProvider documentContext={documentContext} activeTab={resolvedTabName}>
     <div className={[styles.phvbContainer, isDetailRoute ? styles.phvbContainerDetail : ''].filter(Boolean).join(' ')}>
       <PhvbMagSidebar
-        activeTab={activeTab}
+        activeTab={resolvedTabName}
         counts={counts}
         isCollapsed={isDetailRoute ? isDetailSidebarCollapsed : isSidebarCollapsed}
         onSelectTab={handleSelectTab}
@@ -544,15 +545,17 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       <main
         className={[
           styles.contentPane,
-          activeTab === 'ViecCanLam' && !isDetailRoute ? styles.contentPaneTask : '',
+          resolvedTabName === 'ViecCanLam' && !isDetailRoute ? styles.contentPaneTask : '',
           isLibraryTab && !isDetailRoute ? styles.contentPaneLibrary : '',
           isGuideTab && !isDetailRoute ? styles.contentPaneRecent : '',
           isRecentTab && !isDetailRoute ? styles.contentPaneRecent : '',
           isSavedTab && !isDetailRoute ? styles.contentPaneRecent : '',
+          isRecentViewsTab && !isDetailRoute ? styles.contentPaneRecent : '',
+          isHomeTab && !isDetailRoute ? styles.contentPaneHome : '',
           isDetailRoute ? styles.contentPaneDetail : ''
         ].filter(Boolean).join(' ')}
       >
-        {errorMessage && !isLibraryTab && !isGuideTab && !isRecentTab && !isSavedTab && (
+        {errorMessage && !isLibraryTab && !isGuideTab && !isRecentTab && !isSavedTab && !isRecentViewsTab && !isHomeTab && (
           <div className={styles.connectionBanner}>
             <strong>Kết nối dữ liệu:</strong>
             <span>{errorMessage}</span>
@@ -648,10 +651,14 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
           <PhvbMagLibraryView documentContext={documentContext} />
         ) : isGuideTab ? (
           <PhvbMagGuideView siteContext={siteContext} />
+        ) : isHomeTab ? (
+          <PhvbMagHomeView siteContext={siteContext} documentContext={documentContext} />
         ) : isRecentTab ? (
           <PhvbMagRecentPublishedView siteContext={siteContext} />
         ) : isSavedTab ? (
           <PhvbMagSavedDocumentsView documentContext={documentContext} />
+        ) : isRecentViewsTab ? (
+          <PhvbMagRecentViewsView documentContext={documentContext} />
         ) : (
           <>
             <PhvbMagToolbar
@@ -698,6 +705,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       />
     </div>
     </PhvbSavedDocumentsProvider>
+    </PhvbRecentViewsProvider>
   );
 }
 
@@ -705,8 +713,8 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/tab/TrangChu/*" element={<Navigate to="/tab/ViecCanLam" replace />} />
-        <Route path="/tab/TrangChu" element={<Navigate to="/tab/ViecCanLam" replace />} />
+        <Route path="/tab/TrangChu/*" element={<PhvbMagInner {...props} />} />
+        <Route path="/tab/TrangChu" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/ThuVienTaiLieu/*" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/ThuVienTaiLieu" element={<Navigate to="/tab/ThuVienTaiLieu/all" replace />} />
         <Route path="/tab/:tabName" element={<PhvbMagInner {...props} />} />
@@ -714,7 +722,7 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
         <Route path="/tab/:tabName/edit/:editIdYeuCau" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/create" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/item/:itemId" element={<Navigate to="../" replace />} />
-        <Route path="*" element={<Navigate to="/tab/ViecCanLam" replace />} />
+        <Route path="*" element={<Navigate to="/tab/TrangChu" replace />} />
       </Routes>
       <ToastContainer />
     </HashRouter>

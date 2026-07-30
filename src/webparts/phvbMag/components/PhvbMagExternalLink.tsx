@@ -8,6 +8,7 @@ interface IPhvbMagExternalLinkProps {
   mode?: PhvbMagExternalLinkMode;
   downloadFileName?: string;
   'aria-label'?: string;
+  onOpen?: () => void;
   children: React.ReactNode;
 }
 
@@ -18,6 +19,7 @@ export function PhvbMagExternalLink(props: IPhvbMagExternalLinkProps): React.Rea
     mode = 'open',
     downloadFileName,
     children,
+    onOpen,
     'aria-label': ariaLabel
   } = props;
   const normalizedHref = (href || '').trim();
@@ -29,6 +31,7 @@ export function PhvbMagExternalLink(props: IPhvbMagExternalLinkProps): React.Rea
 
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>): void => {
     event.stopPropagation();
+    onOpen?.();
   };
 
   return (

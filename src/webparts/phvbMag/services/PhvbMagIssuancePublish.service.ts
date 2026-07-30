@@ -8,6 +8,7 @@ import { escapeODataValue, getCandidateSiteUrls, normalizeSiteUrl } from '../inf
 import { ensureSharePointResponseOk } from '../infrastructure/SharePointHttp.utils';
 import type { IAttachmentLibraryItem, IPhvbSiteContext, IVanBanItem } from '../models/PhvbMag.models';
 import { resolveLibraryDocumentEffectiveStatus } from '../utils/PhvbMagLibrary.utils';
+import { isFormAttachmentPath } from '../utils/PhvbMagRecentPublished.utils';
 import { buildApiLogParams } from './PhvbMagLog.service';
 import type { BanHanhPublishAuditLogger } from '../utils/PhvbMagBanHanhPublishAudit.utils';
 
@@ -1148,6 +1149,11 @@ export class PhvbIssuancePublishService {
           const fileName = (fileItem.FileLeafRef || '').trim();
 
           if (!sourcePath || !fileName) {
+            continue;
+          }
+
+          const fileDirRef = (fileItem.FileDirRef || '').trim();
+          if (isFormAttachmentPath(fileDirRef)) {
             continue;
           }
 

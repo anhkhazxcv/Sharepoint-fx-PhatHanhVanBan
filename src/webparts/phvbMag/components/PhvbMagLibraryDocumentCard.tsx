@@ -14,12 +14,14 @@ import {
   LibraryFileTypeIcon
 } from './PhvbMagIcons';
 import { PhvbMagSaveBookmarkButton } from './PhvbMagSaveBookmarkButton';
+import { usePhvbRecentViewsOptional } from '../context/PhvbMagRecentViews.context';
 import styles from './PhvbMag.module.scss';
 
 export interface IPhvbMagLibraryDocumentCardProps {
   document: IBanHanhLibraryItem;
   showDownload: boolean;
   showBookmark?: boolean;
+  trackRecentView?: boolean;
   summaryText?: string;
   metaContent: React.ReactNode;
   badgeContent?: React.ReactNode;
@@ -31,11 +33,13 @@ function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps
     document,
     showDownload,
     showBookmark = true,
+    trackRecentView = false,
     summaryText: summaryTextOverride,
     metaContent,
     badgeContent,
     className
   } = props;
+  const recentViews = usePhvbRecentViewsOptional();
   const fileType = resolveLibraryFileTypeVisual(document.name);
   const viewCountLabel = formatViewCount(document.viewCount);
   const effectiveStatus = resolveLibraryDocumentEffectiveStatus(document.hieuLucTu, document.hieuLucDen);
@@ -45,6 +49,12 @@ function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps
   const canShowDownload = showDownload
     && document.canDownload === true
     && Boolean(document.downloadUrl);
+
+  const handleOpenDocument = (): void => {
+    if (trackRecentView && recentViews) {
+      recentViews.recordView(document);
+    }
+  };
 
   return (
     <article className={[styles.libraryDocumentItem, className].filter(Boolean).join(' ')}>
@@ -60,6 +70,7 @@ function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps
           <PhvbMagExternalLink
             href={document.fileUrl}
             className={styles.libraryDocumentTitle}
+            onOpen={handleOpenDocument}
           >
             {document.name}
           </PhvbMagExternalLink>

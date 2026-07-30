@@ -4,7 +4,6 @@ import { getStoragePathAfterLibrary } from './PhvbMagBanHanh.tree';
 import { parseDateOnlyToLocalMidnight } from './PhvbMagLibrary.utils';
 
 export const RECENT_PUBLISHED_WINDOW_DAYS = 7;
-export const RECENT_PUBLISHED_TOP = 200;
 export const EXPIRED_FOLDER_PATH_MARKER = '/Expired_';
 
 export interface IRecentPublishedSection {
@@ -14,6 +13,7 @@ export interface IRecentPublishedSection {
   documents: IBanHanhLibraryItem[];
   formDocuments: IBanHanhLibraryItem[];
   newestNgayPhatHanhMs: number;
+  folderNgayPhatHanh?: string;
 }
 
 function normalizePath(value: string): string {
@@ -24,11 +24,16 @@ function pad2(value: number): string {
   return value < 10 ? `0${value}` : `${value}`;
 }
 
-export function getRecentPublishedStartDate(referenceDate: Date = new Date()): Date {
+export function getRecentPublishedStartDate(
+  windowDays: number,
+  referenceDate: Date = new Date()
+): Date {
+  const safeDays = Math.max(1, windowDays);
+
   return new Date(
     referenceDate.getFullYear(),
     referenceDate.getMonth(),
-    referenceDate.getDate() - (RECENT_PUBLISHED_WINDOW_DAYS - 1)
+    referenceDate.getDate() - (safeDays - 1)
   );
 }
 
@@ -48,6 +53,21 @@ export function isFormAttachmentPath(fileDirRef: string): boolean {
   return normalized === ATTACHMENT_FORM_SUBFOLDER
     || (normalized.length >= suffix.length
       && normalized.substring(normalized.length - suffix.length) === suffix);
+}
+
+export function isRecentPublishedFolderCandidate(fileDirRef: string, fileName: string): boolean {
+  const normalizedPath = normalizePath(fileDirRef);
+  const normalizedName = (fileName || '').trim().toLowerCase();
+
+  if (!normalizedPath || isExpiredArchivePath(normalizedPath)) {
+    return false;
+  }
+
+  if (normalizedName === 'forms' || isFormAttachmentPath(normalizedPath)) {
+    return false;
+  }
+
+  return true;
 }
 
 export function resolveDocumentFolderKey(fileDirRef: string): string {
@@ -99,7 +119,8 @@ function compareRecentItems(left: IBanHanhLibraryItem, right: IBanHanhLibraryIte
 
 export function groupRecentPublishedByDocumentFolder(
   items: IBanHanhLibraryItem[],
-  libraryTitle: string
+  libraryTitle: string,
+  folderNgayPhatHanhByKey?: Record<string, string | undefined>
 ): IRecentPublishedSection[] {
   const sectionMap = new Map<string, IRecentPublishedSection>();
 
@@ -114,13 +135,17 @@ export function groupRecentPublishedByDocumentFolder(
 
     if (!section) {
       const storagePath = getStoragePathAfterLibrary(documentFolderKey, libraryTitle);
+      const folderNgayPhatHanh = folderNgayPhatHanhByKey
+        ? folderNgayPhatHanhByKey[documentFolderKey]
+        : undefined;
       section = {
         documentFolderKey,
         displayPath: resolveDocumentFolderDisplayName(documentFolderKey),
         displayPathFull: storagePath || documentFolderKey,
         documents: [],
         formDocuments: [],
-        newestNgayPhatHanhMs: 0
+        newestNgayPhatHanhMs: getNgayPhatHanhMs(folderNgayPhatHanh),
+        folderNgayPhatHanh
       };
       sectionMap.set(documentFolderKey, section);
     }
@@ -148,13 +173,31 @@ export function groupRecentPublishedByDocumentFolder(
     section.formDocuments.sort(compareRecentItems);
   });
 
-  sections.sort((left: IRecentPublishedSection, right: IRecentPublishedSection) => {
+  return sections;
+}
+
+export function orderRecentPublishedSections(
+  sections: IRecentPublishedSection[],
+  folderPathsInOrder: string[]
+): IRecentPublishedSection[] {
+  const normalizedOrder = folderPathsInOrder.map(path => normalizePath(path));
+  const rankByKey = new Map<string, number>();
+  normalizedOrder.forEach((path, index) => {
+    rankByKey.set(path, index);
+  });
+
+  return sections.slice().sort((left, right) => {
+    const leftRank = rankByKey.get(normalizePath(left.documentFolderKey));
+    const rightRank = rankByKey.get(normalizePath(right.documentFolderKey));
+
+    if (leftRank !== undefined && rightRank !== undefined && leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
     if (right.newestNgayPhatHanhMs !== left.newestNgayPhatHanhMs) {
       return right.newestNgayPhatHanhMs - left.newestNgayPhatHanhMs;
     }
 
     return left.displayPath.localeCompare(right.displayPath, 'vi');
   });
-
-  return sections;
 }

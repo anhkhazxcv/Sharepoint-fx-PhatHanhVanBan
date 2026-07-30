@@ -6771,3 +6771,490 @@ button.libraryDocumentTitle {
     font-size: 14px;
   }
 }
+
+// -------------------------------------------------------------
+// 7. HOMEPAGE
+// -------------------------------------------------------------
+.contentPaneHome {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.homeView {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.homeScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 32px 48px;
+  scroll-behavior: smooth;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #E8E2D8;
+    border-radius: 4px;
+  }
+}
+
+.homeHero {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 26px 28px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #3D1E08 0%, #7B4F2E 55%, #9A6040 100%);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    right: -30px;
+    top: -30px;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: 100px;
+    bottom: -50px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.03);
+    pointer-events: none;
+  }
+}
+
+.homeHeroLeft {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.homeHeroBadge {
+  margin-bottom: 7px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.homeHeroTitle {
+  margin: 0 0 7px;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #FFFFFF;
+}
+
+.homeHeroSub {
+  margin: 0;
+  max-width: 520px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.homeHeroSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 440px;
+  margin-top: 14px;
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(4px);
+}
+
+.homeHeroSearchIcon {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+}
+
+.homeHeroSearchInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: #FFFFFF;
+  font-size: 13px;
+  outline: none;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+.homeHeroStats {
+  display: flex;
+  gap: 20px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.homeHeroStat {
+  text-align: right;
+}
+
+.homeHeroStatValue {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  color: #FFFFFF;
+}
+
+.homeHeroStatLabel {
+  margin-top: 3px;
+  font-size: 10px;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.homeGuideBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  border: 1.5px solid #F2E8DC;
+  border-radius: 9px;
+  background: #FAF5EF;
+}
+
+.homeGuideIcon {
+  font-size: 20px;
+  color: #7B4C2C;
+}
+
+.homeGuideContent {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.homeGuideTitle {
+  margin-bottom: 1px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #7B4C2C;
+}
+
+.homeGuideSub {
+  font-size: 11.5px;
+  color: #A8907A;
+}
+
+.homeGuideAction {
+  flex-shrink: 0;
+  border: 1.5px solid #F2E8DC;
+  border-radius: 6px;
+  background: #FFFFFF;
+  color: #7B4C2C;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.homeGuideDismiss {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #A8907A;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.homeSection {
+  margin-bottom: 24px;
+}
+
+.homeSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.homeSectionTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.homeSectionIcon {
+  color: #7B4C2C;
+  font-size: 14px;
+}
+
+.homeSectionEmoji {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.homeSectionTitle {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #1C1510;
+}
+
+.homeSectionCount {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7B4C2C;
+  background: #F2E8DC;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.homeSectionMore {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: #7B4C2C;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.homeEmptyState {
+  padding: 20px 16px;
+  border: 1px dashed #E8E2D8;
+  border-radius: 10px;
+  text-align: center;
+  color: #8C827A;
+
+  p {
+    margin: 0;
+    font-size: 13px;
+  }
+}
+
+.homeLibraryPreviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.homeLibraryPreviewColumn {
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .homeLibraryPreviewGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.homeSavedList,
+.homePopularList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.homeSavedUnavailable {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #EDE2D7;
+  border-radius: 10px;
+  background: #FFFFFF;
+}
+
+.homeSavedUnavailableTitle {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2C2520;
+}
+
+.homeSavedUnavailableMeta {
+  font-size: 11px;
+  color: #8C827A;
+}
+
+.homeRecentFolderList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.homeRecentFolderRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #E8E2D8;
+  border-radius: 10px;
+  background: #FFFFFF;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
+
+  &:hover {
+    border-color: #F2E8DC;
+    background: #FAF5EF;
+    box-shadow: 0 1px 3px rgba(24, 18, 12, 0.06);
+  }
+}
+
+.homeRecentFolderIcon {
+  flex-shrink: 0;
+  color: #7B4C2C;
+}
+
+.homeRecentFolderBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.homeRecentFolderName {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1C1510;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.homeRecentFolderMeta {
+  font-size: 10.5px;
+  color: #A8907A;
+}
+
+.homeDocRowMeta {
+  font-size: 11px;
+  color: #8C827A;
+}
+
+.homeCategoryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.homeCategoryTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 108px;
+  padding: 14px 10px;
+  border: 1px solid #E8E2D8;
+  border-radius: 10px;
+  background: #FFFFFF;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.13s ease, box-shadow 0.13s ease, transform 0.13s ease;
+
+  &:hover {
+    border-color: #F2E8DC;
+    box-shadow: 0 2px 8px rgba(24, 18, 12, 0.08);
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #7B4C2C;
+    outline-offset: 2px;
+  }
+}
+
+.homeCategoryIcon {
+  font-size: 24px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.homeCategoryName {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #1C1510;
+}
+
+.homeCategorySubtitle {
+  margin-top: 2px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: #A8907A;
+}
+
+.homeCategorySkeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.homeCategorySkeletonTile {
+  min-height: 108px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #F3EDE6 0%, #FAF7F2 50%, #F3EDE6 100%);
+  background-size: 200% 100%;
+  animation: homeCategorySkeletonPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes homeCategorySkeletonPulse {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (max-width: 960px) {
+  .homeScroll {
+    padding: 20px 20px 36px;
+  }
+
+  .homeHero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .homeHeroStats {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .homeHeroStat {
+    text-align: left;
+  }
+
+  .homeCategoryGrid,
+  .homeCategorySkeletonGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

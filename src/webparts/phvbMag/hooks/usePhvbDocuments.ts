@@ -38,7 +38,7 @@ interface IUsePhvbDocumentsResult {
 
 export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDocumentsResult {
   const { userDisplayName, userEmail, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, endPointSendMail, spHttpClient, httpClient } = options;
-  const [activeTab, setActiveTab] = useState<TabType>('ViecCanLam');
+  const [activeTab, setActiveTab] = useState<TabType>('TrangChu');
   const [counts, setCounts] = useState<ITabCounts>(DEFAULT_TAB_COUNTS);
   const [items, setItems] = useState<IVanBanItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -95,7 +95,14 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
       };
     }
 
-    if (activeTab === 'ThuVienTaiLieu' || activeTab === 'MoiBanHanh' || activeTab === 'HuongDan' || activeTab === 'DaLuu') {
+    if (
+      activeTab === 'TrangChu'
+      || activeTab === 'ThuVienTaiLieu'
+      || activeTab === 'MoiBanHanh'
+      || activeTab === 'HuongDan'
+      || activeTab === 'DaLuu'
+      || activeTab === 'XemGanDay'
+    ) {
       setItems([]);
       setIsLoading(false);
       setErrorMessage(undefined);
