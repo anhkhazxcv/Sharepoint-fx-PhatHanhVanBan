@@ -258,6 +258,7 @@ function mapBanHanhLibraryItem(
     hieuLucDen: item.HieuLucDen,
     lienHe: item.LienHe,
     fileUrl: buildSharePointFileOpenUrl(siteUrl, { fileRef, fileName: name, uniqueId }),
+    uniqueId,
     viewCount: extras?.viewCount,
     canDownload,
     downloadUrl: downloadUrl || undefined
@@ -786,6 +787,44 @@ export class PhvbDocumentLibraryService {
 
       return result;
     }).catch(() => ({}));
+  }
+
+  public hydrateBanHanhItemsByIds(
+    context: IPhvbSiteContext,
+    itemIds: number[],
+    chunkSize: number = 25
+  ): Promise<IBanHanhLibraryItem[]> {
+    const libraryTitle = getLibraryTitle(context);
+    const uniqueIds: number[] = [];
+    itemIds.forEach((id: number) => {
+      if (id && uniqueIds.indexOf(id) === -1) {
+        uniqueIds.push(id);
+      }
+    });
+
+    if (uniqueIds.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    return tryAcrossCandidateSites(context, async (siteUrl: string) => {
+      const hydratedItems: IBanHanhLibraryItem[] = [];
+
+      for (let index = 0; index < uniqueIds.length; index += chunkSize) {
+        const chunk = uniqueIds.slice(index, index + chunkSize);
+        const chunkItems = await hydrateLibraryItemsByIds(
+          context,
+          libraryTitle,
+          siteUrl,
+          chunk,
+          {}
+        );
+        chunkItems.forEach((item: IBanHanhLibraryItem) => {
+          hydratedItems.push(item);
+        });
+      }
+
+      return hydratedItems;
+    }, 'Unable to hydrate issuance library items.');
   }
 }
 

@@ -1,27 +1,18 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { TooltipHost } from '@fluentui/react';
 import { ATTACHMENT_FORM_SUBFOLDER, TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { IBanHanhLibraryItem, IPhvbSiteContext } from '../models/PhvbMag.models';
 import { usePhvbRecentPublished } from '../hooks/usePhvbRecentPublished';
-import {
-  formatViewCount,
-  resolveLibraryContactPerson,
-  resolveLibraryDocumentEffectiveStatus,
-  resolveLibraryFileTypeVisual
-} from '../utils/PhvbMagLibrary.utils';
+import { resolveLibraryContactPerson } from '../utils/PhvbMagLibrary.utils';
 import {
   formatRecentPublishDate,
   type IRecentPublishedSection
 } from '../utils/PhvbMagRecentPublished.utils';
-import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import {
   AccordionChevronIcon,
-  DownloadIcon,
-  EyeIcon,
-  FolderAccentIcon,
-  LibraryFileTypeIcon
+  FolderAccentIcon
 } from './PhvbMagIcons';
+import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import styles from './PhvbMag.module.scss';
 
@@ -42,78 +33,27 @@ interface IRecentPublishedSectionProps {
 
 function RecentDocumentCard(props: IRecentDocumentCardProps): React.ReactElement {
   const { document, isFormAttachment = false } = props;
-  const fileType = resolveLibraryFileTypeVisual(document.name);
-  const viewCountLabel = formatViewCount(document.viewCount);
-  const effectiveStatus = resolveLibraryDocumentEffectiveStatus(document.hieuLucTu, document.hieuLucDen);
-  const contactPerson = resolveLibraryContactPerson(document.lienHe);
   const publishDate = formatRecentPublishDate(document.ngayPhatHanh) || 'Chưa xác định';
-  const summaryText = document.tomTatVanban?.trim() || 'Chưa có tóm tắt nội dung.';
-  const canShowDownload = document.canDownload === true && Boolean(document.downloadUrl);
+  const contactPerson = resolveLibraryContactPerson(document.lienHe);
 
   return (
-    <article className={styles.libraryDocumentItem}>
-      <div className={styles.libraryDocumentFileType}>
-        <LibraryFileTypeIcon
-          iconName={fileType.iconName}
-          style={{ color: fileType.color }}
-        />
-      </div>
-
-      <div className={styles.libraryDocumentContent}>
-        <div className={styles.libraryDocumentTitleRow}>
-          <PhvbMagExternalLink
-            href={document.fileUrl}
-            className={styles.libraryDocumentTitle}
-          >
-            {document.name}
-          </PhvbMagExternalLink>
-
-          <div className={styles.libraryDocumentStatusGroup}>
-            {isFormAttachment ? (
-              <span className={styles.recentFormBadge}>Biểu mẫu</span>
-            ) : null}
-            {viewCountLabel ? (
-              <span className={styles.libraryDocumentViews}>
-                <EyeIcon className={styles.libraryDocumentViewsIcon} />
-                {viewCountLabel}
-              </span>
-            ) : null}
-            <span
-              className={styles.libraryDocumentStatusEffective}
-              data-status={effectiveStatus === 'expired' ? 'expired' : 'effective'}
-            >
-              {effectiveStatus === 'effective' ? 'Còn hiệu lực' : 'Hết hiệu lực'}
-            </span>
-            {canShowDownload ? (
-              <TooltipHost content="Tải xuống">
-                <PhvbMagExternalLink
-                  href={document.downloadUrl}
-                  className={styles.libraryDocumentDownloadBtn}
-                  aria-label="Tải xuống"
-                >
-                  <DownloadIcon style={{ width: 14, height: 14 }} />
-                </PhvbMagExternalLink>
-              </TooltipHost>
-            ) : null}
-          </div>
-        </div>
-
-        <TooltipHost content={summaryText}>
-          <p className={styles.libraryDocumentSummary}>
-            {summaryText}
-          </p>
-        </TooltipHost>
-
-        <div className={styles.libraryDocumentMeta}>
+    <PhvbMagLibraryDocumentCard
+      document={document}
+      showDownload
+      badgeContent={isFormAttachment ? (
+        <span className={styles.recentFormBadge}>Biểu mẫu</span>
+      ) : null}
+      metaContent={(
+        <>
           <span className={styles.libraryDocumentEffectiveDate}>
             <strong>Ngày ban hành:</strong> {publishDate}
           </span>
           <span className={styles.libraryDocumentContact}>
             <strong>Người liên hệ:</strong> {contactPerson}
           </span>
-        </div>
-      </div>
-    </article>
+        </>
+      )}
+    />
   );
 }
 
@@ -130,7 +70,7 @@ function RecentPublishedSection(props: IRecentPublishedSectionProps): React.Reac
         onClick={onToggle}
       >
         <FolderAccentIcon className={styles.recentSectionFolderIcon} />
-        <span className={styles.recentSectionTitle} title={section.displayPath}>
+        <span className={styles.recentSectionTitle} title={section.displayPathFull || section.displayPath}>
           {section.displayPath}
         </span>
         <span className={styles.recentSectionCount}>{fileCount}</span>

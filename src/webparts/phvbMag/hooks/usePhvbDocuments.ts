@@ -95,7 +95,7 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
       };
     }
 
-    if (activeTab === 'ThuVienTaiLieu' || activeTab === 'MoiBanHanh' || activeTab === 'HuongDan') {
+    if (activeTab === 'ThuVienTaiLieu' || activeTab === 'MoiBanHanh' || activeTab === 'HuongDan' || activeTab === 'DaLuu') {
       setItems([]);
       setIsLoading(false);
       setErrorMessage(undefined);

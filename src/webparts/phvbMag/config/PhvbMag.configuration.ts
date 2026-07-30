@@ -10,6 +10,7 @@ export const LOG_LIST_TITLE = 'Log';
 export const PHVB_ROLE_LIST_TITLE = 'PHVB_Role';
 export const CONFIG_MAIL_BAN_HANH_LIST_TITLE = 'lstConfigMailBanHanh';
 export const CONFIG_LABEL_CUSTOM_LIST_TITLE = 'lstConfigLabelCustom';
+export const SAVED_DOCUMENTS_LIST_TITLE = 'lstVanBanDaLuu';
 export const COMMENT_HISTORY_STATUS = 'Bình luận';
 export const ALL_USER_GOPY_LIST_TITLE = 'AllUser_GopY';
 export const ALL_USER_THAMDINH_LIST_TITLE = 'AllUser_ThamDinh';
@@ -131,6 +132,7 @@ export const TAB_LABELS: Record<TabType, string> = {
   BanNhap: 'Bản nháp',
   ThuVienTaiLieu: 'Thư viện tài liệu',
   MoiBanHanh: 'Mới ban hành',
+  DaLuu: 'Đã lưu',
   CapSo: 'DC cấp số',
   QLVanBan: 'QL văn bản',
   HuongDan: 'Hướng dẫn sử dụng hệ thống và biểu mẫu'
@@ -138,6 +140,9 @@ export const TAB_LABELS: Record<TabType, string> = {
 
 /** Label trong lstConfigLabelCustom — Value = URL HTTPS tới file PDF sổ tay. */
 export const GUIDE_PDF_URL_LABEL = 'urlSoTayHuongDan';
+
+/** Subtitle trên tab Hướng dẫn (header view). */
+export const GUIDE_VIEW_SUBTITLE = 'Hướng dẫn sử dụng hệ thống và biểu mẫu';
 
 export const DOCUMENT_TYPE_OPTIONS: ReadonlyArray<string> = [
   'Tiêu chuẩn',
@@ -262,6 +267,8 @@ export const LIBRARY_FILES_PAGE_SIZE = 20;
 export const LIBRARY_SEARCH_PAGE_SIZE = 20;
 export const LIBRARY_CACHE_STALE_MS = 5 * 60 * 1000;
 export const LIBRARY_PAGE_CACHE_LIMIT = 20;
+export const SAVED_DOCUMENTS_TOP = 500;
+export const SAVED_DOCUMENTS_HYDRATE_CHUNK_SIZE = 25;
 
 export function hasSharePointSiteContext(context: Pick<IPhvbSiteContext, 'currentWebUrl' | 'siteCollectionUrl' | 'sourceSiteUrl'>): boolean {
   return Boolean((context.sourceSiteUrl && context.sourceSiteUrl.trim()) || context.currentWebUrl || context.siteCollectionUrl);

@@ -156,12 +156,12 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
           />
 
           <NavItem
-            label="Đã lưu"
+            tab="DaLuu"
+            label={TAB_LABELS.DaLuu}
             activeTab={activeTab}
             isCollapsed={isCollapsed}
+            onSelectTab={onSelectTab}
             icon={<SidebarSavedIcon />}
-            disabled
-            soonBadge
           />
 
           {!isCollapsed && <div className={styles.navGroupLabel}>PHÁT HÀNH VĂN BẢN</div>}
