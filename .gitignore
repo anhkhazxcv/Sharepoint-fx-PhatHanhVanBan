@@ -32,3 +32,6 @@ obj
 
 # Styles Generated Code
 *.scss.ts
+
+# Local Excel exports of test cases (CSV is versioned)
+docs/test-cases/*.xlsx
