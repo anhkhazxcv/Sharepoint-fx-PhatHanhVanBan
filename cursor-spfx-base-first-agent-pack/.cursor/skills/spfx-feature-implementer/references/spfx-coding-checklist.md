@@ -2,6 +2,7 @@
 
 - Match current SPFx/React/TypeScript versions.
 - Follow existing component style and folder structure.
+- Use `react-icons/fa` through the web part icon wrapper module; do not add `@fluentui/react-icons`.
 - Use existing service/repository/API client pattern.
 - Keep async flows cancellable or safe against unmount where relevant.
 - Handle loading, empty, error, and forbidden states where relevant.

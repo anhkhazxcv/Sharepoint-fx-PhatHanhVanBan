@@ -6,7 +6,7 @@ This file is for project-specific facts only. Keep it short and factual.
 
 - System name:
 - Repo type: SharePoint Framework (SPFx)
-- UI stack:
+- UI stack: React 17, @fluentui/react components, react-icons/fa for UI icons
 - State management:
 - SharePoint access method: REST / PnPjs / Graph / custom API / mixed
 - Testing tools:
@@ -31,6 +31,8 @@ Document what already exists in the codebase:
 - Do not invent business rules.
 - Do not invent SharePoint lists, columns, content types, APIs, permissions, or workflows.
 - Use only contracts and examples that already exist in the repo or are explicitly provided by the user.
+- All new or changed UI icons must use `react-icons/fa` through the web part icon wrapper module.
+- Do not add `@fluentui/react-icons` imports.
 
 ## User-provided business/data model
 

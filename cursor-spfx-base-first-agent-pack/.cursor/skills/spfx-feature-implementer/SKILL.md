@@ -23,7 +23,9 @@ Use this skill after the plan is clear.
 - Check whether the project uses old gulp toolchain or newer Heft-based scripts.
 - Use SPFx context according to existing code.
 - Do not request new Graph/API scopes unless the user asks.
-- Respect the React and Fluent UI versions already installed.
+- Respect the React and Fluent UI component versions already installed.
+- Use `react-icons/fa` for UI icons through the web part icon wrapper module.
+- Do not add `@fluentui/react-icons` imports or emoji/text glyph icons.
 - Avoid direct DOM manipulation.
 
 ## Done criteria

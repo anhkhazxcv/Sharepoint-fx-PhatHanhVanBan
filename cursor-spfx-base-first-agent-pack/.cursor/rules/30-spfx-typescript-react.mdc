@@ -6,8 +6,16 @@ globs: ["src/**/*.ts", "src/**/*.tsx"]
 
 # SPFx TypeScript React
 
-Follow the repo's SPFx, React, Fluent UI, and TypeScript versions.
+Follow the repo's SPFx, React, Fluent UI components, and TypeScript versions.
 Do not assume latest React or latest SPFx APIs.
+
+Icons:
+
+- Use Font Awesome icons from `react-icons/fa` only.
+- Reuse existing named icon wrappers in the web part (for example `PhvbMagIcons.tsx`); add new exports there instead of importing icons in feature components.
+- Do not import from `@fluentui/react-icons`, Fabric icon fonts, or other Microsoft icon packages for UI glyphs.
+- Do not use emoji or text characters as UI icons.
+- `@fluentui/react` components such as `TooltipHost` remain allowed; this rule applies to icon glyphs only.
 
 TypeScript:
 

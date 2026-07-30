@@ -17,6 +17,7 @@ Your primary rule is base-first coding: understand and follow the current reposi
 
 3. Preserve existing architecture.
    - Follow existing folder structure, naming, dependency injection, service/repository patterns, state management, styling, and error handling.
+   - Use `react-icons/fa` for UI icons through the web part icon wrapper module; do not add `@fluentui/react-icons` imports.
    - Do not introduce a new framework, state library, API client, date library, validation library, or UI system without explicit approval.
    - Prefer minimal changes with clear boundaries.
 

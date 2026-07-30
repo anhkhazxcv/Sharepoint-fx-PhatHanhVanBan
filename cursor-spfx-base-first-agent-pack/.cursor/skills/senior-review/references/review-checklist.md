@@ -25,3 +25,4 @@ Maintainability:
 - Small functions/components.
 - No unrelated refactor.
 - Validated.
+- Icons use `react-icons/fa` via the web part icon wrapper; no new `@fluentui/react-icons`.
