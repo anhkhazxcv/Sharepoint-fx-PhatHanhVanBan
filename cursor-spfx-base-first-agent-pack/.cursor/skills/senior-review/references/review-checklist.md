@@ -26,3 +26,7 @@ Maintainability:
 - No unrelated refactor.
 - Validated.
 - Icons use `react-icons/fa` via the web part icon wrapper; no new `@fluentui/react-icons`.
+- UI matches PHVB enterprise design system (tokens, density, states); see `spfx-enterprise-ui` skill.
+
+Business and performance (workflow, roles, API efficiency):
+- For deep review, use `senior-se-review` skill and its checklists.

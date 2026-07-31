@@ -46,6 +46,11 @@ interface IIconProps {
   style?: React.CSSProperties;
 }
 
+/** Mirrors PHVB SCSS palette ($primary-color, $text-muted, $folder-accent). */
+export const PHVB_ICON_COLOR_PRIMARY = '#7B4C2C';
+export const PHVB_ICON_COLOR_MUTED = '#8C827A';
+export const PHVB_ICON_COLOR_FOLDER = '#FFD700';
+
 function mergeStyle(
   props: IIconProps,
   defaults?: React.CSSProperties
@@ -137,7 +142,7 @@ export function ModalCreateIcon(props: IIconProps): React.ReactElement {
   return (
     <FaEdit
       className={props.className}
-      style={mergeStyle(props, { width: 22, height: 22, color: '#7B4C2C' })}
+      style={mergeStyle(props, { width: 22, height: 22, color: PHVB_ICON_COLOR_PRIMARY })}
       aria-hidden
     />
   );
@@ -147,7 +152,7 @@ export function FolderAccentIcon(props: IIconProps): React.ReactElement {
   return (
     <FaFolder
       className={props.className}
-      style={mergeStyle(props, { width: 18, height: 18, color: '#FFD700' })}
+      style={mergeStyle(props, { width: 18, height: 18 })}
       aria-hidden
     />
   );
@@ -169,7 +174,7 @@ export function DocumentFileIcon(props: IIconProps): React.ReactElement {
   return (
     <FaFileAlt
       className={props.className}
-      style={mergeStyle(props, { width: 32, height: 32, color: '#7B4C2C' })}
+      style={mergeStyle(props, { width: 32, height: 32, color: PHVB_ICON_COLOR_PRIMARY })}
       aria-hidden
     />
   );
@@ -179,7 +184,7 @@ export function FormTemplateFileIcon(props: IIconProps): React.ReactElement {
   return (
     <FaListAlt
       className={props.className}
-      style={mergeStyle(props, { width: 32, height: 32, color: '#7B4C2C' })}
+      style={mergeStyle(props, { width: 32, height: 32, color: PHVB_ICON_COLOR_PRIMARY })}
       aria-hidden
     />
   );
@@ -189,7 +194,7 @@ export function UploadDocumentIcon(props: IIconProps): React.ReactElement {
   return (
     <FaUpload
       className={props.className}
-      style={mergeStyle(props, { width: 38, height: 38, color: '#8C827A' })}
+      style={mergeStyle(props, { width: 38, height: 38, color: PHVB_ICON_COLOR_MUTED })}
       aria-hidden
     />
   );
@@ -199,7 +204,7 @@ export function UploadFormIcon(props: IIconProps): React.ReactElement {
   return (
     <FaFileContract
       className={props.className}
-      style={mergeStyle(props, { width: 38, height: 38, color: '#8C827A' })}
+      style={mergeStyle(props, { width: 38, height: 38, color: PHVB_ICON_COLOR_MUTED })}
       aria-hidden
     />
   );

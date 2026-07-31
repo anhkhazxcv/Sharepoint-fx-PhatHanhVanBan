@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect } from 'react';
-import { TAB_LABELS } from '../config/PhvbMag.configuration';
+import { DOCUMENT_COUNT_SUFFIX, TAB_LABELS } from '../config/PhvbMag.configuration';
 import type {
   IBanHanhLibraryItem,
   IPhvbDocumentContext,
@@ -90,6 +90,7 @@ export function PhvbMagSavedDocumentsView(props: IPhvbMagSavedDocumentsViewProps
       title={TAB_LABELS.DaLuu}
       subtitle="Văn bản bạn đã đánh dấu"
       count={savedCount}
+      countSuffix={DOCUMENT_COUNT_SUFFIX}
       isLoading={isLoadingSavedView}
       loadingMessage="Đang tải văn bản đã lưu..."
       errorMessage={errorMessage}

@@ -40,7 +40,7 @@ export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElem
               className={styles.recentHeaderActionBtn}
               aria-label="Tải xuống sổ tay hướng dẫn"
             >
-              <DownloadIcon style={{ width: 14, height: 14 }} />
+              <DownloadIcon className={styles.iconSizeSm} />
               <span>Tải xuống</span>
             </PhvbMagExternalLink>
           </div>

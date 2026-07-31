@@ -164,7 +164,7 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
         {isOpen && (isLoading || suggestions.length > 0) && (
           <div className={styles.suggestionsDropdown}>
             {isLoading ? (
-              <div className={styles.suggestionItem} style={{ color: '#8C827A', fontStyle: 'italic', cursor: 'default' }}>
+              <div className={styles.suggestionItemLoading}>
                 Đang tải danh sách người dùng...
               </div>
             ) : (

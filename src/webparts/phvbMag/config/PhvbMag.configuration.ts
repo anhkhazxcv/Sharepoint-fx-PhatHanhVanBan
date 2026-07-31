@@ -157,6 +157,14 @@ export const TAB_LABELS: Record<TabType, string> = {
   HuongDan: 'Hướng dẫn sử dụng hệ thống và biểu mẫu'
 };
 
+export const DOCUMENT_COUNT_SUFFIX = 'tài liệu';
+
+/** Label trong lstConfigLabelCustom — pipe-separated filter options cho workflow table. */
+export const WORKFLOW_FILTER_STATUS_LABEL = 'workflowFilterTrangThai';
+export const WORKFLOW_FILTER_LOAI_VB_LABEL = 'workflowFilterLoaiVB';
+export const WORKFLOW_FILTER_PHONG_BAN_LABEL = 'workflowFilterPhongBan';
+export const WORKFLOW_FILTER_NAM_TAO_YEU_CAU_LABEL = 'workflowFilterNamTaoYeuCau';
+
 /** Label trong lstConfigLabelCustom — Value = URL HTTPS tới file PDF sổ tay. */
 export const GUIDE_PDF_URL_LABEL = 'urlSoTayHuongDan';
 

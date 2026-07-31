@@ -1,0 +1,17 @@
+---
+description: PHVB enterprise UI — match existing design system, not marketing layouts
+alwaysApply: true
+globs: ["src/**/*.tsx", "src/**/*.scss"]
+---
+
+# SPFx Enterprise UI (PHVB)
+
+When changing UI or styles in SPFx web parts:
+
+- Match the existing PHVB visual system before adding new styles.
+- Source of truth: SCSS variables at the top of the web part module stylesheet (for example `PhvbMag.module.scss`: `$primary-color`, `$bg-*`, `$text-*`, `$border-color`, shadows). Reuse nearby patterns from similar components.
+- Do not apply landing-page or marketing layout patterns inside SPFx web parts (full-bleed hero, expressive display fonts, decorative gradients, promo overlays).
+- Do not replace the PHVB bronze/cream palette with default Fluent brand colors unless the user explicitly requests a rebrand.
+- Prefer enterprise density: clear hierarchy (title → toolbar/filters → content), one job per section, table/form spacing consistent with existing screens.
+- Shared button, dialog, and form classes must work outside a single parent scope; avoid nested SCSS that hides styles when the parent is missing.
+- For icon rules, follow `30-spfx-typescript-react.mdc`. For full UI workflow, use the `spfx-enterprise-ui` skill.

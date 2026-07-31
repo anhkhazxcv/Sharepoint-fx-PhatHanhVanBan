@@ -9,10 +9,13 @@ Files included:
 - .cursor/rules/20-senior-architecture-lite.mdc
 - .cursor/rules/30-spfx-typescript-react.mdc
 - .cursor/rules/40-validation-review.mdc
+- .cursor/rules/50-spfx-enterprise-ui.mdc
 - .cursor/skills/codebase-cartographer
 - .cursor/skills/implementation-planner
 - .cursor/skills/spfx-feature-implementer
 - .cursor/skills/safe-refactor
 - .cursor/skills/senior-review
+- .cursor/skills/senior-se-review
 - .cursor/skills/bugfix-debug
+- .cursor/skills/spfx-enterprise-ui
 - .cursor/templates/prompt-snippets.md

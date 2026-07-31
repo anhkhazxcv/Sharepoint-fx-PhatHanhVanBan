@@ -24,6 +24,7 @@ const magLogoUrl: string = require('../assets/logoMag.png');
 interface IPhvbMagSidebarProps {
   activeTab: TabType;
   counts: ITabCounts;
+  moiBanHanhFolderCount?: number;
   isCollapsed: boolean;
   onSelectTab: (tab: TabType) => void;
   onToggleCollapse: () => void;
@@ -96,6 +97,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
   const {
     activeTab,
     counts,
+    moiBanHanhFolderCount,
     isCollapsed,
     onSelectTab,
     onToggleCollapse,
@@ -153,6 +155,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             activeTab={activeTab}
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
+            badgeCount={moiBanHanhFolderCount}
             icon={<SidebarNewReleaseIcon />}
           />
 

@@ -10,6 +10,14 @@ function formatDateTimeParts(date: Date): string {
   ].join('/') + ` ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
 }
 
+function formatDateParts(date: Date): string {
+  return [
+    pad2(date.getDate()),
+    pad2(date.getMonth() + 1),
+    date.getFullYear()
+  ].join('/');
+}
+
 export function parseExecutionDateTime(value?: string): Date | undefined {
   const normalized = (value || '').trim();
 
@@ -57,6 +65,16 @@ export function formatExecutionDateTime(value?: string): string {
   }
 
   return formatDateTimeParts(parsed);
+}
+
+export function formatExecutionDate(value?: string): string {
+  const parsed = parseExecutionDateTime(value);
+
+  if (!parsed || isNaN(parsed.getTime())) {
+    return (value || '').trim();
+  }
+
+  return formatDateParts(parsed);
 }
 
 export function formatCurrentExecutionDateTime(): string {

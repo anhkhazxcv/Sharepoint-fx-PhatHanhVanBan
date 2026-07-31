@@ -10,6 +10,8 @@ import { usePhvbComments } from '../hooks/usePhvbComments';
 import { usePhvbDetailDocuments, type DetailDocumentUploadKind } from '../hooks/usePhvbDetailDocuments';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
 import { usePhvbDraftEdit } from '../hooks/usePhvbDraftEdit';
+import { usePhvbLabelCustomConfig } from '../hooks/usePhvbLabelCustomConfig';
+import { usePhvbRecentPublishedFolderCount } from '../hooks/usePhvbRecentPublishedFolderCount';
 import { usePhvbRemindDeadline } from '../hooks/usePhvbRemindDeadline';
 import { usePhvbRequestDetail } from '../hooks/usePhvbRequestDetail';
 import { usePhvbRoles } from '../hooks/usePhvbRoles';
@@ -103,6 +105,17 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
     return nextDepartments;
   }, [userDepartment]);
+
+  const { workflowFilters, recentPublishedWindowDays } = usePhvbLabelCustomConfig({
+    siteContext,
+    enabled: true
+  });
+
+  const { folderCount: moiBanHanhFolderCount } = usePhvbRecentPublishedFolderCount({
+    siteContext,
+    windowDays: recentPublishedWindowDays,
+    enabled: true
+  });
 
   const { activeTab, counts, items, isLoading, isSaving, errorMessage, setActiveTab, saveRequest, refetchCounts } = usePhvbDocuments({
     userDisplayName,
@@ -526,6 +539,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       <PhvbMagSidebar
         activeTab={resolvedTabName}
         counts={counts}
+        moiBanHanhFolderCount={moiBanHanhFolderCount}
         isCollapsed={isDetailRoute ? isDetailSidebarCollapsed : isSidebarCollapsed}
         onSelectTab={handleSelectTab}
         onToggleCollapse={() => {
@@ -673,6 +687,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
               items={processedItems}
               isLoading={isLoading}
               searchQuery={searchQuery}
+              filterOptions={workflowFilters}
               onSearchChange={setSearchQuery}
               onSelectItem={handleSelectItem}
             />

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect } from 'react';
-import { TAB_LABELS } from '../config/PhvbMag.configuration';
+import { DOCUMENT_COUNT_SUFFIX, TAB_LABELS } from '../config/PhvbMag.configuration';
 import type {
   IPhvbDocumentContext,
   IRecentViewDisplayItem
@@ -64,6 +64,7 @@ export function PhvbMagRecentViewsView(props: IPhvbMagRecentViewsViewProps): Rea
       title={TAB_LABELS.XemGanDay}
       subtitle="Văn bản bạn đã mở gần đây"
       count={recentCount}
+      countSuffix={DOCUMENT_COUNT_SUFFIX}
       isLoading={isLoadingRecentView}
       loadingMessage="Đang tải văn bản xem gần đây..."
       errorMessage={errorMessage}

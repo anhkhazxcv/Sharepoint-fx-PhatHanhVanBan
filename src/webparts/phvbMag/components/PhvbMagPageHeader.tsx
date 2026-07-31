@@ -6,12 +6,13 @@ export interface IPhvbMagPageHeaderProps {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   count?: number;
+  countSuffix?: string;
   headerActions?: React.ReactNode;
   className?: string;
 }
 
 export function PhvbMagPageHeader(props: IPhvbMagPageHeaderProps): React.ReactElement {
-  const { eyebrow, title, subtitle, count, headerActions, className } = props;
+  const { eyebrow, title, subtitle, count, countSuffix, headerActions, className } = props;
 
   return (
     <header className={[styles.phvbPageHeader, className].filter(Boolean).join(' ')}>
@@ -24,7 +25,9 @@ export function PhvbMagPageHeader(props: IPhvbMagPageHeaderProps): React.ReactEl
       {headerActions ? (
         headerActions
       ) : count !== undefined && count > 0 ? (
-        <span className={styles.recentSectionCount}>{count}</span>
+        <span className={styles.recentSectionCount}>
+          {countSuffix ? `${count} ${countSuffix}` : count}
+        </span>
       ) : null}
     </header>
   );

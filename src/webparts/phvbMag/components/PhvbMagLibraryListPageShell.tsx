@@ -9,6 +9,7 @@ export interface IPhvbMagLibraryListPageShellProps {
   title: string;
   subtitle: string;
   count?: number;
+  countSuffix?: string;
   headerActions?: React.ReactNode;
   isLoading: boolean;
   loadingMessage: string;
@@ -24,6 +25,7 @@ export function PhvbMagLibraryListPageShell(props: IPhvbMagLibraryListPageShellP
     title,
     subtitle,
     count,
+    countSuffix,
     headerActions,
     isLoading,
     loadingMessage,
@@ -40,6 +42,7 @@ export function PhvbMagLibraryListPageShell(props: IPhvbMagLibraryListPageShellP
         title={title}
         subtitle={subtitle}
         count={count}
+        countSuffix={countSuffix}
         headerActions={headerActions}
         className={styles.recentHeader}
       />

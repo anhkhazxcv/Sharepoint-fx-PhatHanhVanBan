@@ -10,7 +10,46 @@ import type {
 } from '../models/PhvbMag.models';
 import { phvbRecentViewsService } from '../services/PhvbMagRecentViews.service';
 
-const RECENT_VIEWS_RELATED_TABS: TabType[] = ['TrangChu', 'XemGanDay', 'ThuVienTaiLieu'];
+const RECENT_VIEWS_RELATED_TABS: TabType[] = [
+  'TrangChu',
+  'XemGanDay',
+  'ThuVienTaiLieu',
+  'MoiBanHanh',
+  'DaLuu'
+];
+
+function buildOptimisticRecentViewItem(
+  document: IBanHanhLibraryItem,
+  userEmail: string,
+  existing?: IRecentViewItem
+): IRecentViewItem {
+  const normalizedEmail = userEmail.trim().toLowerCase();
+  const now = new Date().toISOString();
+
+  return {
+    id: existing?.id ?? -document.id,
+    title: document.name,
+    userEmail: normalizedEmail,
+    libraryItemId: document.id,
+    fileRef: document.fileRef,
+    fileDirRef: document.fileDirRef,
+    created: existing?.created ?? now,
+    modified: now
+  };
+}
+
+function mergeRecentViewDisplayItem(
+  items: IRecentViewDisplayItem[],
+  displayItem: IRecentViewDisplayItem,
+  limit?: number
+): IRecentViewDisplayItem[] {
+  const merged = [
+    displayItem,
+    ...items.filter(item => item.recentView.libraryItemId !== displayItem.recentView.libraryItemId)
+  ];
+
+  return limit ? merged.slice(0, limit) : merged;
+}
 
 interface IPhvbRecentViewsContextValue {
   isLoading: boolean;
@@ -51,6 +90,46 @@ export function PhvbRecentViewsProvider(props: IPhvbRecentViewsProviderProps): R
   const recentViewPromiseRef = useRef<Promise<void> | undefined>(undefined);
   const recentPreviewPromiseRef = useRef<Promise<void> | undefined>(undefined);
   const recordViewPromiseByLibraryItemIdRef = useRef<Record<number, Promise<void>>>({});
+  const recentViewsRef = useRef<IRecentViewItem[]>([]);
+
+  recentViewsRef.current = recentViews;
+
+  const applyOptimisticRecentView = useCallback((document: IBanHanhLibraryItem): void => {
+    const previousViews = recentViewsRef.current;
+    let existing: IRecentViewItem | undefined;
+
+    for (let index = 0; index < previousViews.length; index += 1) {
+      const view = previousViews[index];
+
+      if (view.libraryItemId === document.id) {
+        existing = view;
+        break;
+      }
+    }
+
+    const viewItem = buildOptimisticRecentViewItem(document, userEmail, existing);
+    const nextViews: IRecentViewItem[] = [viewItem];
+
+    for (let index = 0; index < previousViews.length; index += 1) {
+      const view = previousViews[index];
+
+      if (view.libraryItemId !== document.id) {
+        nextViews.push(view);
+      }
+    }
+    const displayItem: IRecentViewDisplayItem = {
+      recentView: viewItem,
+      document,
+      isAccessible: true
+    };
+
+    setRecentViews(nextViews);
+    phvbRecentViewsService.primeSessionCache(nextViews.filter(view => view.id > 0));
+    setRecentDisplayItems(previousItems => mergeRecentViewDisplayItem(previousItems, displayItem));
+    setRecentPreviewItems(previousItems => (
+      mergeRecentViewDisplayItem(previousItems, displayItem, HOME_LIBRARY_PREVIEW_LIMIT)
+    ));
+  }, [userEmail]);
 
   const applyRecentViews = useCallback((nextViews: IRecentViewItem[]) => {
     setRecentViews(nextViews);
@@ -169,13 +248,16 @@ export function PhvbRecentViewsProvider(props: IPhvbRecentViewsProviderProps): R
     }
 
     const promise = phvbRecentViewsService.recordView(documentContext, userEmail, document)
+      .then(() => {
+        applyOptimisticRecentView(document);
+      })
       .catch(() => undefined)
       .then(() => {
         delete recordViewPromiseByLibraryItemIdRef.current[document.id];
       });
 
     recordViewPromiseByLibraryItemIdRef.current[document.id] = promise;
-  }, [documentContext, userEmail]);
+  }, [applyOptimisticRecentView, documentContext, userEmail]);
 
   React.useEffect(() => {
     if (RECENT_VIEWS_RELATED_TABS.indexOf(activeTab) === -1) {

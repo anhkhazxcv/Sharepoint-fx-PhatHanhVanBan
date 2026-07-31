@@ -166,7 +166,7 @@ function SearchFolderListItem(props: ISearchFolderListItemProps): React.ReactEle
   return (
     <article className={styles.libraryDocumentItem}>
       <div className={styles.libraryDocumentFileType}>
-        <FolderAccentIcon style={{ width: 22, height: 22, color: '#FFD700' }} />
+        <FolderAccentIcon className={styles.libraryFolderIconLg} />
       </div>
 
       <div className={styles.libraryDocumentContent}>
@@ -195,7 +195,6 @@ function DocumentListItem(props: IDocumentListItemProps): React.ReactElement {
     <PhvbMagLibraryDocumentCard
       document={document}
       showDownload={showDownload}
-      trackRecentView
       metaContent={(
         <>
           <span className={styles.libraryDocumentContact}>
@@ -351,6 +350,16 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
             <div className={styles.folderList}>
               {library.isLoadingFolders ? (
                 <PhvbMagSkeleton variant="line" count={6} />
+              ) : null}
+
+              {!library.isLoadingFolders && library.errorMessage && library.rootFolders.length === 0 ? (
+                <div className={styles.libraryErrorBanner} role="alert">
+                  {library.errorMessage}
+                </div>
+              ) : null}
+
+              {!library.isLoadingFolders && !library.errorMessage && library.rootFolders.length === 0 ? (
+                <p className={styles.libraryStatusMessage}>Không có thư mục để hiển thị.</p>
               ) : null}
 
               {!library.isLoadingFolders && library.rootFolders.map(folder => (

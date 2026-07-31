@@ -138,6 +138,18 @@ export interface ILabelCustomConfigItem {
   value: string;
 }
 
+export interface IWorkflowFilterOptions {
+  status: ReadonlyArray<string>;
+  loaiVB: ReadonlyArray<string>;
+  phongBan: ReadonlyArray<string>;
+  namTaoYeuCau: ReadonlyArray<string>;
+}
+
+export interface ILabelCustomSnapshot {
+  workflowFilters: IWorkflowFilterOptions;
+  recentPublishedWindowDays: number;
+}
+
 export type HomeCategoryLinkType = 'TatCa' | 'ThuMuc';
 
 export interface IHomeCategoryItem {

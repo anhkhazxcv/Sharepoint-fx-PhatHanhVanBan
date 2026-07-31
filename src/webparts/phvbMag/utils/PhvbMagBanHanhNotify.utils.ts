@@ -1,13 +1,23 @@
 import {
   BAN_HANH_MAIL_LABELS,
-  BAN_HANH_NOTIFY_DEFAULTS
+  BAN_HANH_NOTIFY_DEFAULTS,
+  RECENT_PUBLISHED_WINDOW_DAYS_DEFAULT,
+  RECENT_PUBLISHED_WINDOW_DAYS_LABEL,
+  RECENT_PUBLISHED_WINDOW_DAYS_MAX,
+  RECENT_PUBLISHED_WINDOW_DAYS_MIN,
+  WORKFLOW_FILTER_LOAI_VB_LABEL,
+  WORKFLOW_FILTER_NAM_TAO_YEU_CAU_LABEL,
+  WORKFLOW_FILTER_PHONG_BAN_LABEL,
+  WORKFLOW_FILTER_STATUS_LABEL
 } from '../config/PhvbMag.configuration';
 import { parseExecutionDateTime } from './PhvbMagDateTime.utils';
 import type {
   IBanHanhNotifyDraft,
   ILabelCustomConfigItem,
+  ILabelCustomSnapshot,
   IMailBanHanhConfigItem,
-  IVanBanItem
+  IVanBanItem,
+  IWorkflowFilterOptions
 } from '../models/PhvbMag.models';
 
 function pad2(value: number): string {
@@ -148,6 +158,80 @@ export function getLabelValue(
   }
 
   return '';
+}
+
+const EMPTY_WORKFLOW_FILTER_OPTIONS: IWorkflowFilterOptions = {
+  status: [],
+  loaiVB: [],
+  phongBan: [],
+  namTaoYeuCau: []
+};
+
+export function createEmptyLabelCustomSnapshot(): ILabelCustomSnapshot {
+  return {
+    workflowFilters: EMPTY_WORKFLOW_FILTER_OPTIONS,
+    recentPublishedWindowDays: RECENT_PUBLISHED_WINDOW_DAYS_DEFAULT
+  };
+}
+
+export function parsePipeDelimitedConfigValue(rawValue?: string): string[] {
+  const normalized = (rawValue || '').trim();
+
+  if (!normalized) {
+    return [];
+  }
+
+  const seen: Record<string, boolean> = {};
+  const values: string[] = [];
+
+  normalized.split('|').forEach(part => {
+    const value = part.trim();
+
+    if (value && !seen[value]) {
+      seen[value] = true;
+      values.push(value);
+    }
+  });
+
+  return values;
+}
+
+function clampRecentPublishedWindowDays(value: number): number {
+  if (value < RECENT_PUBLISHED_WINDOW_DAYS_MIN) {
+    return RECENT_PUBLISHED_WINDOW_DAYS_MIN;
+  }
+
+  if (value > RECENT_PUBLISHED_WINDOW_DAYS_MAX) {
+    return RECENT_PUBLISHED_WINDOW_DAYS_MAX;
+  }
+
+  return value;
+}
+
+function parseRecentPublishedWindowDays(rawValue?: string): number {
+  const parsed = parseInt((rawValue || '').trim(), 10);
+
+  if (!parsed || isNaN(parsed)) {
+    return RECENT_PUBLISHED_WINDOW_DAYS_DEFAULT;
+  }
+
+  return clampRecentPublishedWindowDays(parsed);
+}
+
+export function resolveLabelCustomSnapshot(
+  labelConfig: ReadonlyArray<ILabelCustomConfigItem>
+): ILabelCustomSnapshot {
+  return {
+    workflowFilters: {
+      status: parsePipeDelimitedConfigValue(getLabelValue(labelConfig, WORKFLOW_FILTER_STATUS_LABEL)),
+      loaiVB: parsePipeDelimitedConfigValue(getLabelValue(labelConfig, WORKFLOW_FILTER_LOAI_VB_LABEL)),
+      phongBan: parsePipeDelimitedConfigValue(getLabelValue(labelConfig, WORKFLOW_FILTER_PHONG_BAN_LABEL)),
+      namTaoYeuCau: parsePipeDelimitedConfigValue(getLabelValue(labelConfig, WORKFLOW_FILTER_NAM_TAO_YEU_CAU_LABEL))
+    },
+    recentPublishedWindowDays: parseRecentPublishedWindowDays(
+      getLabelValue(labelConfig, RECENT_PUBLISHED_WINDOW_DAYS_LABEL)
+    )
+  };
 }
 
 function replaceTokens(template: string, tokens: Record<string, string>): string {

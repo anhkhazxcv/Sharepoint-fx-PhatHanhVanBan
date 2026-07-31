@@ -7,6 +7,8 @@ description: Review SPFx/TypeScript/React changes like a senior architect, focus
 
 Use this skill to review a diff, PR, or proposed patch.
 
+For **business workflow** (status, roles, Viết mới/Điều chỉnh) and **performance** (API chatter, pagination, re-renders), also use `senior-se-review`.
+
 ## Review focus
 
 - Does the change follow the existing architecture?

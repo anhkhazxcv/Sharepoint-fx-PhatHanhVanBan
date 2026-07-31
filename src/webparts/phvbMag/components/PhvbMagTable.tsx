@@ -1,7 +1,18 @@
 import * as React from 'react';
-import { REQUEST_STATUS, TAB_LABELS } from '../config/PhvbMag.configuration';
-import type { IVanBanItem, TabType } from '../models/PhvbMag.models';
-import { getBadgeVariant, getRequestStatusDisplayForItem, getSummaryPreview, type RequestStatusFilterKey } from '../utils/PhvbMag.selectors';
+import { ALL_FILTER_VALUE, REQUEST_STATUS, TAB_LABELS } from '../config/PhvbMag.configuration';
+import type { IVanBanItem, IWorkflowFilterOptions, TabType } from '../models/PhvbMag.models';
+import { formatExecutionDate } from '../utils/PhvbMagDateTime.utils';
+import { getBadgeVariant, getRequestStatusDisplayForItem } from '../utils/PhvbMag.selectors';
+import {
+  applyRequestTableFilters,
+  DEFAULT_REQUEST_TABLE_FILTERS,
+  getWorkflowMetricCards,
+  type IRequestTableFilters,
+  type IWorkflowMetricCard,
+  type RequestTableSortDirection,
+  type RequestTableSortKey,
+  sortRequestTableItems
+} from '../utils/PhvbMagTable.utils';
 import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import styles from './PhvbMag.module.scss';
 import { PaginationNextIcon, PaginationPreviousIcon, SearchIcon } from './PhvbMagIcons';
@@ -11,285 +22,121 @@ interface IPhvbMagTableProps {
   items: IVanBanItem[];
   isLoading: boolean;
   searchQuery: string;
+  filterOptions: IWorkflowFilterOptions;
   onSearchChange: (value: string) => void;
   onSelectItem: (item: IVanBanItem) => void;
 }
 
-interface IMetricCard {
-  key: string;
-  count: number;
-  label: string;
-  hint: string;
-  tone: 'danger' | 'warning' | 'success' | 'info';
-}
-
-const metricToneClassMap: Record<IMetricCard['tone'], string> = {
+const metricToneClassMap: Record<IWorkflowMetricCard['tone'], string> = {
   danger: styles.metricDanger,
   warning: styles.metricWarning,
   success: styles.metricSuccess,
   info: styles.metricInfo
 };
 
-type WorkflowBucketKey = 'gopY' | 'thamDinh' | 'pheDuyet' | 'choBanHanh';
-type TaskMetricFilterKey = 'all' | WorkflowBucketKey;
-
-interface ITaskMetricFilterOption {
-  key: TaskMetricFilterKey;
+interface ITableColumnDefinition {
+  key: string;
   label: string;
-  icon?: React.ComponentType<{ className?: string }>;
+  sortKey?: RequestTableSortKey;
+  headerClassName?: string;
+  cellClassName?: string;
 }
 
-const WORKFLOW_BUCKET_LABELS: Record<WorkflowBucketKey, string> = {
-  gopY: 'Cần góp ý',
-  thamDinh: 'Cần thẩm định',
-  pheDuyet: 'Cần phê duyệt',
-  choBanHanh: 'Chờ ban hành'
+const TABLE_COLUMNS: ReadonlyArray<ITableColumnDefinition> = [
+  { key: 'index', label: '#', headerClassName: styles.requestTableIndexCol },
+  { key: 'title', label: 'TÊN VĂN BẢN', sortKey: 'Tenvanban', headerClassName: styles.requestTitleCell },
+  { key: 'code', label: 'MÃ HIỆU', sortKey: 'SoVanBan' },
+  { key: 'type', label: 'LOẠI VB', sortKey: 'LoaiYeuCau' },
+  { key: 'department', label: 'PHÒNG BAN', sortKey: 'KhoaPhongNguoiTao' },
+  { key: 'created', label: 'NGÀY TẠO', sortKey: 'NgayTaoYeuCau' },
+  { key: 'status', label: 'TRẠNG THÁI', sortKey: 'StatusApproved' }
+];
+
+const PAGE_SIZE_OPTIONS: ReadonlyArray<number> = [10, 20, 50];
+
+const LIST_TAB_CONFIG: Record<
+  'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'CapSo' | 'QLVanBan',
+  {
+    countSuffix: string;
+    emptyMessage: string;
+    showStatusMetrics: boolean;
+  }
+> = {
+  ViecCanLam: {
+    countSuffix: 'việc',
+    emptyMessage: 'Không có việc phù hợp với bộ lọc hiện tại.',
+    showStatusMetrics: true
+  },
+  YeuCauCuaToi: {
+    countSuffix: 'yêu cầu',
+    emptyMessage: 'Không có yêu cầu phù hợp với bộ lọc hiện tại.',
+    showStatusMetrics: false
+  },
+  BanNhap: {
+    countSuffix: 'bản nháp',
+    emptyMessage: 'Không có bản nháp phù hợp với bộ lọc hiện tại.',
+    showStatusMetrics: false
+  },
+  CapSo: {
+    countSuffix: 'hồ sơ',
+    emptyMessage: 'Không có hồ sơ phù hợp với bộ lọc hiện tại.',
+    showStatusMetrics: false
+  },
+  QLVanBan: {
+    countSuffix: 'văn bản',
+    emptyMessage: 'Không có văn bản phù hợp với bộ lọc hiện tại.',
+    showStatusMetrics: false
+  }
 };
 
-const WORKFLOW_BUCKET_ORDER: WorkflowBucketKey[] = ['gopY', 'thamDinh', 'pheDuyet', 'choBanHanh'];
-
-const taskMetricFilterOptions: ITaskMetricFilterOption[] = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'gopY', label: WORKFLOW_BUCKET_LABELS.gopY },
-  { key: 'thamDinh', label: WORKFLOW_BUCKET_LABELS.thamDinh},
-  { key: 'pheDuyet', label: WORKFLOW_BUCKET_LABELS.pheDuyet },
-  { key: 'choBanHanh', label: WORKFLOW_BUCKET_LABELS.choBanHanh}
+const LIST_TABLE_TABS: Array<keyof typeof LIST_TAB_CONFIG> = [
+  'ViecCanLam',
+  'YeuCauCuaToi',
+  'BanNhap',
+  'CapSo',
+  'QLVanBan'
 ];
 
-function resolveWorkflowBucket(item: IVanBanItem): WorkflowBucketKey | undefined {
-  const status = (item.StatusApproved || '').trim();
-
-  switch (status) {
-    case REQUEST_STATUS.DANG_GOP_Y:
-      return 'gopY';
-    case REQUEST_STATUS.DANG_THAM_DINH:
-      return 'thamDinh';
-    case REQUEST_STATUS.DANG_PHE_DUYET:
-      return 'pheDuyet';
-    case REQUEST_STATUS.CHO_BAN_HANH:
-      return 'choBanHanh';
-    default:
-      return undefined;
-  }
+function isListTableTab(tab: TabType): tab is keyof typeof LIST_TAB_CONFIG {
+  return LIST_TABLE_TABS.indexOf(tab as keyof typeof LIST_TAB_CONFIG) > -1;
 }
 
-function matchesTaskMetricFilter(item: IVanBanItem, filterKey: TaskMetricFilterKey): boolean {
-  if (filterKey === 'all') {
-    return true;
-  }
-
-  return resolveWorkflowBucket(item) === filterKey;
-}
-
-interface IWorkflowQuickFiltersProps {
-  filterKey: TaskMetricFilterKey;
-  onFilterChange: (key: TaskMetricFilterKey) => void;
-}
-
-function WorkflowQuickFilters(props: IWorkflowQuickFiltersProps): React.ReactElement {
-  const { filterKey, onFilterChange } = props;
-
-  return (
-    <div className={styles.requestQuickFilters}>
-      {taskMetricFilterOptions.map(option => {
-        const IconComponent = option.icon;
-
-        return (
-          <button
-            key={option.key}
-            type="button"
-            className={[styles.requestQuickFilter, filterKey === option.key ? styles.requestQuickFilterActive : ''].filter(Boolean).join(' ')}
-            onClick={() => onFilterChange(option.key)}
-          >
-            {IconComponent ? <IconComponent className={styles.requestQuickFilterIcon} /> : null}
-            <span>{option.label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function getMetricCards(items: IVanBanItem[]): IMetricCard[] {
-  const counts: Record<WorkflowBucketKey, number> = {
-    gopY: 0,
-    thamDinh: 0,
-    pheDuyet: 0,
-    choBanHanh: 0
-  };
-
-  items.forEach(item => {
-    const bucket = resolveWorkflowBucket(item);
-
-    if (bucket) {
-      counts[bucket] += 1;
-    }
-  });
-
-  const toneMap: Record<WorkflowBucketKey, IMetricCard['tone']> = {
-    gopY: 'info',
-    thamDinh: 'warning',
-    pheDuyet: 'success',
-    choBanHanh: 'danger'
-  };
-
-  return WORKFLOW_BUCKET_ORDER.map(key => ({
-    key,
-    count: counts[key],
-    label: WORKFLOW_BUCKET_LABELS[key],
-    hint: 'Việc cần xử lý',
-    tone: toneMap[key]
-  }));
-}
-
-const requestStatusFilterOptions: Array<{ key: RequestStatusFilterKey; label: string }> = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'processing', label: 'Đang xử lý' },
-  { key: 'approved', label: 'Đã ban hành' },
-  { key: 'rejected', label: 'Từ chối' }
-];
-
-function isReleasedStatus(status?: string): boolean {
-  return status === 'Approved' || status === REQUEST_STATUS.BAN_HANH || status === REQUEST_STATUS.CHO_BAN_HANH;
-}
-
-function getStageLabel(item: IVanBanItem): string {
-  if (isReleasedStatus(item.StatusApproved)) {
-    return REQUEST_STATUS.BAN_HANH;
-  }
-
-  if (item.StatusApproved === REQUEST_STATUS.BAN_NHAP) {
-    return REQUEST_STATUS.BAN_NHAP;
-  }
-
-  if (item.StatusApproved === REQUEST_STATUS.DANG_GOP_Y) {
-    return REQUEST_STATUS.DANG_GOP_Y;
-  }
-
-  if (item.StatusApproved === REQUEST_STATUS.DANG_THAM_DINH) {
-    return REQUEST_STATUS.DANG_THAM_DINH;
-  }
-
-  if (item.StatusApproved === REQUEST_STATUS.DANG_PHE_DUYET) {
-    return REQUEST_STATUS.DANG_PHE_DUYET;
-  }
-
-  if (item.StatusApproved === REQUEST_STATUS.CHO_CAP_SO) {
-    return REQUEST_STATUS.CHO_CAP_SO;
-  }
-
-  if (item.StatusApproved === REQUEST_STATUS.DA_CAP_SO) {
-    return REQUEST_STATUS.DA_CAP_SO;
-  }
-
-  if (item.ThamDinh) {
-    return 'Cần thẩm định';
-  }
-
-  if (item.NguoiGopY) {
-    return 'Cần góp ý';
-  }
-
-  if (item.PheDuyet) {
-    return 'Cần phê duyệt';
-  }
-
-  if (item.StatusApproved === REQUEST_STATUS.CHO_CAP_SO) {
-    return 'Cần cấp số';
-  }
-
-  if (item.StatusApproved === REQUEST_STATUS.DA_CAP_SO) {
-    return REQUEST_STATUS.DA_CAP_SO;
-  }
-
-  if (!item.SoVanBan) {
-    return 'Cần cấp số';
-  }
-
-  return 'Đang xử lý';
-}
-
-function getWorkflowText(item: IVanBanItem): string {
-  const owner = item.NguoiTao || 'Yêu cầu';
-
-  if (item.StatusApproved === REQUEST_STATUS.BAN_NHAP) {
-    return `${owner} đang lưu nháp yêu cầu phát hành văn bản`;
-  }
-
-  if (isReleasedStatus(item.StatusApproved)) {
-    return `${owner} đã hoàn tất quy trình phát hành văn bản`;
-  }
-
-  if (item.ThamDinh) {
-    return `${owner} đang chờ thẩm định hồ sơ`;
-  }
-
-  if (item.NguoiGopY) {
-    return `${owner} đang chờ góp ý từ các bên liên quan`;
-  }
-
-  if (item.PheDuyet) {
-    return `${owner} đã qua góp ý và đang chờ phê duyệt`;
-  }
-
-  if (item.StatusApproved === REQUEST_STATUS.CHO_CAP_SO) {
-    return `${owner} đang chờ cấp số phát hành`;
-  }
-
-  if (item.StatusApproved === REQUEST_STATUS.DA_CAP_SO) {
-    return `${owner} đã cấp số, chờ admin chuẩn bị ban hành`;
-  }
-
-  if (!item.SoVanBan) {
-    return `${owner} đang chờ cấp số phát hành`;
-  }
-
-  return `${owner} đang được hệ thống xử lý`;
-}
-
-function getRequestStatusState(item: IVanBanItem): { filterKey: RequestStatusFilterKey; label: string; className: string } {
+function getRequestStatusState(item: IVanBanItem): { label: string; className: string } {
   const statusDisplay = getRequestStatusDisplayForItem(item);
 
   if (statusDisplay.filterKey === 'rejected') {
     return {
-      ...statusDisplay,
+      label: statusDisplay.label,
       className: styles.requestStatusRejected
     };
   }
 
   if (statusDisplay.filterKey === 'approved') {
     return {
-      ...statusDisplay,
+      label: statusDisplay.label,
       className: styles.requestStatusApproved
     };
   }
 
   if (item.StatusApproved === REQUEST_STATUS.BAN_NHAP) {
     return {
-      ...statusDisplay,
+      label: statusDisplay.label,
       className: styles.requestStatusPending
     };
   }
 
   if (item.NguoiGopY || item.ThamDinh) {
     return {
-      filterKey: 'processing',
       label: statusDisplay.label,
       className: styles.requestStatusRevision
     };
   }
 
   return {
-    ...statusDisplay,
+    label: statusDisplay.label,
     className: styles.requestStatusPending
   };
 }
-
-function getRequestFolderLabel(item: IVanBanItem): string {
-  return item.ThuMucBanHanh || 'Thư mục ban hành';
-}
-
-const PAGE_SIZE_OPTIONS: ReadonlyArray<number> = [10, 20, 50];
 
 interface IPagedItemsResult<T> {
   pageSize: number;
@@ -338,18 +185,6 @@ function usePagedItems<T>(items: T[], resetDeps: React.DependencyList): IPagedIt
   };
 }
 
-interface IListPagerProps {
-  pageSize: number;
-  rangeStart: number;
-  rangeEnd: number;
-  totalItems: number;
-  currentPage: number;
-  totalPages: number;
-  onPageSizeChange: (size: number) => void;
-  onPreviousPage: () => void;
-  onNextPage: () => void;
-}
-
 interface IRequestSearchControlsProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
@@ -374,7 +209,7 @@ function RequestSearchControls(props: IRequestSearchControlsProps): React.ReactE
         <input
           type="text"
           value={searchDraft}
-          placeholder="Tìm tài liệu, mã số..."
+          placeholder="Tìm tên văn bản, mã hiệu..."
           onChange={event => setSearchDraft(event.target.value)}
           onKeyDown={event => {
             if (event.key === 'Enter') {
@@ -389,6 +224,141 @@ function RequestSearchControls(props: IRequestSearchControlsProps): React.ReactE
       </button>
     </div>
   );
+}
+
+interface IRequestFilterSelectProps {
+  label: string;
+  value: string;
+  options: ReadonlyArray<string>;
+  onChange: (value: string) => void;
+}
+
+function RequestFilterSelect(props: IRequestFilterSelectProps): React.ReactElement {
+  const { label, value, options, onChange } = props;
+
+  return (
+    <label className={styles.requestFilterField}>
+      <span className={styles.requestFilterLabel}>{label}</span>
+      <select
+        className={styles.requestStatusSelect}
+        value={value}
+        onChange={event => onChange(event.target.value)}
+      >
+        <option value={ALL_FILTER_VALUE}>Tất cả</option>
+        {options.map(option => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+interface IRequestTableToolbarProps {
+  filterOptions: IWorkflowFilterOptions;
+  filters: IRequestTableFilters;
+  searchQuery: string;
+  onFiltersChange: (filters: IRequestTableFilters) => void;
+  onSearchChange: (value: string) => void;
+}
+
+function RequestTableToolbar(props: IRequestTableToolbarProps): React.ReactElement {
+  const { filterOptions, filters, searchQuery, onFiltersChange, onSearchChange } = props;
+
+  const updateFilter = (patch: Partial<IRequestTableFilters>): void => {
+    onFiltersChange({
+      ...filters,
+      ...patch
+    });
+  };
+
+  return (
+    <div className={styles.requestToolBarStack}>
+      <RequestSearchControls searchQuery={searchQuery} onSearchChange={onSearchChange} />
+
+      <div className={styles.requestFilterBar}>
+        <RequestFilterSelect
+          label="Trạng thái:"
+          value={filters.status}
+          options={filterOptions.status}
+          onChange={status => updateFilter({ status })}
+        />
+        <RequestFilterSelect
+          label="Loại VB:"
+          value={filters.loaiYeuCau}
+          options={filterOptions.loaiVB}
+          onChange={loaiYeuCau => updateFilter({ loaiYeuCau })}
+        />
+        <RequestFilterSelect
+          label="Phòng ban:"
+          value={filters.department}
+          options={filterOptions.phongBan}
+          onChange={department => updateFilter({ department })}
+        />
+        <RequestFilterSelect
+          label="Năm tạo yêu cầu:"
+          value={filters.requestCreatedYear}
+          options={filterOptions.namTaoYeuCau}
+          onChange={requestCreatedYear => updateFilter({ requestCreatedYear })}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface ISortableTableHeaderProps {
+  column: ITableColumnDefinition;
+  sortKey?: RequestTableSortKey;
+  sortDirection: RequestTableSortDirection;
+  onSort: (sortKey: RequestTableSortKey) => void;
+}
+
+function SortableTableHeader(props: ISortableTableHeaderProps): React.ReactElement {
+  const { column, sortKey, sortDirection, onSort } = props;
+  const isActive = Boolean(column.sortKey && sortKey === column.sortKey);
+
+  if (!column.sortKey) {
+    return (
+      <th className={column.headerClassName}>
+        {column.label}
+      </th>
+    );
+  }
+
+  const handleClick = (): void => {
+    onSort(column.sortKey as RequestTableSortKey);
+  };
+
+  return (
+    <th className={column.headerClassName}>
+      <button
+        type="button"
+        className={[
+          styles.requestTableSortableHeader,
+          isActive ? styles.requestTableSortableHeaderActive : ''
+        ].filter(Boolean).join(' ')}
+        onClick={handleClick}
+      >
+        <span>{column.label}</span>
+        <span className={styles.requestTableSortIcon} aria-hidden>
+          {isActive ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </button>
+    </th>
+  );
+}
+
+interface IListPagerProps {
+  pageSize: number;
+  rangeStart: number;
+  rangeEnd: number;
+  totalItems: number;
+  currentPage: number;
+  totalPages: number;
+  onPageSizeChange: (size: number) => void;
+  onPreviousPage: () => void;
+  onNextPage: () => void;
 }
 
 function ListPager(props: IListPagerProps): React.ReactElement {
@@ -450,115 +420,94 @@ function ListPager(props: IListPagerProps): React.ReactElement {
 interface IRequestBoardTableProps extends IPhvbMagTableProps {
   boardTitle: string;
   countSuffix: string;
-  showStatusFilters?: boolean;
-  showWorkflowFilters?: boolean;
+  showStatusMetrics?: boolean;
   emptyMessage?: string;
 }
-
-const REQUEST_BOARD_TABS: Record<'YeuCauCuaToi' | 'BanNhap' | 'CapSo' | 'QLVanBan', {
-  countSuffix: string;
-  showStatusFilters: boolean;
-  showWorkflowFilters: boolean;
-  emptyMessage: string;
-}> = {
-  YeuCauCuaToi: {
-    countSuffix: 'yêu cầu',
-    showStatusFilters: true,
-    showWorkflowFilters: false,
-    emptyMessage: 'Không có yêu cầu phù hợp với bộ lọc hiện tại.'
-  },
-  BanNhap: {
-    countSuffix: 'bản nháp',
-    showStatusFilters: false,
-    showWorkflowFilters: false,
-    emptyMessage: 'Không có bản nháp phù hợp với bộ lọc hiện tại.'
-  },
-  CapSo: {
-    countSuffix: 'hồ sơ',
-    showStatusFilters: false,
-    showWorkflowFilters: false,
-    emptyMessage: 'Không có hồ sơ phù hợp với bộ lọc hiện tại.'
-  },
-  QLVanBan: {
-    countSuffix: 'văn bản',
-    showStatusFilters: false,
-    showWorkflowFilters: true,
-    emptyMessage: 'Không có văn bản phù hợp với bộ lọc hiện tại.'
-  }
-};
 
 function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
   const {
     items,
     isLoading,
     searchQuery,
+    filterOptions,
     onSearchChange,
     onSelectItem,
     boardTitle,
     countSuffix,
-    showStatusFilters = false,
-    showWorkflowFilters = false,
+    showStatusMetrics = false,
     emptyMessage = 'Không có dữ liệu phù hợp với bộ lọc hiện tại.'
   } = props;
-  const [statusFilter, setStatusFilter] = React.useState<RequestStatusFilterKey>('all');
-  const [workflowFilter, setWorkflowFilter] = React.useState<TaskMetricFilterKey>('all');
-  const hasQuickFilters = showStatusFilters || showWorkflowFilters;
+  const [filters, setFilters] = React.useState<IRequestTableFilters>(DEFAULT_REQUEST_TABLE_FILTERS);
+  const [sortKey, setSortKey] = React.useState<RequestTableSortKey | undefined>(undefined);
+  const [sortDirection, setSortDirection] = React.useState<RequestTableSortDirection>('desc');
+  const metrics = showStatusMetrics ? getWorkflowMetricCards(items) : [];
 
-  const filteredItems = React.useMemo(() => items.filter(item => {
-    if (showStatusFilters && statusFilter !== 'all' && getRequestStatusState(item).filterKey !== statusFilter) {
-      return false;
+  const filteredItems = React.useMemo(
+    () => applyRequestTableFilters(items, filters),
+    [filters, items]
+  );
+  const sortedItems = React.useMemo(
+    () => sortRequestTableItems(filteredItems, sortKey, sortDirection),
+    [filteredItems, sortDirection, sortKey]
+  );
+  const pagination = usePagedItems(sortedItems, [filters, searchQuery, sortDirection, sortKey]);
+  const { pagedItems, totalItems, currentPage, pageSize } = pagination;
+
+  const handleSort = (nextSortKey: RequestTableSortKey): void => {
+    if (sortKey === nextSortKey) {
+      setSortDirection(previous => (previous === 'asc' ? 'desc' : 'asc'));
+      return;
     }
 
-    if (showWorkflowFilters && !matchesTaskMetricFilter(item, workflowFilter)) {
-      return false;
-    }
+    setSortKey(nextSortKey);
+    setSortDirection('asc');
+  };
 
-    return true;
-  }), [items, showStatusFilters, statusFilter, showWorkflowFilters, workflowFilter]);
-
-  const pagination = usePagedItems(filteredItems, [statusFilter, workflowFilter, searchQuery, showStatusFilters, showWorkflowFilters]);
-  const { pagedItems, totalItems } = pagination;
+  const rootClassName = [
+    showStatusMetrics ? styles.tableCard : styles.requestBoard,
+    showStatusMetrics ? styles.tableCardCompact : ''
+  ].filter(Boolean).join(' ');
 
   return (
-    <div className={styles.requestBoard}>
+    <div className={rootClassName}>
+      {!isLoading && showStatusMetrics ? (
+        <div className={styles.metricsGrid}>
+          {metrics.map(metric => (
+            <article key={metric.key} className={[styles.metricCard, metricToneClassMap[metric.tone]].join(' ')}>
+              <span className={styles.metricValue}>{metric.count}</span>
+              <span className={styles.metricLabel}>{metric.label}</span>
+              <span className={styles.metricHint}>{metric.hint}</span>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
       <div className={styles.requestBoardHeader}>
         <div className={styles.requestBoardTitle}>
           <h3>{boardTitle}</h3>
-          <span>{items.length} {countSuffix}</span>
+          <span>{filteredItems.length} {countSuffix}</span>
         </div>
       </div>
 
-      <div className={[styles.requestToolBar, !hasQuickFilters ? styles.requestToolBarSearchOnly : ''].filter(Boolean).join(' ')}>
-        {showStatusFilters && (
-          <div className={styles.requestQuickFilters}>
-            {requestStatusFilterOptions.map(option => (
-              <button
-                key={option.key}
-                type="button"
-                className={[styles.requestQuickFilter, statusFilter === option.key ? styles.requestQuickFilterActive : ''].filter(Boolean).join(' ')}
-                onClick={() => setStatusFilter(option.key)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {showWorkflowFilters && (
-          <WorkflowQuickFilters filterKey={workflowFilter} onFilterChange={setWorkflowFilter} />
-        )}
-
-        <RequestSearchControls searchQuery={searchQuery} onSearchChange={onSearchChange} />
-      </div>
+      <RequestTableToolbar
+        filterOptions={filterOptions}
+        filters={filters}
+        searchQuery={searchQuery}
+        onFiltersChange={setFilters}
+        onSearchChange={onSearchChange}
+      />
 
       {isLoading ? (
         <div className={styles.skeletonContainer}>
           {[1, 2, 3, 4, 5].map(index => (
             <div key={index} className={styles.requestSkeletonRow}>
-              <div className={styles.skeletonCell} style={{ width: '34%' }} />
+              <div className={styles.skeletonCell} style={{ width: '8%' }} />
               <div className={styles.skeletonCell} style={{ width: '24%' }} />
+              <div className={styles.skeletonCell} style={{ width: '12%' }} />
+              <div className={styles.skeletonCell} style={{ width: '12%' }} />
               <div className={styles.skeletonCell} style={{ width: '14%' }} />
-              <div className={styles.skeletonCell} style={{ width: '18%' }} />
+              <div className={styles.skeletonCell} style={{ width: '14%' }} />
+              <div className={styles.skeletonCell} style={{ width: '12%' }} />
             </div>
           ))}
         </div>
@@ -570,27 +519,46 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
             <table className={styles.requestTable}>
               <thead>
                 <tr>
-                  <th>TÊN VĂN BẢN</th>
-                  <th>TÓM TẮT NỘI DUNG</th>
-                  <th>TRẠNG THÁI</th>
-                  <th>THƯ MỤC BAN HÀNH</th>
+                  {TABLE_COLUMNS.map(column => (
+                    <SortableTableHeader
+                      key={column.key}
+                      column={column}
+                      sortKey={sortKey}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    />
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {pagedItems.map(item => {
+                {pagedItems.map((item, index) => {
                   const requestStatus = getRequestStatusState(item);
-                  const summaryPreview = getSummaryPreview(item.TomTatNoiDung, 110);
+                  const rowNumber = ((currentPage - 1) * pageSize) + index + 1;
+                  const createdLabel = formatExecutionDate(item.NgayTaoYeuCau) || '---';
 
                   return (
                     <tr key={item.Id} className={styles.requestTableRow} onClick={() => onSelectItem(item)}>
+                      <td className={styles.requestTableIndexCol}>{rowNumber}</td>
                       <td className={styles.requestTitleCell}>
                         <div className={styles.requestTitle}>{item.Tenvanban || 'Chưa có tên văn bản'}</div>
                       </td>
-                      <td className={styles.requestSummaryCell}>{summaryPreview || getWorkflowText(item)}</td>
+                      <td>{item.SoVanBan || '---'}</td>
                       <td>
-                        <span className={[styles.requestStatusBadge, requestStatus.className].join(' ')}>{requestStatus.label}</span>
+                        {item.LoaiYeuCau ? (
+                          <span className={`${styles.badge} ${styles[getBadgeVariant(item.LoaiYeuCau)]}`}>
+                            {item.LoaiYeuCau}
+                          </span>
+                        ) : (
+                          '---'
+                        )}
                       </td>
-                      <td className={styles.requestFolderCell}>{getRequestFolderLabel(item)}</td>
+                      <td>{item.KhoaPhongNguoiTao || '---'}</td>
+                      <td>{createdLabel}</td>
+                      <td>
+                        <span className={[styles.requestStatusBadge, requestStatus.className].join(' ')}>
+                          {requestStatus.label}
+                        </span>
+                      </td>
                     </tr>
                   );
                 })}
@@ -615,139 +583,23 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
   );
 }
 
-function TaskListView(props: IPhvbMagTableProps): React.ReactElement {
-  const { activeTab, items, isLoading, searchQuery, onSearchChange, onSelectItem } = props;
-  const [metricFilter, setMetricFilter] = React.useState<TaskMetricFilterKey>('all');
-  const isTaskTab = activeTab === 'ViecCanLam';
-  const metrics = isTaskTab ? getMetricCards(items) : [];
-  const sectionTitle = isTaskTab ? 'Cần xử lý' : TAB_LABELS[activeTab];
-  const visibleItems = React.useMemo(() => {
-    if (!isTaskTab) {
-      return items;
-    }
-
-    return items.filter(item => matchesTaskMetricFilter(item, metricFilter));
-  }, [isTaskTab, items, metricFilter]);
-  const pagination = usePagedItems(visibleItems, [metricFilter, items, activeTab, searchQuery]);
-  const { pagedItems, totalItems } = pagination;
-  const listCountText = isTaskTab ? `${visibleItems.length} việc` : `${visibleItems.length} mục`;
-
-  return (
-    <div className={[styles.tableCard, isTaskTab ? styles.tableCardCompact : ''].filter(Boolean).join(' ')}>
-      {!isLoading && isTaskTab && (
-        <div className={styles.metricsGrid}>
-          {metrics.map(metric => (
-            <article key={metric.key} className={[styles.metricCard, metricToneClassMap[metric.tone]].join(' ')}>
-              <span className={styles.metricValue}>{metric.count}</span>
-              <span className={styles.metricLabel}>{metric.label}</span>
-              <span className={styles.metricHint}>{metric.hint}</span>
-            </article>
-          ))}
-        </div>
-      )}
-
-      <div className={styles.listSectionHeader}>
-        <div className={styles.titleArea}>
-          <h3>{sectionTitle}</h3>
-          <span className={styles.countText}>{listCountText}</span>
-        </div>
-      </div>
-
-      {isTaskTab && (
-        <div className={styles.requestToolBar}>
-          <WorkflowQuickFilters filterKey={metricFilter} onFilterChange={setMetricFilter} />
-          <RequestSearchControls searchQuery={searchQuery} onSearchChange={onSearchChange} />
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className={styles.skeletonContainer}>
-          {[1, 2, 3, 4, 5].map(index => (
-            <div key={index} className={styles.skeletonRow}>
-              <div className={styles.skeletonBlock}>
-                <div className={styles.skeletonCell} style={{ width: '52%' }} />
-                <div className={styles.skeletonCell} style={{ width: '34%' }} />
-                <div className={styles.skeletonCell} style={{ width: '28%' }} />
-              </div>
-              <div className={styles.skeletonCell} style={{ width: '96px' }} />
-            </div>
-          ))}
-        </div>
-      ) : totalItems === 0 ? (
-        <PhvbMagEmptyState message="Không có dữ liệu phù hợp với bộ lọc hiện tại." />
-      ) : (
-        <>
-          <div className={styles.taskList}>
-            {pagedItems.map(item => {
-              const summaryPreview = getSummaryPreview(item.TomTatNoiDung, 120);
-              const stageLabel = getStageLabel(item);
-
-              return (
-                <article key={item.Id} className={[styles.taskCard, styles.cardNeutral].join(' ')} onClick={() => onSelectItem(item)}>
-                  <div className={styles.taskCardAccent} />
-
-                  <div className={styles.taskCardBody}>
-                    <div className={styles.taskCardTitleRow}>
-                      <h4 className={styles.taskCardTitle}>{item.Tenvanban || 'Chưa có tên văn bản'}</h4>
-                    </div>
-
-                    <p className={styles.taskCardDescription}>{getWorkflowText(item)}</p>
-
-                    <div className={styles.taskTagRow}>
-                      <span className={styles.taskMetaPill}>{stageLabel}</span>
-                      {item.LoaiYeuCau && <span className={`${styles.badge} ${styles[getBadgeVariant(item.LoaiYeuCau)]}`}>{item.LoaiYeuCau}</span>}
-                      {item.KhoaPhongNguoiTao && <span className={styles.deptPill}>{item.KhoaPhongNguoiTao}</span>}
-                      {item.SoVanBan && <span className={styles.taskMetaPill}>{item.SoVanBan}</span>}
-                    </div>
-
-                    {summaryPreview && <div className={styles.taskCardMeta}>{summaryPreview}</div>}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-
-          <ListPager
-            pageSize={pagination.pageSize}
-            rangeStart={pagination.rangeStart}
-            rangeEnd={pagination.rangeEnd}
-            totalItems={pagination.totalItems}
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            onPageSizeChange={pagination.setPageSize}
-            onPreviousPage={pagination.goToPreviousPage}
-            onNextPage={pagination.goToNextPage}
-          />
-        </>
-      )}
-    </div>
-  );
-}
-
-const BOARD_TABLE_TABS: Array<keyof typeof REQUEST_BOARD_TABS> = ['YeuCauCuaToi', 'BanNhap', 'CapSo', 'QLVanBan'];
-
-function isBoardTableTab(tab: TabType): tab is keyof typeof REQUEST_BOARD_TABS {
-  return BOARD_TABLE_TABS.indexOf(tab as keyof typeof REQUEST_BOARD_TABS) > -1;
-}
-
 export function PhvbMagTable(props: IPhvbMagTableProps): React.ReactElement {
   const { activeTab } = props;
 
-  if (isBoardTableTab(activeTab)) {
-    const boardConfig = REQUEST_BOARD_TABS[activeTab];
-
-    return (
-      <RequestBoardTable
-        key={activeTab}
-        {...props}
-        boardTitle={TAB_LABELS[activeTab]}
-        countSuffix={boardConfig.countSuffix}
-        showStatusFilters={boardConfig.showStatusFilters}
-        showWorkflowFilters={boardConfig.showWorkflowFilters}
-        emptyMessage={boardConfig.emptyMessage}
-      />
-    );
+  if (!isListTableTab(activeTab)) {
+    return <PhvbMagEmptyState message="Không có dữ liệu cho tab này." />;
   }
 
-  return <TaskListView key={activeTab} {...props} />;
+  const tabConfig = LIST_TAB_CONFIG[activeTab];
+
+  return (
+    <RequestBoardTable
+      key={activeTab}
+      {...props}
+      boardTitle={TAB_LABELS[activeTab]}
+      countSuffix={tabConfig.countSuffix}
+      showStatusMetrics={tabConfig.showStatusMetrics}
+      emptyMessage={tabConfig.emptyMessage}
+    />
+  );
 }

@@ -11,7 +11,8 @@ import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import {
   DownloadIcon,
   EyeIcon,
-  LibraryFileTypeIcon
+  LibraryFileTypeIcon,
+  type LibraryFileTypeIconName
 } from './PhvbMagIcons';
 import { PhvbMagSaveBookmarkButton } from './PhvbMagSaveBookmarkButton';
 import { usePhvbRecentViewsOptional } from '../context/PhvbMagRecentViews.context';
@@ -28,12 +29,20 @@ export interface IPhvbMagLibraryDocumentCardProps {
   className?: string;
 }
 
+const LIBRARY_FILE_TYPE_CLASS: Record<LibraryFileTypeIconName, string> = {
+  pdf: styles.libraryFileTypePdf,
+  word: styles.libraryFileTypeWord,
+  excel: styles.libraryFileTypeExcel,
+  powerpoint: styles.libraryFileTypePowerpoint,
+  file: styles.libraryFileTypeFile
+};
+
 function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps): React.ReactElement {
   const {
     document,
     showDownload,
     showBookmark = true,
-    trackRecentView = false,
+    trackRecentView = true,
     summaryText: summaryTextOverride,
     metaContent,
     badgeContent,
@@ -61,7 +70,7 @@ function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps
       <div className={styles.libraryDocumentFileType}>
         <LibraryFileTypeIcon
           iconName={fileType.iconName}
-          style={{ color: fileType.color }}
+          className={`${styles.libraryFileTypeIcon} ${LIBRARY_FILE_TYPE_CLASS[fileType.iconName]}`}
         />
       </div>
 
@@ -97,7 +106,7 @@ function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps
                   className={styles.libraryDocumentDownloadBtn}
                   aria-label="Tải xuống"
                 >
-                  <DownloadIcon style={{ width: 14, height: 14 }} />
+                  <DownloadIcon className={styles.iconSizeSm} />
                 </PhvbMagExternalLink>
               </TooltipHost>
             ) : null}
