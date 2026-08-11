@@ -9,11 +9,10 @@ import {
   type WorkflowDocumentStage
 } from './PhvbMagWorkflowState.utils';
 
-export type WorkflowActionKey = 'approve' | 'requestRevision' | 'reject';
+export type WorkflowActionKey = 'approve' | 'reject';
 
 export interface IWorkflowActionAvailability {
   approve: boolean;
-  requestRevision: boolean;
   reject: boolean;
 }
 
@@ -58,10 +57,6 @@ function findPendingParticipantForUser(
   return undefined;
 }
 
-function canRequestRevisionAtStage(stage: WorkflowStage): boolean {
-  return stage === 'thamdinh' || stage === 'pheduyet';
-}
-
 function canRejectAtStage(stage: WorkflowStage): boolean {
   return stage === 'pheduyet';
 }
@@ -86,12 +81,6 @@ export function resolveWorkflowActionContext(
 
   const availableActions: IWorkflowActionAvailability = {
     approve: Boolean(isActionable && pendingParticipant),
-    requestRevision: Boolean(
-      isActionable &&
-      pendingParticipant &&
-      activeStage !== 'none' &&
-      canRequestRevisionAtStage(activeStage)
-    ),
     reject: Boolean(
       isActionable &&
       pendingParticipant &&

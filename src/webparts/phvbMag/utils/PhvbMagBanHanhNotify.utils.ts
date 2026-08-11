@@ -5,7 +5,7 @@ import {
   RECENT_PUBLISHED_WINDOW_DAYS_LABEL,
   RECENT_PUBLISHED_WINDOW_DAYS_MAX,
   RECENT_PUBLISHED_WINDOW_DAYS_MIN,
-  WORKFLOW_FILTER_LOAI_VB_LABEL,
+  WORKFLOW_FILTER_LOAI_YEU_CAU_LABEL,
   WORKFLOW_FILTER_NAM_TAO_YEU_CAU_LABEL,
   WORKFLOW_FILTER_PHONG_BAN_LABEL,
   WORKFLOW_FILTER_STATUS_LABEL
@@ -162,7 +162,7 @@ export function getLabelValue(
 
 const EMPTY_WORKFLOW_FILTER_OPTIONS: IWorkflowFilterOptions = {
   status: [],
-  loaiVB: [],
+  loaiYeuCau: [],
   phongBan: [],
   namTaoYeuCau: []
 };
@@ -224,7 +224,7 @@ export function resolveLabelCustomSnapshot(
   return {
     workflowFilters: {
       status: parsePipeDelimitedConfigValue(getLabelValue(labelConfig, WORKFLOW_FILTER_STATUS_LABEL)),
-      loaiVB: parsePipeDelimitedConfigValue(getLabelValue(labelConfig, WORKFLOW_FILTER_LOAI_VB_LABEL)),
+      loaiYeuCau: parsePipeDelimitedConfigValue(getLabelValue(labelConfig, WORKFLOW_FILTER_LOAI_YEU_CAU_LABEL)),
       phongBan: parsePipeDelimitedConfigValue(getLabelValue(labelConfig, WORKFLOW_FILTER_PHONG_BAN_LABEL)),
       namTaoYeuCau: parsePipeDelimitedConfigValue(getLabelValue(labelConfig, WORKFLOW_FILTER_NAM_TAO_YEU_CAU_LABEL))
     },

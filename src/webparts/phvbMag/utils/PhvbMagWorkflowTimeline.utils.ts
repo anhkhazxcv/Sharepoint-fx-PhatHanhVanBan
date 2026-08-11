@@ -2,7 +2,7 @@ import { WORKFLOW_PARTICIPANT_STATUS } from '../config/PhvbMag.configuration';
 import type { IVanBanItem, IWorkflowParticipantItem, WorkflowStage } from '../models/PhvbMag.models';
 import { formatExecutionDateTime } from './PhvbMagDateTime.utils';
 
-export type WorkflowStepTone = 'done' | 'active' | 'pending';
+export type WorkflowStepTone = 'done' | 'active' | 'pending' | 'rejected';
 
 export interface IWorkflowTimelineStep {
   id: string;
@@ -34,7 +34,19 @@ function normalizeStatusValue(status?: string): string {
     .replace(/đ/g, 'd');
 }
 
+export function isWorkflowParticipantRejected(status?: string): boolean {
+  const normalized = normalizeStatusValue(status);
+  return (
+    normalized === 'da tu choi' ||
+    normalized.indexOf('tu choi') > -1
+  );
+}
+
 export function isWorkflowParticipantConfirmed(status?: string): boolean {
+  if (isWorkflowParticipantRejected(status)) {
+    return false;
+  }
+
   const normalized = normalizeStatusValue(status);
   return normalized === 'da xac nhan';
 }
@@ -42,6 +54,10 @@ export function isWorkflowParticipantConfirmed(status?: string): boolean {
 export function isWorkflowParticipantUnconfirmed(status?: string): boolean {
   if (!status || !status.trim()) {
     return true;
+  }
+
+  if (isWorkflowParticipantRejected(status)) {
+    return false;
   }
 
   if (isWorkflowParticipantConfirmed(status)) {
@@ -57,12 +73,20 @@ export function isWorkflowParticipantUnconfirmed(status?: string): boolean {
 }
 
 export function resolveWorkflowParticipantStatusLabel(status?: string): string {
+  if (isWorkflowParticipantRejected(status)) {
+    return WORKFLOW_PARTICIPANT_STATUS.DA_TU_CHOI;
+  }
+
   return isWorkflowParticipantConfirmed(status)
     ? WORKFLOW_PARTICIPANT_STATUS.DA_XAC_NHAN
     : WORKFLOW_PARTICIPANT_STATUS.CHUA_XAC_NHAN;
 }
 
 export function resolveWorkflowStepTone(status?: string): WorkflowStepTone {
+  if (isWorkflowParticipantRejected(status)) {
+    return 'rejected';
+  }
+
   if (isWorkflowParticipantConfirmed(status)) {
     return 'done';
   }
@@ -81,15 +105,21 @@ export function resolveWorkflowStepTone(status?: string): WorkflowStepTone {
 }
 
 function buildParticipantSubtitle(participant: IWorkflowParticipantItem): string | undefined {
-  if (!isWorkflowParticipantConfirmed(participant.TrangThai_ThucHien)) {
+  const status = participant.TrangThai_ThucHien;
+
+  if (!isWorkflowParticipantConfirmed(status) && !isWorkflowParticipantRejected(status)) {
     return undefined;
   }
 
-  const approvalDate = participant.Modified || participant.Ngay_ThucHien;
-  return approvalDate ? formatExecutionDateTime(approvalDate) : undefined;
+  const actionDate = participant.Modified || participant.Ngay_ThucHien;
+  return actionDate ? formatExecutionDateTime(actionDate) : undefined;
 }
 
 export function resolveWorkflowStepStatusChip(step: IWorkflowTimelineStep): string {
+  if (step.statusTone === 'rejected') {
+    return WORKFLOW_PARTICIPANT_STATUS.DA_TU_CHOI;
+  }
+
   if (step.statusTone === 'active') {
     return 'Đang xử lý';
   }
@@ -126,6 +156,12 @@ export function getWorkflowStepDisplayInitials(name: string): string {
 }
 
 function markCurrentPendingStep(steps: IWorkflowTimelineStep[]): void {
+  const hasRejectedStep = steps.some(step => step.statusTone === 'rejected');
+
+  if (hasRejectedStep) {
+    return;
+  }
+
   let assignedCurrent = false;
 
   for (let index = 0; index < steps.length; index += 1) {
@@ -196,6 +232,11 @@ function findStepIndex(steps: IWorkflowTimelineStep[], predicate: (step: IWorkfl
 export function findCurrentWorkflowStepIndex(steps: IWorkflowTimelineStep[]): number {
   if (steps.length === 0) {
     return -1;
+  }
+
+  const rejectedIndex = findStepIndex(steps, step => step.statusTone === 'rejected');
+  if (rejectedIndex > -1) {
+    return rejectedIndex;
   }
 
   const activeIndex = findStepIndex(steps, step => step.statusTone === 'active');

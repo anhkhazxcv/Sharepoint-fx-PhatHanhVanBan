@@ -26,8 +26,6 @@ function buildWorkflowLogActionName(action: WorkflowActionKey): string {
       return 'Workflow_Approve';
     case 'reject':
       return 'Workflow_Reject';
-    case 'requestRevision':
-      return 'Workflow_RequestRevision';
     default:
       return 'Workflow_Action';
   }

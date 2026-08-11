@@ -1,5 +1,6 @@
 import {
   DEFAULT_LIST_TITLE,
+  DMVL_DEFAULT_SO_VAN_BAN,
   hasSharePointSiteContext,
   PHVB_ROLES,
   REQUEST_STATUS
@@ -16,7 +17,8 @@ import {
   validateBanHanhNotifyDraft
 } from '../utils/PhvbMagBanHanhNotify.utils';
 import { RETURN_BAN_HANH_TO_ADMIN_COMMENT_REQUIRED_MESSAGE } from '../utils/PhvbMagWorkflowActionDialog.utils';
-import { getRoleEmails } from '../utils/PhvbMagRole.utils';
+import { canAccessDmvl, getRoleEmails } from '../utils/PhvbMagRole.utils';
+import { isDmvlSubmissionRelease } from '../utils/PhvbMagDmvl.utils';
 import {
   buildTraLaiAdminBanHanhPayload,
   buildXacNhanBanHanhPayload,
@@ -133,6 +135,8 @@ function assertReturnToAdminMailReady(
   return documentInfo;
 }
 
+const DMVL_PUBLISH_HISTORY_NOI_DUNG = 'Đã trình DMVL và ban hành văn bản.';
+
 function assertPublishNotifyReady(release: IVanBanItem): void {
   const draft: IBanHanhNotifyDraft = {
     recipient: (release.EmailNhanBanHanh || '').trim(),
@@ -148,6 +152,181 @@ function assertPublishNotifyReady(release: IVanBanItem): void {
         : validationError
     );
   }
+}
+
+export async function publishIssuanceWithNotify(
+  context: IPhvbDocumentContext,
+  detail: IRequestDetailData,
+  options: IBanHanhPublishOptions | undefined,
+  logContext: IPhvbLogContext | undefined,
+  auditLogger: ReturnType<typeof createBanHanhPublishAuditLogger>
+): Promise<void> {
+  const idYeuCau = (detail.release.IdYeuCau || '').trim();
+  const mainDocumentId = resolveMainDocumentId(detail.attachments, options?.mainDocumentId);
+  const mainDocumentError = validateMainDocumentCandidate(detail.attachments, mainDocumentId);
+
+  if (mainDocumentError) {
+    throw new Error(mainDocumentError);
+  }
+
+  assertPublishNotifyReady(detail.release);
+
+  if (!(context.endPointSendMail || '').trim()) {
+    throw new Error('Chưa cấu hình endpoint gửi mail (endPointSendMail).');
+  }
+
+  const publishResult = await phvbIssuancePublishService.publishVietMoi(
+    { ...context, logContext },
+    detail.release,
+    mainDocumentId as number,
+    auditLogger
+  );
+
+  const labelConfig = await phvbBanHanhConfigService.loadLabelCustomConfig(context);
+  const { apiKey, source: apiKeySource } = resolveShortUrlApiKey(labelConfig);
+
+  const mainFileLongUrl = buildDirectFileUrl(
+    publishResult.siteUrl,
+    publishResult.mainFileServerRelativePath
+  );
+  const folderLongUrl = buildIssuanceLibraryViewUrl(
+    publishResult.siteUrl,
+    publishResult.folderServerRelativePath
+  );
+
+  let linkFile = '';
+  let linkTatCaTaiLieu = '';
+
+  try {
+    linkFile = await phvbShortUrlService.createShortUrl(context, mainFileLongUrl, apiKey, logContext);
+    await auditLogger.logCreateShortUrl(
+      'BanHanh_CreateShortUrl_LinkFile',
+      auditLogger.buildShortUrlAuditPayload(mainFileLongUrl, linkFile, apiKeySource, apiKey),
+      'success'
+    );
+  } catch (error) {
+    await auditLogger.logCreateShortUrl(
+      'BanHanh_CreateShortUrl_LinkFile',
+      auditLogger.buildShortUrlAuditPayload(mainFileLongUrl, '', apiKeySource, apiKey),
+      'failed',
+      error instanceof Error ? error.message : String(error)
+    );
+    throw error;
+  }
+
+  try {
+    linkTatCaTaiLieu = await phvbShortUrlService.createShortUrl(context, folderLongUrl, apiKey, logContext);
+    await auditLogger.logCreateShortUrl(
+      'BanHanh_CreateShortUrl_LinkTatCaTaiLieu',
+      auditLogger.buildShortUrlAuditPayload(folderLongUrl, linkTatCaTaiLieu, apiKeySource, apiKey),
+      'success'
+    );
+  } catch (error) {
+    await auditLogger.logCreateShortUrl(
+      'BanHanh_CreateShortUrl_LinkTatCaTaiLieu',
+      auditLogger.buildShortUrlAuditPayload(folderLongUrl, '', apiKeySource, apiKey),
+      'failed',
+      error instanceof Error ? error.message : String(error)
+    );
+    throw error;
+  }
+
+  const resolvedBody = replaceBanHanhLinkTokens((detail.release.BodyEmail || '').trim(), {
+    linkFile,
+    linkTatCaTaiLieu
+  });
+  const lienHe = (detail.release.NguoiTao || detail.release.EmailNguoiTao || '').trim();
+  const releaseUpdatePayload: Record<string, string | boolean | number> = {
+    StatusApproved: REQUEST_STATUS.BAN_HANH,
+    BodyEmail: resolvedBody,
+    LienHe: lienHe
+  };
+
+  try {
+    await phvbRepository.updateItem({
+      ...context,
+      logContext,
+      listTitle: DEFAULT_LIST_TITLE,
+      itemId: detail.release.Id,
+      payload: releaseUpdatePayload
+    });
+
+    await auditLogger.logUpdateRelease(
+      {
+        StatusApproved: REQUEST_STATUS.BAN_HANH,
+        itemId: detail.release.Id,
+        LienHe: lienHe,
+        hasReplacedBodyLinks: true,
+        linkFile,
+        linkTatCaTaiLieu
+      },
+      'success'
+    );
+  } catch (error) {
+    await auditLogger.logUpdateRelease(
+      {
+        StatusApproved: REQUEST_STATUS.BAN_HANH,
+        itemId: detail.release.Id,
+        LienHe: lienHe,
+        hasReplacedBodyLinks: true,
+        linkFile,
+        linkTatCaTaiLieu
+      },
+      'failed',
+      error instanceof Error ? error.message : String(error)
+    );
+    throw error;
+  }
+
+  await createExecutionHistoryRecord(
+    { ...context, logContext },
+    {
+      idYeuCau,
+      historyStatus: PUBLISH_BAN_HANH_HISTORY_STATUS,
+      noiDung: (options?.historyNoiDung || '').trim() || 'SuperAdmin đã ban hành văn bản.',
+      department: detail.release.KhoaPhongNguoiTao,
+      isComment: false
+    }
+  );
+
+  const mailPayload = buildXacNhanBanHanhPayload(context.userEmail, detail.release, resolvedBody);
+
+  if (!mailPayload) {
+    throw new Error('Không tạo được nội dung email xác nhận ban hành.');
+  }
+
+  try {
+    await phvbSendMailService.sendMail(context, mailPayload, logContext);
+    await auditLogger.logSendMail(
+      {
+        TypeSendMail: mailPayload.TypeSendMail,
+        EmailTo: mailPayload.EmailTo,
+        hasLinkFile: Boolean(linkFile),
+        hasLinkTatCaTaiLieu: Boolean(linkTatCaTaiLieu)
+      },
+      'success'
+    );
+  } catch (error) {
+    await auditLogger.logSendMail(
+      {
+        TypeSendMail: mailPayload.TypeSendMail,
+        EmailTo: mailPayload.EmailTo
+      },
+      'failed',
+      error instanceof Error ? error.message : String(error)
+    );
+    throw error;
+  }
+
+  await auditLogger.logSuccess({
+    loaiYeuCau: detail.release.LoaiYeuCau,
+    mainDocumentId,
+    linkFile,
+    linkTatCaTaiLieu,
+    mainFileServerRelativePath: publishResult.mainFileServerRelativePath,
+    folderServerRelativePath: publishResult.folderServerRelativePath,
+    expiredFolderServerRelativePath: publishResult.expiredFolderServerRelativePath
+  });
 }
 
 export class PhvbBanHanhService {
@@ -382,7 +561,7 @@ export class PhvbBanHanhService {
 
     try {
       if (isFullIssuancePublish) {
-        await this.publishIssuanceFlow(context, detail, options, logContext, auditLogger);
+        await publishIssuanceWithNotify(context, detail, options, logContext, auditLogger);
         return;
       }
 
@@ -421,179 +600,84 @@ export class PhvbBanHanhService {
     }
   }
 
-  private async publishIssuanceFlow(
+  public async publishDmvlBanHanh(
     context: IPhvbDocumentContext,
     detail: IRequestDetailData,
+    notify: IBanHanhNotifyDraft,
     options: IBanHanhPublishOptions | undefined,
     logContext: IPhvbLogContext | undefined,
-    auditLogger: ReturnType<typeof createBanHanhPublishAuditLogger>
+    roles: ReadonlyArray<IPhvbRoleEntry>
   ): Promise<void> {
-    const idYeuCau = (detail.release.IdYeuCau || '').trim();
-    const mainDocumentId = resolveMainDocumentId(detail.attachments, options?.mainDocumentId);
-    const mainDocumentError = validateMainDocumentCandidate(detail.attachments, mainDocumentId);
+    if (!hasSharePointSiteContext(context)) {
+      throw new Error('Chưa có site context SharePoint.');
+    }
 
+    if (!canAccessDmvl(context.userDisplayName, roles, context.userEmail)) {
+      throw new Error('Bạn không có quyền trình DMVL cho yêu cầu này.');
+    }
+
+    if (!isDmvlSubmissionRelease(detail.release)) {
+      throw new Error('Yêu cầu không thuộc luồng DMVL.');
+    }
+
+    const idYeuCau = (detail.release.IdYeuCau || '').trim();
+    if (!idYeuCau) {
+      throw new Error('Yêu cầu chưa có mã IdYeuCau.');
+    }
+
+    const validationError = validateBanHanhNotifyDraft(notify);
+    if (validationError) {
+      throw new Error(validationError);
+    }
+
+    const mainDocumentError = validateMainDocumentCandidate(detail.attachments, options?.mainDocumentId);
     if (mainDocumentError) {
       throw new Error(mainDocumentError);
     }
 
-    assertPublishNotifyReady(detail.release);
-
-    if (!(context.endPointSendMail || '').trim()) {
-      throw new Error('Chưa cấu hình endpoint gửi mail (endPointSendMail).');
-    }
-
-    const publishResult = await phvbIssuancePublishService.publishVietMoi(
-      { ...context, logContext },
-      detail.release,
-      mainDocumentId as number,
-      auditLogger
-    );
-
-    const labelConfig = await phvbBanHanhConfigService.loadLabelCustomConfig(context);
-    const { apiKey, source: apiKeySource } = resolveShortUrlApiKey(labelConfig);
-
-    const mainFileLongUrl = buildDirectFileUrl(
-      publishResult.siteUrl,
-      publishResult.mainFileServerRelativePath
-    );
-    const folderLongUrl = buildIssuanceLibraryViewUrl(
-      publishResult.siteUrl,
-      publishResult.folderServerRelativePath
-    );
-
-    let linkFile = '';
-    let linkTatCaTaiLieu = '';
-
-    try {
-      linkFile = await phvbShortUrlService.createShortUrl(context, mainFileLongUrl, apiKey, logContext);
-      await auditLogger.logCreateShortUrl(
-        'BanHanh_CreateShortUrl_LinkFile',
-        auditLogger.buildShortUrlAuditPayload(mainFileLongUrl, linkFile, apiKeySource, apiKey),
-        'success'
-      );
-    } catch (error) {
-      await auditLogger.logCreateShortUrl(
-        'BanHanh_CreateShortUrl_LinkFile',
-        auditLogger.buildShortUrlAuditPayload(mainFileLongUrl, '', apiKeySource, apiKey),
-        'failed',
-        error instanceof Error ? error.message : String(error)
-      );
-      throw error;
-    }
-
-    try {
-      linkTatCaTaiLieu = await phvbShortUrlService.createShortUrl(context, folderLongUrl, apiKey, logContext);
-      await auditLogger.logCreateShortUrl(
-        'BanHanh_CreateShortUrl_LinkTatCaTaiLieu',
-        auditLogger.buildShortUrlAuditPayload(folderLongUrl, linkTatCaTaiLieu, apiKeySource, apiKey),
-        'success'
-      );
-    } catch (error) {
-      await auditLogger.logCreateShortUrl(
-        'BanHanh_CreateShortUrl_LinkTatCaTaiLieu',
-        auditLogger.buildShortUrlAuditPayload(folderLongUrl, '', apiKeySource, apiKey),
-        'failed',
-        error instanceof Error ? error.message : String(error)
-      );
-      throw error;
-    }
-
-    const resolvedBody = replaceBanHanhLinkTokens((detail.release.BodyEmail || '').trim(), {
-      linkFile,
-      linkTatCaTaiLieu
+    await phvbRepository.updateItem({
+      ...context,
+      logContext,
+      listTitle: DEFAULT_LIST_TITLE,
+      itemId: detail.release.Id,
+      payload: {
+        EmailNhanBanHanh: notify.recipient.trim(),
+        SubjectBanHanh: notify.subject.trim(),
+        BodyEmail: notify.body.trim(),
+        SoVanBan: DMVL_DEFAULT_SO_VAN_BAN
+      }
     });
-    const lienHe = (detail.release.NguoiTao || detail.release.EmailNguoiTao || '').trim();
-    const releaseUpdatePayload: Record<string, string | boolean | number> = {
-      StatusApproved: REQUEST_STATUS.BAN_HANH,
-      BodyEmail: resolvedBody,
-      LienHe: lienHe
+
+    const publishDetail: IRequestDetailData = {
+      ...detail,
+      release: {
+        ...detail.release,
+        EmailNhanBanHanh: notify.recipient.trim(),
+        SubjectBanHanh: notify.subject.trim(),
+        BodyEmail: notify.body.trim(),
+        SoVanBan: DMVL_DEFAULT_SO_VAN_BAN
+      }
     };
 
+    const auditLogger = createBanHanhPublishAuditLogger(context, logContext || {}, idYeuCau);
+
+    await auditLogger.logStart(options?.mainDocumentId);
+
     try {
-      await phvbRepository.updateItem({
-        ...context,
+      await publishIssuanceWithNotify(
+        context,
+        publishDetail,
+        {
+          ...options,
+          historyNoiDung: DMVL_PUBLISH_HISTORY_NOI_DUNG
+        },
         logContext,
-        listTitle: DEFAULT_LIST_TITLE,
-        itemId: detail.release.Id,
-        payload: releaseUpdatePayload
-      });
-
-      await auditLogger.logUpdateRelease(
-        {
-          StatusApproved: REQUEST_STATUS.BAN_HANH,
-          itemId: detail.release.Id,
-          LienHe: lienHe,
-          hasReplacedBodyLinks: true,
-          linkFile,
-          linkTatCaTaiLieu
-        },
-        'success'
+        auditLogger
       );
     } catch (error) {
-      await auditLogger.logUpdateRelease(
-        {
-          StatusApproved: REQUEST_STATUS.BAN_HANH,
-          itemId: detail.release.Id,
-          LienHe: lienHe,
-          hasReplacedBodyLinks: true,
-          linkFile,
-          linkTatCaTaiLieu
-        },
-        'failed',
-        error instanceof Error ? error.message : String(error)
-      );
+      await auditLogger.logFailed('publish_issuance', error);
       throw error;
     }
-
-    await createExecutionHistoryRecord(
-      { ...context, logContext },
-      {
-        idYeuCau,
-        historyStatus: PUBLISH_BAN_HANH_HISTORY_STATUS,
-        noiDung: 'SuperAdmin đã ban hành văn bản.',
-        department: detail.release.KhoaPhongNguoiTao,
-        isComment: false
-      }
-    );
-
-    const mailPayload = buildXacNhanBanHanhPayload(context.userEmail, detail.release, resolvedBody);
-
-    if (!mailPayload) {
-      throw new Error('Không tạo được nội dung email xác nhận ban hành.');
-    }
-
-    try {
-      await phvbSendMailService.sendMail(context, mailPayload, logContext);
-      await auditLogger.logSendMail(
-        {
-          TypeSendMail: mailPayload.TypeSendMail,
-          EmailTo: mailPayload.EmailTo,
-          hasLinkFile: Boolean(linkFile),
-          hasLinkTatCaTaiLieu: Boolean(linkTatCaTaiLieu)
-        },
-        'success'
-      );
-    } catch (error) {
-      await auditLogger.logSendMail(
-        {
-          TypeSendMail: mailPayload.TypeSendMail,
-          EmailTo: mailPayload.EmailTo
-        },
-        'failed',
-        error instanceof Error ? error.message : String(error)
-      );
-      throw error;
-    }
-
-    await auditLogger.logSuccess({
-      loaiYeuCau: detail.release.LoaiYeuCau,
-      mainDocumentId,
-      linkFile,
-      linkTatCaTaiLieu,
-      mainFileServerRelativePath: publishResult.mainFileServerRelativePath,
-      folderServerRelativePath: publishResult.folderServerRelativePath,
-      expiredFolderServerRelativePath: publishResult.expiredFolderServerRelativePath
-    });
   }
 
   public getRuntimeErrorMessage(error: unknown): string {

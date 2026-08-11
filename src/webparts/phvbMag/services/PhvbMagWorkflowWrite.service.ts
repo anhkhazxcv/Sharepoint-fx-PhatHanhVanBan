@@ -17,7 +17,7 @@ import {
   resolveInitialSubmitStatus,
   resolveSendMailDocumentInfoFromCreateInput
 } from '../utils/PhvbMagSendMail.utils';
-import type { ICreateRequestInput, IPhvbDirectoryUser, IPhvbLogContext, IPhvbSiteContext, SaveRequestMode } from '../models/PhvbMag.models';
+import type { ICreateRequestInput, IPhvbDirectoryUser, IPhvbLogContext, IPhvbSiteContext, RequestSubmissionFlow, SaveRequestMode } from '../models/PhvbMag.models';
 
 interface ICreateWorkflowRecordsOptions extends IPhvbSiteContext {
   requestReferenceId: string;
@@ -26,6 +26,7 @@ interface ICreateWorkflowRecordsOptions extends IPhvbSiteContext {
   creatorEmail: string;
   directoryUsers: ReadonlyArray<IPhvbDirectoryUser>;
   saveMode: SaveRequestMode;
+  submissionFlow?: RequestSubmissionFlow;
   isUpdate?: boolean;
   logContext?: IPhvbLogContext;
 }
@@ -158,7 +159,7 @@ export class PhvbWorkflowWriteService {
       }
     );
 
-    if (isDraft) {
+    if (isDraft || options.submissionFlow === 'dmvl') {
       return;
     }
 

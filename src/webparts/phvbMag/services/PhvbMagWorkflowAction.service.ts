@@ -74,8 +74,6 @@ function resolveHistoryStatusForAction(action: WorkflowActionKey, stage: Workflo
       return resolveHistoryStatusForApprove(stage);
     case 'reject':
       return EXECUTION_HISTORY_STATUS.TU_CHOI;
-    case 'requestRevision':
-      return EXECUTION_HISTORY_STATUS.YEU_CAU_CHINH_SUA;
     default:
       return EXECUTION_HISTORY_STATUS.PHE_DUYET;
   }
@@ -85,8 +83,6 @@ function resolveDocumentStatusForAction(action: WorkflowActionKey): string {
   switch (action) {
     case 'reject':
       return REQUEST_STATUS.TU_CHOI;
-    case 'requestRevision':
-      return REQUEST_STATUS.YEU_CAU_CHINH_SUA;
     default:
       return REQUEST_STATUS.DANG_GOP_Y;
   }
@@ -115,7 +111,8 @@ async function updateParticipantConfirmation(
   context: IPhvbDocumentContext & { logContext?: IPhvbLogContext },
   stage: WorkflowStage,
   participant: IAllUserWorkflowItem,
-  comment: string
+  comment: string,
+  participantStatus: string = WORKFLOW_PARTICIPANT_STATUS.DA_XAC_NHAN
 ): Promise<void> {
   const performedAt = formatCurrentExecutionDateTime();
 
@@ -124,7 +121,7 @@ async function updateParticipantConfirmation(
     listTitle: getAllUserListTitleForStage(stage),
     itemId: participant.Id,
     payload: {
-      TrangThai_ThucHien: WORKFLOW_PARTICIPANT_STATUS.DA_XAC_NHAN,
+      TrangThai_ThucHien: participantStatus,
       Ngay_ThucHien: performedAt,
       NoiDung: comment
     }
@@ -296,7 +293,7 @@ export class PhvbWorkflowActionService {
 
     const comment = (options.input.comment || '').trim();
 
-    if ((options.input.action === 'reject' || options.input.action === 'requestRevision') && !comment) {
+    if (options.input.action === 'reject' && !comment) {
       throw new Error(getWorkflowActionCommentRequiredMessage(options.input.action));
     }
 
@@ -353,18 +350,13 @@ export class PhvbWorkflowActionService {
       throw new Error('Không tìm thấy nhiệm vụ chờ xử lý của bạn.');
     }
 
-    if (options.input.action === 'requestRevision') {
-      await createHistoryRecord(
-        options,
-        idYeuCau,
-        historyStatus,
-        comment,
-        options.detail.release.KhoaPhongNguoiTao
-      );
-      return;
-    }
-
-    await updateParticipantConfirmation(options, stage, participant, comment);
+    await updateParticipantConfirmation(
+      options,
+      stage,
+      participant,
+      comment,
+      WORKFLOW_PARTICIPANT_STATUS.DA_TU_CHOI
+    );
     await updateReleaseStatus(options, options.detail.release.Id, resolveDocumentStatusForAction(options.input.action));
     await sendRejectWorkflowMail(options, stage);
     await createHistoryRecord(
