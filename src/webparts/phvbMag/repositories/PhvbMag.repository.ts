@@ -38,9 +38,15 @@ export interface IDeletePhvbItemCommand extends IPhvbSiteContext {
   logContext?: IPhvbLogContext;
 }
 
+export interface IFetchPhvbCountQuery extends IPhvbSiteContext {
+  filter?: string;
+  logContext?: IPhvbLogContext;
+}
+
 export interface IPhvbRepository {
   fetchItems(query: IFetchPhvbItemsQuery): Promise<IVanBanItem[]>;
   fetchItemsPage(query: IFetchPhvbItemsQuery): Promise<IFetchPhvbItemsPageResult>;
+  fetchCount(query: IFetchPhvbCountQuery): Promise<number>;
   createItem(command: ICreatePhvbItemCommand): Promise<number>;
   updateItem(command: IUpdatePhvbItemCommand): Promise<void>;
   deleteItem(command: IDeletePhvbItemCommand): Promise<void>;
@@ -179,6 +185,38 @@ async function runPatchRequestWithFallback(siteUrl: string, command: IUpdatePhvb
 
 async function readJson<T>(response: SPHttpClientResponse): Promise<T> {
   return response.json() as Promise<T>;
+}
+
+function buildCountQueryString(query: IFetchPhvbCountQuery): string {
+  if (!query.filter) {
+    return '';
+  }
+
+  return `$filter=${query.filter}`;
+}
+
+async function runCountRequest(siteUrl: string, query: IFetchPhvbCountQuery): Promise<number> {
+  const queryString = buildCountQueryString(query);
+  const requestUrl = queryString
+    ? `${getItemsEndpoint(siteUrl, query.listTitle)}/$count?${queryString}`
+    : `${getItemsEndpoint(siteUrl, query.listTitle)}/$count`;
+  const response = await query.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1, {
+    headers: {
+      accept: 'application/json;odata=nometadata',
+      'odata-version': ''
+    }
+  });
+
+  await ensureSharePointResponseOk(
+    response,
+    requestUrl,
+    buildRepositoryApiLogParams(query, 'SP_GET')
+  );
+
+  const rawCount = await response.text();
+  const parsedCount = parseInt(rawCount, 10);
+
+  return isNaN(parsedCount) ? 0 : parsedCount;
 }
 
 async function runGetRequest(siteUrl: string, query: IFetchPhvbItemsQuery, selectFields: string[]): Promise<SPHttpClientResponse> {
@@ -336,6 +374,10 @@ export class SharePointPhvbRepository implements IPhvbRepository {
         nextSkip: skip
       };
     });
+  }
+
+  public async fetchCount(query: IFetchPhvbCountQuery): Promise<number> {
+    return tryAcrossCandidateSites(query, async (siteUrl: string) => runCountRequest(siteUrl, query));
   }
 
   public async createItem(command: ICreatePhvbItemCommand): Promise<number> {

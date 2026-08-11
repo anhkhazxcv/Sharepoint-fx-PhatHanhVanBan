@@ -7,9 +7,10 @@ import type {
   ISavedDocumentDisplayItem
 } from '../models/PhvbMag.models';
 import { usePhvbSavedDocuments } from '../context/PhvbMagSavedDocuments.context';
-import { formatBanHanhDate } from '../utils/PhvbMagBanHanh.tree';
+import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
 import { PhvbMagLibraryListPageShell } from './PhvbMagLibraryListPageShell';
+import { PhvbMagLibraryPagedList } from './PhvbMagLibraryPagedList';
 import { PhvbMagSaveBookmarkButton } from './PhvbMagSaveBookmarkButton';
 import styles from './PhvbMag.module.scss';
 
@@ -31,7 +32,7 @@ function buildFallbackDocument(bookmark: ISavedDocumentDisplayItem['bookmark']):
 
 function SavedDocumentCard(props: { item: ISavedDocumentDisplayItem }): React.ReactElement {
   const { item } = props;
-  const savedAt = formatBanHanhDate(item.bookmark.created) || 'Chưa xác định';
+  const savedAt = formatExecutionDateTime(item.bookmark.created) || 'Chưa xác định';
 
   if (!item.isAccessible || !item.document) {
     const fallbackDocument = buildFallbackDocument(item.bookmark);
@@ -47,7 +48,7 @@ function SavedDocumentCard(props: { item: ISavedDocumentDisplayItem }): React.Re
           </div>
           <p className={styles.libraryDocumentSummary}>Không còn truy cập được văn bản này.</p>
           <div className={styles.libraryDocumentMeta}>
-            <span className={styles.libraryDocumentEffectiveDate}>
+            <span className={styles.libraryDocumentTimestamp}>
               <strong>Đã lưu:</strong> {savedAt}
             </span>
           </div>
@@ -63,7 +64,7 @@ function SavedDocumentCard(props: { item: ISavedDocumentDisplayItem }): React.Re
       showBookmark
       metaContent={(
         <>
-          <span className={styles.libraryDocumentEffectiveDate}>
+          <span className={styles.libraryDocumentTimestamp}>
             <strong>Đã lưu:</strong> {savedAt}
           </span>
           {item.bookmark.notes ? (
@@ -97,11 +98,16 @@ export function PhvbMagSavedDocumentsView(props: IPhvbMagSavedDocumentsViewProps
       isEmpty={savedDisplayItems.length === 0}
       emptyMessage="Chưa lưu văn bản nào. Hãy mở Thư viện tài liệu hoặc Mới ban hành để đánh dấu văn bản."
     >
-      <div className={[styles.recentSectionList, styles.savedDocumentList].join(' ')}>
-        {savedDisplayItems.map((item: ISavedDocumentDisplayItem) => (
-          <SavedDocumentCard key={item.bookmark.id} item={item} />
-        ))}
-      </div>
+      <PhvbMagLibraryPagedList
+        items={savedDisplayItems}
+        resetDeps={[savedDisplayItems.length]}
+        listClassName={styles.savedDocumentList}
+        getItemKey={item => item.bookmark.id}
+        renderItem={item => <SavedDocumentCard item={item} />}
+        onReload={() => {
+          loadSavedView().catch(() => undefined);
+        }}
+      />
     </PhvbMagLibraryListPageShell>
   );
 }

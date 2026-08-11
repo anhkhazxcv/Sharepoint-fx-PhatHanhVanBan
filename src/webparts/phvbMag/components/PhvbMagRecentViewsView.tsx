@@ -1,14 +1,15 @@
 import * as React from 'react';
 import { useEffect } from 'react';
-import { DOCUMENT_COUNT_SUFFIX, TAB_LABELS } from '../config/PhvbMag.configuration';
+import { DOCUMENT_COUNT_SUFFIX, RECENT_VIEWS_TOP, TAB_LABELS } from '../config/PhvbMag.configuration';
 import type {
   IPhvbDocumentContext,
   IRecentViewDisplayItem
 } from '../models/PhvbMag.models';
 import { usePhvbRecentViews } from '../context/PhvbMagRecentViews.context';
-import { formatBanHanhDate } from '../utils/PhvbMagBanHanh.tree';
+import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
 import { PhvbMagLibraryListPageShell } from './PhvbMagLibraryListPageShell';
+import { PhvbMagLibraryPagedList } from './PhvbMagLibraryPagedList';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagRecentViewsViewProps {
@@ -17,7 +18,7 @@ interface IPhvbMagRecentViewsViewProps {
 
 function RecentViewCard(props: { item: IRecentViewDisplayItem }): React.ReactElement {
   const { item } = props;
-  const viewedAt = formatBanHanhDate(item.recentView.modified) || 'Chưa xác định';
+  const viewedAt = formatExecutionDateTime(item.recentView.modified) || 'Chưa xác định';
 
   if (!item.isAccessible || !item.document) {
     return (
@@ -28,7 +29,7 @@ function RecentViewCard(props: { item: IRecentViewDisplayItem }): React.ReactEle
           </div>
           <p className={styles.libraryDocumentSummary}>Không còn truy cập được văn bản này.</p>
           <div className={styles.libraryDocumentMeta}>
-            <span className={styles.libraryDocumentEffectiveDate}>
+            <span className={styles.libraryDocumentTimestamp}>
               <strong>Đã xem:</strong> {viewedAt}
             </span>
           </div>
@@ -43,7 +44,7 @@ function RecentViewCard(props: { item: IRecentViewDisplayItem }): React.ReactEle
       showDownload
       showBookmark
       metaContent={(
-        <span className={styles.libraryDocumentEffectiveDate}>
+        <span className={styles.libraryDocumentTimestamp}>
           <strong>Đã xem:</strong> {viewedAt}
         </span>
       )}
@@ -62,7 +63,7 @@ export function PhvbMagRecentViewsView(props: IPhvbMagRecentViewsViewProps): Rea
     <PhvbMagLibraryListPageShell
       eyebrow="Thư viện"
       title={TAB_LABELS.XemGanDay}
-      subtitle="Văn bản bạn đã mở gần đây"
+      subtitle={`Văn bản bạn đã mở gần đây. Chỉ hiển thị ${RECENT_VIEWS_TOP} văn bản xem gần nhất.`}
       count={recentCount}
       countSuffix={DOCUMENT_COUNT_SUFFIX}
       isLoading={isLoadingRecentView}
@@ -71,11 +72,16 @@ export function PhvbMagRecentViewsView(props: IPhvbMagRecentViewsViewProps): Rea
       isEmpty={recentDisplayItems.length === 0}
       emptyMessage="Chưa có văn bản nào được xem. Hãy mở Thư viện tài liệu để bắt đầu."
     >
-      <div className={[styles.recentSectionList, styles.savedDocumentList].join(' ')}>
-        {recentDisplayItems.map((item: IRecentViewDisplayItem) => (
-          <RecentViewCard key={item.recentView.id} item={item} />
-        ))}
-      </div>
+      <PhvbMagLibraryPagedList
+        items={recentDisplayItems}
+        resetDeps={[recentDisplayItems.length]}
+        listClassName={styles.savedDocumentList}
+        getItemKey={item => item.recentView.id}
+        renderItem={item => <RecentViewCard item={item} />}
+        onReload={() => {
+          loadRecentView().catch(() => undefined);
+        }}
+      />
     </PhvbMagLibraryListPageShell>
   );
 }

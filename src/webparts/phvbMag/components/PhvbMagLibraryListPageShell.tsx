@@ -47,7 +47,12 @@ export function PhvbMagLibraryListPageShell(props: IPhvbMagLibraryListPageShellP
         className={styles.recentHeader}
       />
 
-      <div className={styles.recentBody}>
+      <div
+        className={[
+          styles.recentBody,
+          !isLoading && !errorMessage && !isEmpty ? styles.recentBodyWithList : ''
+        ].filter(Boolean).join(' ')}
+      >
         <PhvbMagLoadingOverlay isOpen={isLoading} message={loadingMessage} />
 
         {!isLoading && errorMessage ? (

@@ -1,9 +1,10 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
-import { COMMENT_ATTACHMENT_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
+import { COMMENT_ATTACHMENT_CHUNK_SIZE, COMMENT_ATTACHMENT_LIBRARY_TITLE, HISTORY_LIST_TITLE } from '../config/PhvbMag.configuration';
 import { buildSharePointFileOpenUrl } from '../infrastructure/SharePointFile.utils';
 import { escapeODataValue, getCandidateSiteUrls, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { resolveCommentAttachmentFolderName } from '../utils/PhvbMagCommentAttachment.utils';
 import { ensureSharePointResponseOk } from '../infrastructure/SharePointHttp.utils';
+import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { buildApiLogParams } from './PhvbMagLog.service';
 import type { ICommentAttachmentItem, IPhvbLogContext, IPhvbSiteContext } from '../models/PhvbMag.models';
 
@@ -95,8 +96,17 @@ function mapFolderFile(item: ISharePointFolderFile, commentId: number, siteUrl: 
 }
 
 export class PhvbCommentAttachmentService {
+  private readonly libraryRootPathBySiteUrl = new Map<string, string>();
+
   private async getLibraryRootFolder(siteUrl: string, context: ICommentAttachmentContext): Promise<string> {
-    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(COMMENT_ATTACHMENT_LIBRARY_TITLE)}')/RootFolder?$select=ServerRelativeUrl`;
+    const normalizedSiteUrl = normalizeSiteUrl(siteUrl);
+    const cachedRootPath = this.libraryRootPathBySiteUrl.get(normalizedSiteUrl);
+
+    if (cachedRootPath) {
+      return cachedRootPath;
+    }
+
+    const requestUrl = `${normalizedSiteUrl}/_api/web/lists/getByTitle('${escapeODataValue(COMMENT_ATTACHMENT_LIBRARY_TITLE)}')/RootFolder?$select=ServerRelativeUrl`;
     const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
     await ensureCommentAttachmentResponseOk(response, requestUrl, context, 'SP_GET');
     const data = await response.json() as { ServerRelativeUrl?: string };
@@ -105,7 +115,27 @@ export class PhvbCommentAttachmentService {
       throw new Error(`Missing root folder for library ${COMMENT_ATTACHMENT_LIBRARY_TITLE}.`);
     }
 
-    return normalizeServerRelativePath(data.ServerRelativeUrl);
+    const rootPath = normalizeServerRelativePath(data.ServerRelativeUrl);
+    this.libraryRootPathBySiteUrl.set(normalizedSiteUrl, rootPath);
+    return rootPath;
+  }
+
+  private async markCommentHasAttachments(
+    context: IPhvbSiteContext,
+    commentId: number,
+    logContext?: IPhvbLogContext
+  ): Promise<void> {
+    try {
+      await phvbRepository.updateItem({
+        ...context,
+        listTitle: HISTORY_LIST_TITLE,
+        itemId: commentId,
+        payload: { IsHasAttach: true },
+        logContext
+      });
+    } catch {
+      // Column may not exist yet — upload still succeeded.
+    }
   }
 
   private async folderExists(siteUrl: string, context: IPhvbSiteContext, folderPath: string): Promise<boolean> {
@@ -250,6 +280,7 @@ export class PhvbCommentAttachmentService {
           )
         );
 
+        await this.markCommentHasAttachments(context, commentId, logContext);
         return;
       } catch (error) {
         lastError = error;
@@ -318,11 +349,20 @@ export class PhvbCommentAttachmentService {
       return [];
     }
 
-    const results = await Promise.all(
-      uniqueIds.map(commentId => this.listCommentFiles(context, commentId).catch(() => []))
-    );
+    const merged: ICommentAttachmentItem[] = [];
 
-    return results.reduce<ICommentAttachmentItem[]>((merged, items) => merged.concat(items), []);
+    for (let index = 0; index < uniqueIds.length; index += COMMENT_ATTACHMENT_CHUNK_SIZE) {
+      const chunk = uniqueIds.slice(index, index + COMMENT_ATTACHMENT_CHUNK_SIZE);
+      const chunkResults = await Promise.all(
+        chunk.map(commentId => this.listCommentFiles(context, commentId).catch(() => []))
+      );
+
+      chunkResults.forEach(items => {
+        items.forEach(item => merged.push(item));
+      });
+    }
+
+    return merged;
   }
 }
 

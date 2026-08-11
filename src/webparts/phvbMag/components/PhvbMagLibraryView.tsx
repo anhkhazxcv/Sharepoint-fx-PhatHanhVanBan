@@ -12,11 +12,10 @@ import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
 import { PhvbMagPageHeader } from './PhvbMagPageHeader';
 import { PhvbMagSkeleton } from './PhvbMagSkeleton';
+import { PhvbMagFolderTreeNode } from './PhvbMagFolderTree';
 import {
   CloseIcon,
   FolderAccentIcon,
-  FolderTreeChevronDownIcon,
-  FolderTreeChevronRightIcon,
   PaginationNextIcon,
   PaginationPreviousIcon,
   SearchIcon,
@@ -93,37 +92,15 @@ function FolderTreeNode(props: IFolderTreeNodeProps): React.ReactElement {
 
   return (
     <>
-      <div
-        className={`${styles.libraryFolderNode} ${isSelected ? styles.libraryFolderNodeActive : ''}`}
-        style={{ paddingLeft: `${12 + depth * 16}px` }}
-      >
-        <button
-          type="button"
-          className={styles.libraryFolderChevron}
-          onClick={event => {
-            event.stopPropagation();
-            onToggleExpand(folder.serverRelativePath);
-          }}
-          aria-label={isExpanded ? 'Thu gọn' : 'Mở rộng'}
-        >
-          {hasChildren ? (
-            isExpanded ? (
-              <FolderTreeChevronDownIcon className={styles.libraryFolderChevronIcon} />
-            ) : (
-              <FolderTreeChevronRightIcon className={styles.libraryFolderChevronIcon} />
-            )
-          ) : null}
-        </button>
-        <button
-          type="button"
-          className={styles.libraryFolderNodeButton}
-          onClick={() => onSelectFolder(folder)}
-          title={folder.name}
-        >
-          <FolderAccentIcon className={styles.libraryFolderIcon} />
-          <span>{folder.name}</span>
-        </button>
-      </div>
+      <PhvbMagFolderTreeNode
+        name={folder.name}
+        depth={depth}
+        hasChildren={hasChildren}
+        isExpanded={isExpanded}
+        isSelected={isSelected}
+        onToggleExpand={() => onToggleExpand(folder.serverRelativePath)}
+        onSelect={() => onSelectFolder(folder)}
+      />
 
       {isExpanded && children.map(child => (
         <FolderTreeNode

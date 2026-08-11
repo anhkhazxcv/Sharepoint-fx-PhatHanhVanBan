@@ -13,9 +13,11 @@ import {
   type RequestTableSortKey,
   sortRequestTableItems
 } from '../utils/PhvbMagTable.utils';
+import { usePhvbPagedItems } from '../hooks/usePhvbPagedItems';
 import { PhvbMagEmptyState } from './PhvbMagEmptyState';
+import { PhvbMagListPager } from './PhvbMagListPager';
 import styles from './PhvbMag.module.scss';
-import { PaginationNextIcon, PaginationPreviousIcon, SearchIcon } from './PhvbMagIcons';
+import { SearchIcon } from './PhvbMagIcons';
 
 interface IPhvbMagTableProps {
   activeTab: TabType;
@@ -46,13 +48,11 @@ const TABLE_COLUMNS: ReadonlyArray<ITableColumnDefinition> = [
   { key: 'index', label: '#', headerClassName: styles.requestTableIndexCol },
   { key: 'title', label: 'TÊN VĂN BẢN', sortKey: 'Tenvanban', headerClassName: styles.requestTitleCell },
   { key: 'code', label: 'MÃ HIỆU', sortKey: 'SoVanBan' },
-  { key: 'type', label: 'LOẠI VB', sortKey: 'LoaiYeuCau' },
+  { key: 'type', label: 'LOẠI YÊU CẦU', sortKey: 'LoaiYeuCau' },
   { key: 'department', label: 'PHÒNG BAN', sortKey: 'KhoaPhongNguoiTao' },
   { key: 'created', label: 'NGÀY TẠO', sortKey: 'NgayTaoYeuCau' },
   { key: 'status', label: 'TRẠNG THÁI', sortKey: 'StatusApproved' }
 ];
-
-const PAGE_SIZE_OPTIONS: ReadonlyArray<number> = [10, 20, 50];
 
 const LIST_TAB_CONFIG: Record<
   'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'CapSo' | 'QLVanBan',
@@ -135,53 +135,6 @@ function getRequestStatusState(item: IVanBanItem): { label: string; className: s
   return {
     label: statusDisplay.label,
     className: styles.requestStatusPending
-  };
-}
-
-interface IPagedItemsResult<T> {
-  pageSize: number;
-  setPageSize: (size: number) => void;
-  pagedItems: T[];
-  totalItems: number;
-  totalPages: number;
-  currentPage: number;
-  rangeStart: number;
-  rangeEnd: number;
-  goToPreviousPage: () => void;
-  goToNextPage: () => void;
-}
-
-function usePagedItems<T>(items: T[], resetDeps: React.DependencyList): IPagedItemsResult<T> {
-  const [pageSize, setPageSizeState] = React.useState<number>(20);
-  const [page, setPage] = React.useState<number>(1);
-
-  React.useEffect(() => {
-    setPage(1);
-  }, resetDeps);
-
-  const setPageSize = (size: number): void => {
-    setPageSizeState(size);
-    setPage(1);
-  };
-
-  const totalItems = items.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const currentPage = page > totalPages ? totalPages : page;
-  const pagedItems = items.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const rangeStart = totalItems === 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
-  const rangeEnd = Math.min(currentPage * pageSize, totalItems);
-
-  return {
-    pageSize,
-    setPageSize,
-    pagedItems,
-    totalItems,
-    totalPages,
-    currentPage,
-    rangeStart,
-    rangeEnd,
-    goToPreviousPage: () => setPage(currentPage - 1),
-    goToNextPage: () => setPage(currentPage + 1)
   };
 }
 
@@ -285,9 +238,9 @@ function RequestTableToolbar(props: IRequestTableToolbarProps): React.ReactEleme
           onChange={status => updateFilter({ status })}
         />
         <RequestFilterSelect
-          label="Loại VB:"
+          label="Loại yêu cầu:"
           value={filters.loaiYeuCau}
-          options={filterOptions.loaiVB}
+          options={filterOptions.loaiYeuCau}
           onChange={loaiYeuCau => updateFilter({ loaiYeuCau })}
         />
         <RequestFilterSelect
@@ -349,74 +302,6 @@ function SortableTableHeader(props: ISortableTableHeaderProps): React.ReactEleme
   );
 }
 
-interface IListPagerProps {
-  pageSize: number;
-  rangeStart: number;
-  rangeEnd: number;
-  totalItems: number;
-  currentPage: number;
-  totalPages: number;
-  onPageSizeChange: (size: number) => void;
-  onPreviousPage: () => void;
-  onNextPage: () => void;
-}
-
-function ListPager(props: IListPagerProps): React.ReactElement {
-  const {
-    pageSize,
-    rangeStart,
-    rangeEnd,
-    totalItems,
-    currentPage,
-    totalPages,
-    onPageSizeChange,
-    onPreviousPage,
-    onNextPage
-  } = props;
-
-  return (
-    <div className={styles.requestFooter}>
-      <button type="button" className={styles.requestReloadButton} onClick={() => window.location.reload()}>
-        Tải lại
-      </button>
-
-      <div className={styles.requestPager}>
-        <label className={styles.requestPageSizeLabel}>
-          Hiển thị:
-          <select value={pageSize} onChange={event => onPageSizeChange(Number(event.target.value))}>
-            {PAGE_SIZE_OPTIONS.map(size => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <span className={styles.requestRangeText}>{rangeStart}-{rangeEnd}/{totalItems}</span>
-
-        <button
-          type="button"
-          className={styles.requestPageButton}
-          onClick={onPreviousPage}
-          disabled={currentPage <= 1}
-          aria-label="Trang trước"
-        >
-          <PaginationPreviousIcon />
-        </button>
-        <button
-          type="button"
-          className={styles.requestPageButton}
-          onClick={onNextPage}
-          disabled={currentPage >= totalPages}
-          aria-label="Trang sau"
-        >
-          <PaginationNextIcon />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 interface IRequestBoardTableProps extends IPhvbMagTableProps {
   boardTitle: string;
   countSuffix: string;
@@ -450,7 +335,7 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
     () => sortRequestTableItems(filteredItems, sortKey, sortDirection),
     [filteredItems, sortDirection, sortKey]
   );
-  const pagination = usePagedItems(sortedItems, [filters, searchQuery, sortDirection, sortKey]);
+  const pagination = usePhvbPagedItems(sortedItems, [filters, searchQuery, sortDirection, sortKey]);
   const { pagedItems, totalItems, currentPage, pageSize } = pagination;
 
   const handleSort = (nextSortKey: RequestTableSortKey): void => {
@@ -566,7 +451,7 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
             </table>
           </div>
 
-          <ListPager
+          <PhvbMagListPager
             pageSize={pagination.pageSize}
             rangeStart={pagination.rangeStart}
             rangeEnd={pagination.rangeEnd}
@@ -576,6 +461,7 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
             onPageSizeChange={pagination.setPageSize}
             onPreviousPage={pagination.goToPreviousPage}
             onNextPage={pagination.goToNextPage}
+            onReload={() => window.location.reload()}
           />
         </>
       )}

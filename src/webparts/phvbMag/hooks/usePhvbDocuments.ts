@@ -17,6 +17,8 @@ interface IUsePhvbDocumentsOptions {
   endPointSendMail?: string;
   spHttpClient: SPHttpClient;
   httpClient: HttpClient;
+  suspendTabItemsLoad?: boolean;
+  deferCountsLoad?: boolean;
 }
 
 interface IUsePhvbDocumentsResult {
@@ -37,7 +39,19 @@ interface IUsePhvbDocumentsResult {
 }
 
 export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDocumentsResult {
-  const { userDisplayName, userEmail, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, endPointSendMail, spHttpClient, httpClient } = options;
+  const {
+    userDisplayName,
+    userEmail,
+    currentWebUrl,
+    siteCollectionUrl,
+    sourceSiteUrl,
+    listTitle,
+    endPointSendMail,
+    spHttpClient,
+    httpClient,
+    suspendTabItemsLoad = false,
+    deferCountsLoad = false
+  } = options;
   const [activeTab, setActiveTab] = useState<TabType>('TrangChu');
   const [counts, setCounts] = useState<ITabCounts>(DEFAULT_TAB_COUNTS);
   const [items, setItems] = useState<IVanBanItem[]>([]);
@@ -70,7 +84,8 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     }
 
     try {
-      const nextCounts = await phvbDocumentsService.loadTabCounts(documentContext);
+      phvbDocumentsService.invalidateTabCountsCache();
+      const nextCounts = await phvbDocumentsService.loadTabCounts(documentContext, true);
       setCounts(nextCounts);
       setErrorMessage(undefined);
     } catch (error) {
@@ -80,8 +95,19 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
   }, [documentContext, hasAnySiteContext, resolvedListTitle]);
 
   useEffect(() => {
-    refetchCounts().catch(() => undefined);
-  }, [refetchCounts]);
+    if (!deferCountsLoad) {
+      refetchCounts().catch(() => undefined);
+      return;
+    }
+
+    const deferHandle = window.setTimeout(() => {
+      refetchCounts().catch(() => undefined);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(deferHandle);
+    };
+  }, [deferCountsLoad, refetchCounts]);
 
   useEffect(() => {
     let isMounted = true;
@@ -90,6 +116,15 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
       setItems([]);
       setIsLoading(false);
       setErrorMessage(SITE_CONTEXT_ERROR_MESSAGE);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    if (suspendTabItemsLoad) {
+      setItems([]);
+      setIsLoading(false);
+      setErrorMessage(undefined);
       return () => {
         isMounted = false;
       };
@@ -145,7 +180,7 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     return () => {
       isMounted = false;
     };
-  }, [activeTab, hasAnySiteContext, resolvedListTitle, siteContext, userEmail]);
+  }, [activeTab, hasAnySiteContext, resolvedListTitle, siteContext, suspendTabItemsLoad, userEmail]);
 
   const saveRequest = async (
     input: ICreateRequestInput,
@@ -189,8 +224,10 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
 
       const targetTab: TabType = mode === 'draft' ? 'BanNhap' : activeTab;
 
+      phvbDocumentsService.invalidateTabCountsCache();
+
       const [nextCounts, nextItems] = await Promise.all([
-        phvbDocumentsService.loadTabCounts(documentContext),
+        phvbDocumentsService.loadTabCounts(documentContext, true),
         phvbDocumentsService.loadTabItems({
           ...siteContext,
           userEmail,
