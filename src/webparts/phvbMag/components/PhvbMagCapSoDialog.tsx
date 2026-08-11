@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import styles from './PhvbMag.module.scss';
+import { PhvbMagButton } from './primitives/PhvbMagButton';
+import { PhvbMagDialog } from './primitives/PhvbMagDialog';
 
 interface IPhvbMagCapSoDialogProps {
   isOpen: boolean;
@@ -47,44 +49,17 @@ export function PhvbMagCapSoDialog(props: IPhvbMagCapSoDialogProps): React.React
   };
 
   return (
-    <div className={styles.confirmDialogOverlay}>
-      <div className={styles.confirmDialogContent}>
-        <h4>Cấp số</h4>
-        <p>Nhập số văn bản chính thức cho yêu cầu này.</p>
-
-        <div className={styles.workflowActionDialogComment}>
-          <label htmlFor="phvb-cap-so-number">
-            Số văn bản<span className={styles.workflowActionDialogRequired}> *</span>
-          </label>
-          <input
-            id="phvb-cap-so-number"
-            type="text"
-            className={styles.formInput}
-            value={documentNumberDraft}
-            placeholder="Nhập số văn bản..."
-            disabled={isProcessing}
-            onChange={event => {
-              setDocumentNumberDraft(event.target.value);
-              if (validationError) {
-                setValidationError(undefined);
-              }
-            }}
-          />
-        </div>
-
-        {displayedError ? (
-          <p className={styles.workflowActionDialogError} role="alert">{displayedError}</p>
-        ) : null}
-
-        <div className={styles.confirmDialogActions}>
-          <button
-            type="button"
-            className={styles.btnSecondary}
-            disabled={isProcessing}
-            onClick={onCancel}
-          >
+    <PhvbMagDialog
+      isOpen={isOpen}
+      title="Cấp số"
+      titleId="phvb-cap-so-title"
+      variant="confirm"
+      onDismiss={onCancel}
+      footer={(
+        <>
+          <PhvbMagButton variant="secondary" disabled={isProcessing} onClick={onCancel}>
             Hủy
-          </button>
+          </PhvbMagButton>
           <button
             type="button"
             className={styles.detailActionCapSo}
@@ -93,8 +68,34 @@ export function PhvbMagCapSoDialog(props: IPhvbMagCapSoDialogProps): React.React
           >
             {isProcessing ? 'Đang cấp số...' : 'Cấp số'}
           </button>
-        </div>
+        </>
+      )}
+    >
+      <p>Nhập số văn bản chính thức cho yêu cầu này.</p>
+
+      <div className={styles.workflowActionDialogComment}>
+        <label htmlFor="phvb-cap-so-number">
+          Số văn bản<span className={styles.workflowActionDialogRequired}> *</span>
+        </label>
+        <input
+          id="phvb-cap-so-number"
+          type="text"
+          className={styles.formInput}
+          value={documentNumberDraft}
+          placeholder="Nhập số văn bản..."
+          disabled={isProcessing}
+          onChange={event => {
+            setDocumentNumberDraft(event.target.value);
+            if (validationError) {
+              setValidationError(undefined);
+            }
+          }}
+        />
       </div>
-    </div>
+
+      {displayedError ? (
+        <p className={styles.workflowActionDialogError} role="alert">{displayedError}</p>
+      ) : null}
+    </PhvbMagDialog>
   );
 }

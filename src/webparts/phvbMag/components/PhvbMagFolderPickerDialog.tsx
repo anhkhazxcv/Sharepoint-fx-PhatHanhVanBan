@@ -9,8 +9,9 @@ import type {
 import { phvbDocumentLibraryService } from '../services/PhvbMagDocumentLibrary.service';
 import { resolveIssuanceLibraryTitle } from '../config/PhvbMag.configuration';
 import { buildFolderTree, getStoragePathAfterLibrary } from '../utils/PhvbMagBanHanh.tree';
+import { PhvbMagFolderTreeNode } from './PhvbMagFolderTree';
 import { PhvbMagFolderConfirmDialog } from './PhvbMagFolderConfirmDialog';
-import { CloseIcon, FolderAccentIcon, FolderTreeChevronDownIcon, FolderTreeChevronRightIcon } from './PhvbMagIcons';
+import { CloseIcon } from './PhvbMagIcons';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagFolderPickerDialogProps {
@@ -56,39 +57,15 @@ function FolderTreeNode(props: IFolderTreeNodeProps): React.ReactElement {
 
   return (
     <>
-      <div
-        className={`${styles.libraryFolderNode} ${isSelected ? styles.libraryFolderNodeActive : ''}`}
-        style={{ paddingLeft: `${12 + depth * 16}px` }}
-      >
-        <button
-          type="button"
-          className={styles.libraryFolderChevron}
-          onClick={event => {
-            event.stopPropagation();
-            if (hasChildren) {
-              onToggleExpand(node.serverRelativePath);
-            }
-          }}
-          aria-label={isExpanded ? 'Thu gọn' : 'Mở rộng'}
-        >
-          {hasChildren ? (
-            isExpanded ? (
-              <FolderTreeChevronDownIcon className={styles.libraryFolderChevronIcon} />
-            ) : (
-              <FolderTreeChevronRightIcon className={styles.libraryFolderChevronIcon} />
-            )
-          ) : null}
-        </button>
-        <button
-          type="button"
-          className={styles.libraryFolderNodeButton}
-          onClick={handleSelect}
-          title={node.name}
-        >
-          <FolderAccentIcon className={styles.libraryFolderIcon} />
-          <span>{node.name}</span>
-        </button>
-      </div>
+      <PhvbMagFolderTreeNode
+        name={node.name}
+        depth={depth}
+        hasChildren={hasChildren}
+        isExpanded={isExpanded}
+        isSelected={isSelected}
+        onToggleExpand={() => onToggleExpand(node.serverRelativePath)}
+        onSelect={handleSelect}
+      />
 
       {hasChildren && isExpanded && (
         <div className={styles.folderPickerTreeChildren}>

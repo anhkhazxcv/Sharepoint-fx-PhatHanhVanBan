@@ -20,6 +20,7 @@ interface IPhvbMagBanHanhNotifyDialogProps {
   isProcessing?: boolean;
   errorMessage?: string;
   draft?: IBanHanhNotifyDraft;
+  confirmLabel?: string;
   onCancel: () => void;
   onConfirm: (draft: IBanHanhNotifyDraft, options?: IBanHanhNotifyConfirmOptions) => void;
   onReturnToAdmin?: () => void;
@@ -37,7 +38,11 @@ function getDialogTitle(mode: BanHanhNotifyMode): string {
   return 'Nội dung thông báo ban hành';
 }
 
-function getConfirmLabel(mode: BanHanhNotifyMode, isProcessing: boolean): string {
+function getConfirmLabel(mode: BanHanhNotifyMode, isProcessing: boolean, confirmLabel?: string): string {
+  if (confirmLabel) {
+    return isProcessing ? 'Đang xử lý...' : confirmLabel;
+  }
+
   if (mode === 'publish') {
     return isProcessing ? 'Đang xử lý...' : 'Ban hành';
   }
@@ -73,6 +78,7 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
     isProcessing = false,
     errorMessage,
     draft,
+    confirmLabel,
     onCancel,
     onConfirm,
     onReturnToAdmin
@@ -277,7 +283,7 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
             disabled={isBusy || isAwaitingDraft}
             onClick={handleConfirm}
           >
-            {getConfirmLabel(mode, isProcessing)}
+            {getConfirmLabel(mode, isProcessing, confirmLabel)}
           </button>
         </div>
       </div>

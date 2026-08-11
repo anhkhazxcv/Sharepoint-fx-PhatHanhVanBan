@@ -11,6 +11,8 @@ import {
   validateWorkflowActionComment
 } from '../utils/PhvbMagWorkflowActionDialog.utils';
 import styles from './PhvbMag.module.scss';
+import { PhvbMagButton } from './primitives/PhvbMagButton';
+import { PhvbMagDialog } from './primitives/PhvbMagDialog';
 
 interface IPhvbMagWorkflowActionDialogProps {
   isOpen: boolean;
@@ -71,45 +73,17 @@ export function PhvbMagWorkflowActionDialog(props: IPhvbMagWorkflowActionDialogP
   };
 
   return (
-    <div className={styles.confirmDialogOverlay}>
-      <div className={styles.confirmDialogContent}>
-        <h4>{getWorkflowActionDialogTitle(action)}</h4>
-        <p>{getWorkflowActionDialogMessage(action)}</p>
-
-        <div className={styles.workflowActionDialogComment}>
-          <label htmlFor="phvb-workflow-action-comment">
-            Ghi chú
-            {isCommentRequired ? <span className={styles.workflowActionDialogRequired}> *</span> : null}
-          </label>
-          <textarea
-            id="phvb-workflow-action-comment"
-            className={styles.workflowActionDialogTextarea}
-            value={commentDraft}
-            placeholder={commentPlaceholder}
-            rows={4}
-            disabled={isProcessing}
-            onChange={event => {
-              setCommentDraft(event.target.value);
-              if (validationError) {
-                setValidationError(undefined);
-              }
-            }}
-          />
-        </div>
-
-        {displayedError ? (
-          <p className={styles.workflowActionDialogError} role="alert">{displayedError}</p>
-        ) : null}
-
-        <div className={styles.confirmDialogActions}>
-          <button
-            type="button"
-            className={styles.btnSecondary}
-            disabled={isProcessing}
-            onClick={onCancel}
-          >
+    <PhvbMagDialog
+      isOpen={isOpen}
+      title={getWorkflowActionDialogTitle(action)}
+      titleId="phvb-workflow-action-title"
+      variant="confirm"
+      onDismiss={onCancel}
+      footer={(
+        <>
+          <PhvbMagButton variant="secondary" disabled={isProcessing} onClick={onCancel}>
             Hủy
-          </button>
+          </PhvbMagButton>
           <button
             type="button"
             className={confirmButtonClassName}
@@ -118,8 +92,35 @@ export function PhvbMagWorkflowActionDialog(props: IPhvbMagWorkflowActionDialogP
           >
             {isProcessing ? 'Đang xử lý...' : confirmLabel}
           </button>
-        </div>
+        </>
+      )}
+    >
+      <p>{getWorkflowActionDialogMessage(action)}</p>
+
+      <div className={styles.workflowActionDialogComment}>
+        <label htmlFor="phvb-workflow-action-comment">
+          Ghi chú
+          {isCommentRequired ? <span className={styles.workflowActionDialogRequired}> *</span> : null}
+        </label>
+        <textarea
+          id="phvb-workflow-action-comment"
+          className={styles.workflowActionDialogTextarea}
+          value={commentDraft}
+          placeholder={commentPlaceholder}
+          rows={4}
+          disabled={isProcessing}
+          onChange={event => {
+            setCommentDraft(event.target.value);
+            if (validationError) {
+              setValidationError(undefined);
+            }
+          }}
+        />
       </div>
-    </div>
+
+      {displayedError ? (
+        <p className={styles.workflowActionDialogError} role="alert">{displayedError}</p>
+      ) : null}
+    </PhvbMagDialog>
   );
 }

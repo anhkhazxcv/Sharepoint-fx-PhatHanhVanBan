@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { ISelectedBanHanhFolder } from '../models/PhvbMag.models';
-import styles from './PhvbMag.module.scss';
+import { PhvbMagButton } from './primitives/PhvbMagButton';
+import { PhvbMagDialog } from './primitives/PhvbMagDialog';
 
 interface IPhvbMagFolderConfirmDialogProps {
   isOpen: boolean;
@@ -31,19 +32,24 @@ export function PhvbMagFolderConfirmDialog(props: IPhvbMagFolderConfirmDialogPro
   }
 
   return (
-    <div className={styles.confirmDialogOverlay}>
-      <div className={styles.confirmDialogContent}>
-        <h4>Xác nhận lựa chọn</h4>
-        <p>{buildConfirmMessage(requestType, selectedFolder.name)}</p>
-        <div className={styles.confirmDialogActions}>
-          <button type="button" className={styles.btnSecondary} onClick={onCancel}>
+    <PhvbMagDialog
+      isOpen={isOpen}
+      title="Xác nhận lựa chọn"
+      titleId="phvb-folder-confirm-title"
+      variant="confirm"
+      onDismiss={onCancel}
+      footer={(
+        <>
+          <PhvbMagButton variant="secondary" onClick={onCancel}>
             Hủy
-          </button>
-          <button type="button" className={styles.btnSubmit} onClick={onConfirm}>
+          </PhvbMagButton>
+          <PhvbMagButton variant="submit" onClick={onConfirm}>
             Xác nhận
-          </button>
-        </div>
-      </div>
-    </div>
+          </PhvbMagButton>
+        </>
+      )}
+    >
+      <p>{buildConfirmMessage(requestType, selectedFolder.name)}</p>
+    </PhvbMagDialog>
   );
 }
