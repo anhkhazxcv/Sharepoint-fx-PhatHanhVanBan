@@ -1,0 +1,361 @@
+
+// -------------------------------------------------------------
+// 1. LEFT NAVIGATION SIDEBAR
+// -------------------------------------------------------------
+.sidebar {
+  width: $sidebar-width-expanded;
+  height: 100%;
+  max-height: 100%;
+  background-color: $bg-sidebar;
+  border-right: 1px solid $border-color;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 0.2s ease, padding 0.2s ease;
+
+  .sidebarTop {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .sidebarHeader {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 32px;
+
+    .sidebarBrand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      padding-left: 8px;
+    }
+
+    .logoBox {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+
+      .logoImage {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: contain;
+      }
+    }
+
+    .headerTitle {
+      min-width: 0;
+
+      h3 {
+        margin: 0;
+        font-size: $font-size-body;
+        font-weight: $font-weight-bold;
+        line-height: $line-height-snug;
+        color: $text-ink;
+      }
+      p {
+        margin: 1px 0 0 0;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-regular;
+        color: $text-ink3;
+        text-transform: none;
+        letter-spacing: normal;
+      }
+    }
+  }
+
+  .navMenu {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .navGroupLabel {
+      @include ty-label-upper-wide;
+      margin: 8px 8px 4px 12px;
+      letter-spacing: $letter-spacing-group;
+    }
+
+    .navItem {
+      display: flex;
+      align-items: center;
+      padding: 7px 10px;
+      width: 100%;
+      border: none;
+      background: transparent;
+      border-radius: $radius-sm;
+      cursor: pointer;
+      color: $text-ink2;
+      font-family: $font-family-base;
+      font-size: $font-size-base2;
+      font-weight: $font-weight-medium;
+      transition: all 0.2s ease;
+      gap: 12px;
+      position: relative;
+      text-align: left;
+
+      .iconWrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: $text-muted;
+        transition: color 0.2s ease;
+      }
+
+      .navText {
+        flex-grow: 1;
+      }
+
+      &.navItemCollapsed {
+        justify-content: center;
+        padding-left: 8px;
+        padding-right: 8px;
+
+        .countBadge {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          margin-left: 0;
+          min-width: 18px;
+          padding: 1px 5px;
+        }
+      }
+
+      .countBadge {
+        margin-left: auto;
+        background-color: $primary-color;
+        color: #FFFFFF;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-extrabold;
+        padding: 1px 6px;
+        border-radius: 10px;
+        min-width: 18px;
+        text-align: center;
+      }
+
+      &:hover {
+        background-color: $bg-folders;
+        .iconWrapper {
+          color: $primary-color;
+        }
+      }
+
+      &:focus-visible {
+        @include phvb-focus-ring;
+      }
+
+      &.active {
+        background-color: $primary-light;
+        color: $primary-color;
+        font-weight: $font-weight-bold;
+
+        .iconWrapper {
+          color: $primary-color;
+        }
+
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 25%;
+          height: 50%;
+          width: 4px;
+          background-color: $primary-color;
+          border-radius: 0 4px 4px 0;
+        }
+      }
+
+      &.navItemDisabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+
+        &:hover {
+          background-color: transparent;
+
+          .iconWrapper {
+            color: $text-muted;
+          }
+        }
+      }
+
+      .navSoonBadge {
+        margin-left: auto;
+        flex-shrink: 0;
+        font-size: 10px;
+        font-weight: 700;
+        color: $text-muted;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+
+      &.navItemCollapsed .navSoonBadge {
+        display: none;
+      }
+    }
+  }
+
+  .sidebarBottom {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+    padding-top: 16px;
+    border-top: 1px solid $border-color;
+    margin-top: 24px;
+
+    .collapseButton {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+      border-radius: 8px;
+      border: 1px solid $border-color;
+      background-color: #FFFFFF;
+      color: $text-main;
+      cursor: pointer;
+      line-height: 1;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: $bg-folders;
+        color: $primary-color;
+      }
+    }
+  }
+
+  .sidebarFooter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .userAvatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background-color: $primary-color;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: $font-weight-extrabold;
+      color: #FFFFFF;
+      font-size: $font-size-sm;
+      border: none;
+    }
+
+    .userInfo {
+      overflow: hidden;
+      h4 {
+        margin: 0;
+        font-size: $font-size-base;
+        font-weight: $font-weight-bold;
+        color: $text-ink;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      p {
+        margin: 1px 0 0 0;
+        font-size: $font-size-md2;
+        font-weight: $font-weight-regular;
+        color: $text-ink3;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  &.sidebarCollapsed {
+    width: $sidebar-width-collapsed;
+    padding-left: 8px;
+    padding-right: 8px;
+
+    .sidebarHeader {
+      margin-bottom: 24px;
+      justify-content: center;
+
+      .sidebarBrand {
+        padding-left: 0;
+      }
+
+      .logoBox {
+        width: 36px;
+        height: 36px;
+      }
+    }
+
+    .navMenu {
+      align-items: center;
+    }
+
+    .sidebarFooter {
+      justify-content: center;
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// 2. FOLDERS SUB-SIDEBAR
+// -------------------------------------------------------------
+.folderPane {
+  width: 250px;
+  background-color: $bg-folders;
+  border-right: 1px solid $border-color;
+  padding: 24px 12px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+
+  .folderPaneHeader {
+    padding-left: 12px;
+    margin-bottom: 16px;
+    h4 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: $text-main;
+      letter-spacing: 0.02em;
+      text-transform: none;
+    }
+  }
+
+    .folderList {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow-y: auto;
+      flex-grow: 1;
+      padding-right: 4px;
+
+      /* Custom Scrollbar */
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+      &::-webkit-scrollbar-thumb {
+        background-color: rgba(123, 76, 44, 0.1);
+        border-radius: 4px;
+      }
+
+    .subFolderList {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-left: 20px;
+      margin: 2px 0;
+    }
+  }
+}
+

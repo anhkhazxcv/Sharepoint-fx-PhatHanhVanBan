@@ -1,0 +1,840 @@
+// -------------------------------------------------------------
+// 5. MODAL: + TẠO YÊU CẦU (POPUP FORM)
+// -------------------------------------------------------------
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(44, 37, 32, 0.45);
+  backdrop-filter: blur(5px);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(252, 249, 245, 0.78);
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.2s ease;
+}
+
+.loadingPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-5 $space-6;
+  border-radius: $radius-md;
+  background-color: $surface-card;
+  box-shadow: $shadow-md;
+  border: 1px solid $border-subtle;
+}
+
+.loadingSpinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid $border-subtle;
+  border-top-color: $primary-color;
+  border-radius: 50%;
+  animation: loadingSpin 0.8s linear infinite;
+}
+
+.loadingMessage {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: $primary-color;
+}
+
+@keyframes loadingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.modalContent {
+  position: relative;
+  width: 760px;
+  max-width: 100%;
+  max-height: 94vh;
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: $shadow-lg;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  .modalHeader {
+    padding: $space-5 $space-6;
+    border-bottom: 1px solid $border-color;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: $bg-folders;
+
+    .modalHeaderTitleArea {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      h3 {
+        margin: 0;
+        @include ty-modal-title;
+        color: $text-ink;
+      }
+    }
+
+    .btnClose {
+      background: transparent;
+      border: none;
+      font-size: $font-size-lg;
+      color: $text-muted;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: $text-main;
+      }
+    }
+  }
+
+  .formContainer {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-grow: 1;
+  }
+
+  .modalBody {
+    padding: 28px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+
+    /* Custom scrollbar */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(123, 76, 44, 0.15);
+      border-radius: 4px;
+    }
+
+    .formRow {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .formRowTwoCol {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .formGroup {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      .fieldLabel {
+        @include ty-form-label;
+        color: $text-ink2;
+      }
+
+      .fieldSubtitle {
+        font-size: $font-size-sm2;
+        font-weight: $font-weight-regular;
+        color: $text-ink3;
+        margin-top: -2px;
+        margin-bottom: 6px;
+        line-height: $line-height-loose;
+      }
+
+      .required {
+        color: #D32F2F;
+        margin-left: 2px;
+      }
+    }
+
+    /* Request Type Toggle Group */
+    .requestTypeGroup {
+      display: flex;
+      gap: 10px;
+
+      .requestTypeBtn {
+        background-color: #FFFFFF;
+        border: 1.5px solid #E8E2D9;
+        border-radius: 6px;
+        padding: 5px 12px;
+        font-family: $font-family-base;
+        font-size: $font-size-base;
+        font-weight: $font-weight-bold;
+        color: $text-ink2;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: $bg-folders;
+        }
+      }
+
+      .requestTypeBtnActive {
+        background-color: #7B4C2C;
+        color: #FFFFFF;
+        border-color: #7B4C2C;
+
+        &:hover {
+          background-color: #7B4C2C;
+          color: #FFFFFF;
+          border-color: #7B4C2C;
+        }
+      }
+    }
+
+    /* Modern Text Inputs and Textareas */
+    .formInput, .formSelect, .formTextArea, .formTextAreaSmall {
+      padding: 8px 11px;
+      border: 1.5px solid #E8E2D9;
+      border-radius: 7px;
+      @include ty-input;
+      outline: none;
+      background-color: #FFFFFF;
+      color: $text-ink;
+      transition: all 0.2s ease;
+      width: 100%;
+
+      &:focus {
+        border-color: $primary-color;
+        box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+      }
+
+      &::placeholder {
+        color: $text-muted;
+      }
+    }
+
+    .formTextArea {
+      resize: vertical;
+      min-height: 96px;
+    }
+
+    .formTextAreaSmall {
+      resize: vertical;
+      min-height: 72px;
+    }
+
+    .createSummaryHintCallout {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background-color: $primary-light;
+      border-left: 4px solid $primary-color;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 14px;
+      margin-bottom: 2px;
+    }
+
+    .createSummaryHintIcon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      color: $primary-color;
+      margin-top: 1px;
+    }
+
+    .createSummaryHintText {
+      margin: 0;
+      font-size: $font-size-sm2;
+      line-height: $line-height-loose;
+      color: $text-ink;
+    }
+
+    .createEmailNotifyBox {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1.5px solid;
+      min-height: 44px;
+    }
+
+    .createEmailNotifyBoxIssue {
+      background-color: #E8F5E9;
+      border-color: #2E7D32;
+
+      .createEmailNotifyLabel {
+        color: #1B5E20;
+      }
+
+      .createEmailNotifyRow {
+        cursor: default;
+      }
+
+      input[type='checkbox'] {
+        accent-color: #2E7D32;
+
+        &:disabled {
+          opacity: 1;
+          cursor: default;
+        }
+      }
+    }
+
+    .createEmailNotifyBoxRevoke {
+      background-color: #FFFFFF;
+      border-color: #E8E2D9;
+
+      .createEmailNotifyLabel {
+        color: $text-ink;
+      }
+    }
+
+    .createEmailNotifyRow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .createEmailNotifyLabel {
+      font-size: 13.5px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .createEmailNotifyOptional {
+      font-size: 12.5px;
+      color: $text-muted;
+      flex-shrink: 0;
+    }
+
+    /* Thư mục lưu trữ: Custom Folder Selector */
+    .folderInputWrapper {
+      position: relative;
+      display: flex;
+      gap: 10px;
+
+      .folderInputLeft {
+        display: flex;
+        align-items: center;
+        border: 1px solid #E5D6C7;
+        background-color: #FAF6H0;
+        background-color: #F8F5EF;
+        border-radius: 8px;
+        padding: 0 12px;
+        flex-grow: 1;
+        gap: 8px;
+      }
+
+      .folderInputText {
+        border: none;
+        background: transparent;
+        padding: 10px 0;
+        font-size: 13.5px;
+        color: $text-main;
+        width: 100%;
+        outline: none;
+        cursor: pointer;
+      }
+
+      .folderInputInvalid {
+        border-color: #D32F2F;
+        background-color: #FFF8F7;
+      }
+
+      .btnSelectFolder {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background-color: #FFFFFF;
+        border: 1px solid #E5D6C7;
+        border-radius: 8px;
+        padding: 0 16px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: $primary-color;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: #F8F0E7;
+        }
+      }
+
+      .folderDropdownMenu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: #FFFFFF;
+        border: 1px solid #E5D6C7;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(123, 76, 44, 0.12);
+        z-index: 1000;
+        margin-top: 6px;
+        overflow: hidden;
+      }
+
+      .folderDropdownHeader {
+        padding: 12px 16px;
+        font-size: 12px;
+        font-weight: 700;
+        color: $text-muted;
+        border-bottom: 1px solid $border-color;
+        background-color: $bg-folders;
+      }
+
+      .folderDropdownList {
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .folderDropdownItem {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        color: $text-main;
+        cursor: pointer;
+        transition: background 0.15s ease;
+
+        &:hover {
+          background-color: $bg-folders;
+        }
+
+        svg {
+          flex-shrink: 0;
+        }
+      }
+
+      .folderItemActive {
+        background-color: #F5EBE0;
+        font-weight: 600;
+        color: $primary-color;
+      }
+    }
+
+    /* Drag and Drop Zone */
+    .dragDropZone {
+      border: 1.5px dashed #DCCFBF;
+      background-color: #FDFBF8;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+
+      &:hover {
+        border-color: $primary-color;
+        background-color: #FCF9F4;
+      }
+    }
+
+    .dragDropActive {
+      border-color: $primary-color;
+      background-color: #FAF2E9;
+    }
+
+    .dragDropHasFile {
+      border-style: solid;
+      border-color: #E5D6C7;
+      background-color: #FAF7F2;
+      cursor: pointer;
+
+      &:hover {
+        border-color: $primary-color;
+        background-color: #FCF9F4;
+      }
+    }
+
+    .dragDropContent {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .dragDropTitle {
+      font-size: 14px;
+      font-weight: 700;
+      color: #4A4038;
+    }
+
+    .dragDropFormat {
+      font-size: 11px;
+      color: $text-muted;
+    }
+
+    /* Selected File Card Details */
+    .fileCard {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: 12px 16px;
+      background-color: #FFFFFF;
+      border: 1px solid #E5D6C7;
+      border-radius: 10px;
+      gap: 12px;
+      position: relative;
+    }
+
+    .fileIconArea {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #FAF4EE;
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+    }
+
+    .fileMetaArea {
+      flex-grow: 1;
+      text-align: left;
+      min-width: 0;
+    }
+
+    .fileName {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: $text-main;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .fileSize {
+      font-size: 11px;
+      color: $text-muted;
+      margin-top: 2px;
+    }
+
+    .btnTrash {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      color: #8C827A;
+      cursor: pointer;
+      transition: color 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+
+      &:hover {
+        color: #B54033;
+        background-color: #FBEBE9;
+      }
+    }
+
+    /* Autocomplete User Tag Picker */
+    .userPickerContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+    }
+
+    .userPickerInputWrapper {
+      position: relative;
+      border: 1px solid #E5D6C7;
+      border-radius: 8px;
+      background-color: #FFFFFF;
+      transition: all 0.2s ease;
+
+      &:focus-within {
+        border-color: $primary-color;
+        box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+      }
+    }
+
+    .tagsContainer {
+      display: flex;
+      flex-wrap: wrap;
+      padding: 6px;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .userTag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: #F3ECE5;
+      color: $primary-color;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(123, 76, 44, 0.1);
+    }
+
+    .btnRemoveTag {
+      background: transparent;
+      border: none;
+      color: #A0948D;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 700;
+      line-height: 1;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        color: $primary-color;
+      }
+    }
+
+    .userPickerInput {
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      flex-grow: 1;
+      padding: 6px 8px !important;
+      font-size: 13.5px;
+      min-width: 120px;
+      background-color: transparent !important;
+      color: $text-main !important;
+    }
+
+    .suggestionsDropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      background-color: #FFFFFF;
+      border: 1px solid #E5D6C7;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(123, 76, 44, 0.1);
+      z-index: 1000;
+      margin-top: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .suggestionItem {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid $border-color;
+      transition: background 0.15s ease;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: $bg-folders;
+      }
+    }
+
+    .suggestionItemLoading {
+      padding: 10px 14px;
+      color: $text-muted;
+      font-style: italic;
+      cursor: default;
+    }
+
+    .suggestionName {
+      font-size: 13px;
+      font-weight: 700;
+      color: $text-main;
+    }
+
+    .suggestionMeta {
+      font-size: 11px;
+      color: $text-muted;
+      margin-top: 2px;
+    }
+
+    /* User Picker Deadline Row */
+    .deadlineRow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .deadlineLabel {
+      font-size: 12px;
+      color: $text-muted;
+      font-weight: 600;
+    }
+
+    .deadlineInput {
+      padding: 4px 8px;
+      border: 1px solid #E5D6C7;
+      border-radius: 6px;
+      font-size: 12px;
+      color: $text-main;
+      outline: none;
+      background-color: #FFFFFF;
+
+      &:focus {
+        border-color: $primary-color;
+      }
+    }
+
+    .deadlineInputInvalid {
+      border-color: #D32F2F;
+      background-color: #FFF8F7;
+    }
+
+    .deadlineError {
+      margin: 4px 0 0;
+      font-size: 11.5px;
+      line-height: 1.4;
+      color: #D32F2F;
+    }
+
+    .workflowDeadlineNotice {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background-color: #FFF5E8;
+      border: 1px solid #F1DFC2;
+      color: #7B4C2C;
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+
+    /* LUỒNG XÉT DUYỆT Section */
+    .workflowSection {
+      margin-top: 14px;
+      padding-top: 18px;
+      border-top: 1px solid #EFECE6;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      .workflowSectionTitle {
+        margin: 0 0 2px 0;
+        font-size: 12px;
+        font-weight: 800;
+        color: $primary-color;
+        letter-spacing: 1px;
+      }
+    }
+  }
+
+  .submitError {
+    margin: 0 28px 16px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background-color: #FFF5F5;
+    border: 1px solid #FFCDD2;
+    color: #C62828;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .modalFooter {
+    padding: $space-5 $space-6;
+    border-top: 1px solid $border-color;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background-color: $bg-folders;
+
+    .btnSecondary {
+      background-color: #FFFFFF;
+      border: 1px solid $border-color;
+      border-radius: 7px;
+      padding: 6px 14px;
+      @include ty-button;
+      font-weight: $font-weight-bold;
+      color: $text-ink2;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background-color: $bg-content;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .btnDraft {
+      background-color: #FFFFFF;
+      border: 1px solid #C0B2A3;
+      border-radius: 7px;
+      padding: 6px 14px;
+      @include ty-button;
+      color: $primary-color;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: $bg-folders;
+        border-color: $primary-color;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .btnSubmit {
+      background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+      border: none;
+      border-radius: 7px;
+      padding: 6px 14px;
+      @include ty-button;
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(123, 76, 44, 0.15);
+
+      &:hover {
+        background: linear-gradient(135deg, #8B5A39 0%, #764A2C 100%);
+        box-shadow: 0 6px 16px rgba(123, 76, 44, 0.22);
+      }
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+
+    .submitButtonContent {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+  }
+}
+

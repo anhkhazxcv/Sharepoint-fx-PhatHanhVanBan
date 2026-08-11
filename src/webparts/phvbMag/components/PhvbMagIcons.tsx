@@ -46,10 +46,10 @@ interface IIconProps {
   style?: React.CSSProperties;
 }
 
-/** Mirrors PHVB SCSS palette ($primary-color, $text-muted, $folder-accent). */
-export const PHVB_ICON_COLOR_PRIMARY = '#7B4C2C';
-export const PHVB_ICON_COLOR_MUTED = '#8C827A';
-export const PHVB_ICON_COLOR_FOLDER = '#FFD700';
+/** Mirrors PHVB CSS vars (--phvb-primary, --phvb-text-muted, --phvb-folder-accent). */
+export const PHVB_ICON_COLOR_PRIMARY = 'var(--phvb-primary, #7B4C2C)';
+export const PHVB_ICON_COLOR_MUTED = 'var(--phvb-text-muted, #8C827A)';
+export const PHVB_ICON_COLOR_FOLDER = 'var(--phvb-folder-accent, #FFD700)';
 
 function mergeStyle(
   props: IIconProps,

@@ -15,11 +15,13 @@ interface IPhvbMagDetailWorkflowStepCardProps {
 export function PhvbMagDetailWorkflowStepCard(props: IPhvbMagDetailWorkflowStepCardProps): React.ReactElement {
   const { step, isCurrent } = props;
   const toneClass =
-    step.statusTone === 'done'
-      ? styles.detailWorkflowStepCardDone
-      : step.statusTone === 'active'
-        ? styles.detailWorkflowStepCardActive
-        : styles.detailWorkflowStepCardPending;
+    step.statusTone === 'rejected'
+      ? styles.detailWorkflowStepCardRejected
+      : step.statusTone === 'done'
+        ? styles.detailWorkflowStepCardDone
+        : step.statusTone === 'active'
+          ? styles.detailWorkflowStepCardActive
+          : styles.detailWorkflowStepCardPending;
 
   const statusChip = resolveWorkflowStepStatusChip(step);
   const title = `${step.stageLabel} - ${step.name}`;
@@ -30,6 +32,11 @@ export function PhvbMagDetailWorkflowStepCard(props: IPhvbMagDetailWorkflowStepC
         {step.statusTone === 'done' ? (
           <span className={styles.detailWorkflowStepCardIconDone} aria-hidden="true">
             <SuccessIcon />
+          </span>
+        ) : null}
+        {step.statusTone === 'rejected' ? (
+          <span className={styles.detailWorkflowStepCardIconRejected} aria-hidden="true">
+            {getWorkflowStepDisplayInitials(step.name)}
           </span>
         ) : null}
         {step.statusTone === 'active' ? (
@@ -60,6 +67,7 @@ export function PhvbMagDetailWorkflowStepCard(props: IPhvbMagDetailWorkflowStepC
         <span
           className={[
             styles.detailWorkflowStepCardStatusChip,
+            step.statusTone === 'rejected' ? styles.detailWorkflowStepCardStatusChipRejected : '',
             step.statusTone === 'done' ? styles.detailWorkflowStepCardStatusChipDone : '',
             step.statusTone === 'active' ? styles.detailWorkflowStepCardStatusChipActive : '',
             step.statusTone === 'pending' ? styles.detailWorkflowStepCardStatusChipPending : ''

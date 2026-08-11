@@ -7,13 +7,20 @@ export interface IPhvbMagSectionShellProps {
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  withDocumentSpine?: boolean;
 }
 
 export function PhvbMagSectionShell(props: IPhvbMagSectionShellProps): React.ReactElement {
-  const { title, icon, action, children, className } = props;
+  const { title, icon, action, children, className, withDocumentSpine = false } = props;
 
   return (
-    <section className={[styles.phvbSectionCard, className].filter(Boolean).join(' ')}>
+    <section
+      className={[
+        styles.phvbSectionCard,
+        withDocumentSpine ? styles.phvbSurfaceSpine : '',
+        className
+      ].filter(Boolean).join(' ')}
+    >
       <header className={styles.phvbSectionCardHeader}>
         <div className={styles.homeSectionTitleWrap}>
           {icon}

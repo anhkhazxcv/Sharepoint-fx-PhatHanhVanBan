@@ -1,0 +1,73 @@
+// Locked PHVB warm-cream & golden-bronze palette — do not change without explicit rebrand approval.
+
+// Brand
+$primary-color: #7B4C2C;
+$primary-hover: #5C3D2E;
+$primary-light: #F5EBE0;
+$folder-accent: #FFD700;
+
+// Surfaces
+$bg-sidebar: #FFFFFF;
+$bg-folders: #FAF6F0;
+$bg-content: #FCF9F5;
+$surface-white: #FFFFFF;
+
+// Text
+$text-main: #2C2520;
+$text-muted: #8C827A;
+
+// Borders & shadows
+$border-color: #EFECE6;
+$shadow-sm: 0 2px 8px rgba(123, 76, 44, 0.03);
+$shadow-md: 0 8px 24px rgba(123, 76, 44, 0.05);
+$shadow-lg: 0 16px 40px rgba(123, 76, 44, 0.08);
+
+// Semantic
+$color-success: #2E7D32;
+$color-success-bg: #E2ECE5;
+$color-warning: #EF6C00;
+$color-warning-bg: #FFF3E0;
+$color-error: #D32F2F;
+$color-overlay: rgba(44, 37, 32, 0.45);
+$color-overlay-strong: rgba(44, 37, 32, 0.5);
+$color-primary-alpha-05: rgba(123, 76, 44, 0.05);
+$color-primary-alpha-08: rgba(123, 76, 44, 0.08);
+$color-primary-alpha-10: rgba(123, 76, 44, 0.1);
+$color-primary-alpha-15: rgba(123, 76, 44, 0.15);
+$color-primary-alpha-35: rgba(123, 76, 44, 0.35);
+$color-primary-alpha-45: rgba(123, 76, 44, 0.45);
+
+// Submit gradient
+$gradient-submit: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+$gradient-submit-hover: linear-gradient(135deg, #8B5A39 0%, #764A2C 100%);
+
+// Document-type badges
+$badge-tc-bg: #F6EFE9;
+$badge-tc-text: #8C5B38;
+$badge-qc-bg: #EFEAE3;
+$badge-qc-text: #6C5A49;
+$badge-qd-bg: #ECE7DF;
+$badge-qd-text: #70675D;
+$badge-cs-bg: #E2DDD5;
+$badge-cs-text: #4F473E;
+$badge-hd-bg: #EAE6DE;
+$badge-hd-text: #5A544A;
+
+// Layout (shell)
+$sidebar-width-expanded: 280px;
+$sidebar-width-collapsed: 68px;
+
+@mixin phvb-color-vars {
+  --phvb-primary: #{$primary-color};
+  --phvb-primary-hover: #{$primary-hover};
+  --phvb-primary-light: #{$primary-light};
+  --phvb-folder-accent: #{$folder-accent};
+  --phvb-bg-content: #{$bg-content};
+  --phvb-bg-folders: #{$bg-folders};
+  --phvb-bg-sidebar: #{$bg-sidebar};
+  --phvb-text-main: #{$text-main};
+  --phvb-text-muted: #{$text-muted};
+  --phvb-border-color: #{$border-color};
+  --phvb-color-success: #{$color-success};
+  --phvb-color-error: #{$color-error};
+}

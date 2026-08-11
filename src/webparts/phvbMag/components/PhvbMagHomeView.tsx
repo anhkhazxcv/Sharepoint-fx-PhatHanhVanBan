@@ -10,7 +10,7 @@ import { usePhvbRecentViews } from '../context/PhvbMagRecentViews.context';
 import { usePhvbHomeCategories } from '../hooks/usePhvbHomeCategories';
 import { usePhvbHomeData } from '../hooks/usePhvbHomeData';
 import type { IPhvbDocumentContext, IPhvbSiteContext, IHomeCategoryItem } from '../models/PhvbMag.models';
-import { formatBanHanhDate } from '../utils/PhvbMagBanHanh.tree';
+import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import {
   buildHomeCategoryAriaLabel,
   buildHomeCategoryNavigatePath
@@ -118,7 +118,7 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
     savedPreviewItems.map(item => ({
       key: item.bookmark.id,
       title: item.bookmark.title,
-      dateLabel: `Đã lưu: ${formatBanHanhDate(item.bookmark.created) || 'Chưa xác định'}`,
+      dateLabel: `Đã lưu: ${formatExecutionDateTime(item.bookmark.created) || 'Chưa xác định'}`,
       document: item.document,
       isAccessible: item.isAccessible
     }))
@@ -128,7 +128,7 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
     recentPreviewItems.map(item => ({
       key: item.recentView.id,
       title: item.recentView.title,
-      dateLabel: `Đã xem: ${formatBanHanhDate(item.recentView.modified) || 'Chưa xác định'}`,
+      dateLabel: `Đã xem: ${formatExecutionDateTime(item.recentView.modified) || 'Chưa xác định'}`,
       document: item.document,
       isAccessible: item.isAccessible
     }))

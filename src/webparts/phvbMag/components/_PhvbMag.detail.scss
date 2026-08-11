@@ -1,0 +1,2974 @@
+// -------------------------------------------------------------
+// FOLDER PICKER & CONFIRM DIALOG
+// -------------------------------------------------------------
+.folderPickerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(44, 37, 32, 0.45);
+  animation: folderPickerOverlayIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  backdrop-filter: blur(2px);
+}
+
+.folderPickerDialog {
+  width: min(640px, calc(100vw - 40px));
+  height: min(70vh, calc(100vh - 48px));
+  min-height: min(70vh, calc(100vh - 48px));
+  max-height: min(70vh, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  box-shadow: $shadow-lg;
+  overflow: hidden;
+  animation: folderPickerDialogIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: center center;
+}
+
+.folderPickerHeader {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 22px;
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+
+  h3 {
+    margin: 0;
+    @include ty-modal-title;
+  }
+
+  .btnClose {
+    border: none;
+    background: transparent;
+    color: #FFFFFF;
+    font-size: $font-size-lg;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+  }
+}
+
+.folderPickerBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid $border-color;
+  background-color: $bg-folders;
+}
+
+.folderPickerTreePane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 16px 14px 12px;
+}
+
+.folderPickerTreeHeader {
+  flex: 0 0 auto;
+  padding: 0 8px 12px;
+
+  h4 {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 800;
+    color: $text-muted;
+    letter-spacing: 1.2px;
+  }
+}
+
+.folderPickerTreeScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 8px 4px;
+  background-color: #FFFFFF;
+  border: 1px solid #E8DDD1;
+  border-radius: 10px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(139, 90, 57, 0.35);
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  .libraryStatusMessage,
+  .libraryErrorBanner {
+    margin: 8px;
+  }
+}
+
+.folderPickerTreeChildren {
+  animation: folderTreeExpand 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+
+.folderTreeNode {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  transition: background-color 0.18s ease;
+}
+
+.folderTreeNodeActive {
+  background-color: #E8F3FF;
+}
+
+.folderTreeChevron {
+  flex: 0 0 24px;
+  border: none;
+  background: transparent;
+  color: #8C827A;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    color: $primary-color;
+  }
+}
+
+.folderTreeChevronExpanded {
+  transform: rotate(0deg);
+}
+
+.folderTreeNodeContent {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 7px 10px 7px 0;
+  cursor: pointer;
+  transition: background-color 0.18s ease, padding-left 0.18s ease;
+
+  &:hover {
+    background-color: rgba(160, 106, 67, 0.08);
+  }
+}
+
+.folderTreeIcon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.folderTreeLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-regular;
+  color: $text-ink2;
+}
+
+.folderDocPaneHeader {
+  padding: 12px 16px;
+  @include ty-form-label;
+  color: $primary-color;
+  border-bottom: 1px solid $border-color;
+}
+
+.folderDocList {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(139, 90, 57, 0.35);
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+}
+
+.folderDocCard {
+  border: 1px solid #E8DDD1;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background-color: #FFFFFF;
+  box-shadow: $shadow-sm;
+  animation: folderDocCardIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: #D8C8B8;
+    box-shadow: $shadow-md;
+  }
+}
+
+.folderDocCardTitle {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  color: #2F78A8;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.folderDocCardBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.folderDocCardIcon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background-color: #F4EEE8;
+  color: $primary-color;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.folderDocCardSummary {
+  flex: 1 1 auto;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #8A7C70;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.folderDocCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 12px;
+  color: #6B5D51;
+}
+
+.folderDocCardMetaLabel {
+  font-weight: 700;
+  color: #8C827A;
+}
+
+.folderPickerStatus,
+.folderPickerError {
+  padding: 14px 16px;
+  font-size: 13px;
+  animation: folderPickerStatusIn 0.24s ease both;
+}
+
+.folderPickerError {
+  color: #B54033;
+}
+
+.folderPickerFooter {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid $border-color;
+  background-color: $bg-folders;
+
+  .btnSecondary,
+  .btnSubmit {
+    min-height: 36px;
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  }
+
+  .btnSecondary {
+    background-color: #FFFFFF;
+    border: 1px solid $border-color;
+    color: $text-main;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: $shadow-sm;
+    }
+  }
+
+  .btnSubmit {
+    border: none;
+    background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+    color: #FFFFFF;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: $shadow-md;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.confirmDialogOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(44, 37, 32, 0.5);
+  animation: fadeIn 0.18s ease;
+}
+
+.confirmDialogContent {
+  width: min(460px, calc(100vw - 40px));
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: $shadow-lg;
+  animation: scaleUp 0.2s ease;
+
+  h4 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    color: $primary-color;
+  }
+
+  p {
+    margin: 0 0 18px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: $text-main;
+  }
+
+  .formInput {
+    padding: 8px 11px;
+    border: 1.5px solid #E8E2D9;
+    border-radius: 8px;
+    @include ty-input;
+    outline: none;
+    background-color: #FFFFFF;
+    color: $text-ink;
+    transition: all 0.2s ease;
+    width: 100%;
+
+    &:focus {
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+    }
+
+    &::placeholder {
+      color: $text-muted;
+    }
+
+    &:disabled {
+      background-color: #F8F5EF;
+      color: $text-muted;
+      cursor: not-allowed;
+      opacity: 0.72;
+    }
+  }
+}
+
+.workflowActionDialogComment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+
+  label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: #8A7C70;
+  }
+}
+
+.workflowActionDialogRequired {
+  color: #D32F2F;
+}
+
+.workflowActionDialogTextarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid #E7DACB;
+  border-radius: 8px;
+  font-family: $font-family-base;
+  font-size: $font-size-base2;
+  color: $text-main;
+  resize: vertical;
+  background-color: #FAFAF8;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.workflowActionDialogError {
+  margin: 0 0 14px;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: #DC2626;
+}
+
+.confirmDialogContent .workflowActionDialogError {
+  font-size: $font-size-base2;
+  color: #DC2626;
+}
+
+.confirmDialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  .btnSecondary,
+  .btnSubmit {
+    min-height: 36px;
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btnSecondary {
+    background-color: #FFFFFF;
+    border: 1px solid $border-color;
+    color: $text-main;
+  }
+
+  .btnSubmit {
+    border: none;
+    background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+    color: #FFFFFF;
+  }
+}
+
+.banHanhNotifyModal {
+  width: min(760px, calc(100vw - 40px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: $shadow-lg;
+  animation: scaleUp 0.2s ease;
+
+  .formInput {
+    padding: 8px 11px;
+    border: 1.5px solid #E8E2D9;
+    border-radius: 7px;
+    @include ty-input;
+    outline: none;
+    background-color: #FFFFFF;
+    color: $text-ink;
+    transition: all 0.2s ease;
+    width: 100%;
+
+    &:focus {
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+    }
+
+    &::placeholder {
+      color: $text-muted;
+    }
+
+    &:disabled {
+      background-color: #F8F5EF;
+      color: $text-muted;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.banHanhNotifyHeader {
+  background-color: $primary-color;
+  padding: 14px 20px;
+
+  h4 {
+    margin: 0;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+  }
+}
+
+.banHanhNotifyBody {
+  padding: 20px 22px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.banHanhNotifyField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: #8A7C70;
+  }
+}
+
+.banHanhNotifyTextarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 10px 12px;
+  border: 1.5px solid #E8E2D9;
+  border-radius: 8px;
+  font-family: $font-family-base;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: $text-ink;
+  resize: vertical;
+  outline: none;
+
+  &:focus {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+  }
+
+  &:disabled {
+    background-color: #F8F5EF;
+    color: $text-muted;
+  }
+}
+
+.banHanhNotifyHtmlEditor {
+  width: 100%;
+  min-height: 220px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1.5px solid #E8E2D9;
+  border-radius: 8px;
+  font-family: $font-family-base;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: $text-ink;
+  outline: none;
+  background-color: #FFFFFF;
+
+  &:focus {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+  }
+
+  &[contenteditable='false'] {
+    background-color: #F8F5EF;
+    color: $text-muted;
+    cursor: not-allowed;
+  }
+
+  p {
+    margin: 0 0 8px;
+  }
+
+  a {
+    color: $primary-color;
+    text-decoration: underline;
+  }
+}
+
+.banHanhNotifyLoading {
+  margin: 24px 0;
+  text-align: center;
+  color: $text-muted;
+  font-size: 14px;
+}
+
+.banHanhNotifyMainDocLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: #8A7C70;
+}
+
+.banHanhNotifyMainDocList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1.5px solid #E8E2D9;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.banHanhNotifyMainDocOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: $text-ink;
+  cursor: pointer;
+
+  input {
+    margin: 0;
+  }
+}
+
+.banHanhNotifyActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid $border-color;
+  background-color: $bg-folders;
+}
+
+.banHanhNotifyCancelBtn {
+  background-color: #FFFFFF;
+  border: 1.5px solid #D32F2F;
+  border-radius: 7px;
+  padding: 7px 16px;
+  color: #D32F2F;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: #FFF5F5;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.banHanhNotifyReturnBtn {
+  background-color: #FFFFFF;
+  border: 1.5px solid #B45309;
+  border-radius: 7px;
+  padding: 7px 16px;
+  color: #B45309;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: #FFFBEB;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.banHanhNotifySendBtn {
+  background-color: $primary-color;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 18px;
+  color: #FFFFFF;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: $primary-hover;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.remindDeadlineModal {
+  width: min(640px, calc(100vw - 40px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: $shadow-lg;
+  animation: scaleUp 0.2s ease;
+}
+
+.remindDeadlineHeader {
+  background-color: $primary-color;
+  padding: 14px 20px;
+
+  h4 {
+    margin: 0;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+  }
+}
+
+.remindDeadlineBody {
+  padding: 18px 22px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.remindDeadlineDescription {
+  margin: 0;
+  font-size: $font-size-sm;
+  color: $text-muted;
+  line-height: 1.5;
+
+  strong {
+    color: $text-ink;
+    font-weight: $font-weight-bold;
+  }
+}
+
+.remindDeadlineToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.remindDeadlineToolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.remindDeadlineToolbarBtn {
+  border: 1px solid #D9CFC4;
+  border-radius: 7px;
+  padding: 5px 12px;
+  background-color: #FFFFFF;
+  color: $text-ink;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #F8F5EF;
+    border-color: $primary-color;
+    color: $primary-color;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.remindDeadlineSelectedCount {
+  font-size: $font-size-sm;
+  color: $text-muted;
+  font-weight: $font-weight-bold;
+  white-space: nowrap;
+}
+
+.remindDeadlineSearchRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.remindDeadlineSearchInput {
+  width: 100%;
+  padding: 8px 11px;
+  border: 1.5px solid #E8E2D9;
+  border-radius: 7px;
+  @include ty-input;
+  outline: none;
+  background-color: #FFFFFF;
+  color: $text-ink;
+  transition: all 0.2s ease;
+
+  &:focus {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+  }
+
+  &::placeholder {
+    color: $text-muted;
+  }
+
+  &:disabled {
+    background-color: #F8F5EF;
+    color: $text-muted;
+    cursor: not-allowed;
+  }
+}
+
+.remindDeadlineFilterActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.remindDeadlineList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(360px, calc(100vh - 320px));
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.remindDeadlineEmpty {
+  margin: 0;
+  padding: 24px 12px;
+  text-align: center;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}
+
+.remindDeadlineRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1.5px solid #EFE5DA;
+  border-radius: 10px;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: #D9CFC4;
+    background-color: #FDFBF8;
+  }
+}
+
+.remindDeadlineRowSelected {
+  border-color: rgba(123, 76, 44, 0.45);
+  background-color: #FBF6F1;
+  box-shadow: 0 0 0 1px rgba(123, 76, 44, 0.08);
+}
+
+.remindDeadlineCheckbox {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: $primary-color;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.remindDeadlineAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: $font-weight-bold;
+  flex-shrink: 0;
+}
+
+.remindDeadlineInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.remindDeadlineName {
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  color: $text-ink;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.remindDeadlineEmail {
+  font-size: $font-size-sm;
+  color: $text-muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.remindDeadlineSubtitle {
+  font-size: 12px;
+  color: #8A7C70;
+  font-weight: $font-weight-bold;
+}
+
+.remindDeadlineError {
+  margin: 4px 0 0;
+  font-size: $font-size-sm;
+  color: #C14D56;
+}
+
+.remindDeadlineActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid $border-color;
+  background-color: $bg-folders;
+}
+
+.remindDeadlineCancelBtn {
+  background-color: #FFFFFF;
+  border: 1.5px solid #D32F2F;
+  border-radius: 7px;
+  padding: 7px 16px;
+  color: #D32F2F;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: #FFF5F5;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.remindDeadlineSendBtn {
+  background-color: $primary-color;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 18px;
+  color: #FFFFFF;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: $primary-hover;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.workflowParticipantModalContent {
+  width: min(640px, calc(100vw - 40px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: $shadow-lg;
+  animation: scaleUp 0.2s ease;
+
+  h4 {
+    margin: 0;
+    font-size: 16px;
+    color: $primary-color;
+  }
+}
+
+.templateModalContent {
+  width: min(720px, calc(100vw - 40px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: $shadow-lg;
+  overflow: hidden;
+  animation: scaleUp 0.2s ease;
+}
+
+.templateModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #EFE5DA;
+
+  h4 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: $font-weight-extrabold;
+    color: $text-ink;
+  }
+}
+
+.templateModalTitleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.templateModalTitleIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: #F3EEFC;
+  color: #6B4AA8;
+  flex-shrink: 0;
+}
+
+.templateModalClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #E7DACB;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: $text-ink3;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #FBF8F4;
+    color: $primary-color;
+  }
+}
+
+.templateModalIntro {
+  margin: 0;
+  padding: 14px 24px 0;
+  font-size: $font-size-base;
+  line-height: $line-height-relaxed;
+  color: $text-ink3;
+}
+
+.templateModalBody {
+  padding: 16px 24px;
+  overflow-y: auto;
+  min-height: 120px;
+}
+
+.templateModalStatus,
+.templateModalError {
+  margin: 0;
+  padding: 12px 0;
+  font-size: $font-size-base;
+  color: $text-ink3;
+}
+
+.templateModalError {
+  color: #C14D56;
+}
+
+.templateModalList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.templateModalItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid #E7DACB;
+  border-radius: 12px;
+  background-color: #FFFFFF;
+}
+
+.templateModalItemIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #FAF6F0;
+  flex-shrink: 0;
+}
+
+.templateModalItemMain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.templateModalItemTitle {
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  color: $text-ink;
+  line-height: $line-height-tight;
+  word-break: break-word;
+}
+
+.templateModalItemMeta {
+  font-size: $font-size-sm2;
+  color: $text-ink3;
+}
+
+.templateModalDownloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid #E2D6C8;
+  border-radius: 999px;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #FBF8F4;
+    border-color: rgba(123, 76, 44, 0.28);
+    color: $primary-color;
+  }
+}
+
+.templateModalFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 24px 20px;
+  border-top: 1px solid #EFE5DA;
+}
+
+.templateModalCloseBtn {
+  min-height: 38px;
+  padding: 0 18px;
+  border: 1px solid #E2D6C8;
+  border-radius: 10px;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #FBF8F4;
+    color: $primary-color;
+  }
+}
+
+.workflowParticipantModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.workflowParticipantModalClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: $text-muted;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(139, 90, 57, 0.08);
+    color: $primary-color;
+  }
+}
+
+.workflowParticipantModalBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.workflowParticipantSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.workflowParticipantSectionTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: $text-main;
+}
+
+.workflowParticipantSearchRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workflowParticipantAddBtn {
+  flex-shrink: 0;
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: #FFFFFF;
+  border: 1px solid $border-color;
+  color: $text-main;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: $shadow-sm;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.workflowParticipantSearchInput {
+  flex: 1;
+  min-height: 38px;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: $text-main;
+  background-color: #FFFFFF;
+
+  &:focus {
+    outline: none;
+    border-color: rgba(139, 90, 57, 0.55);
+    box-shadow: 0 0 0 3px rgba(139, 90, 57, 0.12);
+  }
+}
+
+.workflowParticipantList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.workflowParticipantEmpty {
+  margin: 0;
+  font-size: 13px;
+  color: $text-muted;
+}
+
+.workflowParticipantRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(139, 90, 57, 0.12);
+  border-radius: 10px;
+  background-color: #FAF8F6;
+
+  .btnTrash {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: #8C827A;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+
+    &:hover {
+      color: #B54033;
+      background-color: #FBEBE9;
+    }
+  }
+}
+
+.workflowParticipantAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #C89A72 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.workflowParticipantInfo {
+  min-width: 0;
+}
+
+.workflowParticipantName {
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-main;
+}
+
+.workflowParticipantRole {
+  font-size: 12px;
+  color: $text-muted;
+}
+
+.workflowParticipantJobTitle {
+  font-size: 12px;
+  color: $text-main;
+  text-align: right;
+}
+
+.workflowParticipantError {
+  margin: 0 0 14px;
+  font-size: $font-size-sm;
+  color: #C14D56;
+}
+
+.detailWorkflowActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #E2D6C8;
+  border-radius: 999px;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: #FBF8F4;
+    border-color: rgba(123, 76, 44, 0.28);
+    color: $primary-color;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.detailWorkflowActionBtnIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: $text-ink3;
+}
+
+.detailWorkflowTabActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detailWorkflowActionError {
+  margin: 0;
+  font-size: $font-size-sm;
+  color: #C14D56;
+}
+
+@media (max-width: 900px) {
+  .folderPickerDialog {
+    width: min(100vw - 24px, 640px);
+    height: min(78vh, calc(100vh - 32px));
+    min-height: min(78vh, calc(100vh - 32px));
+    max-height: min(78vh, calc(100vh - 32px));
+  }
+
+  .folderPickerTreePane {
+    padding: 12px 10px 10px;
+  }
+}
+
+// -------------------------------------------------------------
+// DETAIL PAGE
+// -------------------------------------------------------------
+$detail-stepper-height: 72px;
+$detail-page-gap: 18px;
+
+.contentPaneDetail {
+  padding: $space-5 $space-5 $space-6;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  scroll-behavior: smooth;
+}
+
+.detailPage {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $detail-page-gap;
+  overflow: hidden;
+}
+
+.detailHeaderArea {
+  flex-shrink: 0;
+}
+
+.detailBodySplit {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 400px);
+  gap: $detail-page-gap;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.detailLeftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: $detail-page-gap;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.detailHeaderMain {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.detailBreadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: $font-size-md;
+  color: $text-ink3;
+}
+
+.detailBreadcrumbLink {
+  color: $text-ink2;
+  text-decoration: none;
+
+  &:hover {
+    color: $primary-color;
+    text-decoration: underline;
+  }
+}
+
+.detailBreadcrumbSep {
+  color: $text-ink3;
+}
+
+.detailBreadcrumbCurrent {
+  color: $text-ink2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 420px;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-extrabold;
+  line-height: $line-height-snug;
+  color: $text-ink;
+}
+
+.detailActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detailHeaderActionsArea {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 280px;
+}
+
+.detailCommentBox {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: #8A7C70;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 56px;
+    padding: 8px 10px;
+    border: 1px solid #E7DACB;
+    border-radius: 8px;
+    font-size: $font-size-base2;
+    color: $text-main;
+    resize: vertical;
+    background-color: #FFFFFF;
+  }
+}
+
+.detailCapSoBox {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: #8A7C70;
+  }
+}
+
+.detailCapSoRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid #E7DACB;
+    border-radius: 8px;
+    font-size: $font-size-base2;
+    color: $text-main;
+    background-color: #FFFFFF;
+
+    &:disabled {
+      opacity: 0.7;
+    }
+  }
+}
+
+.detailActionCapSo {
+  min-height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #8B5A39 0%, #7B4C2C 100%);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+  }
+}
+
+.detailActionError {
+  margin: 0;
+  font-size: $font-size-sm;
+  color: #C14D56;
+  text-align: right;
+}
+
+.detailActionApprove,
+.detailActionEdit,
+.detailActionReject {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+  opacity: 1;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+  }
+}
+
+.detailActionApprove {
+  border: none;
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+}
+
+.detailActionEdit {
+  border: 1px solid #C5D9EF;
+  background-color: #EAF3FC;
+  color: #2F78A8;
+}
+
+.detailActionReject {
+  border: 1px solid #F0C8C8;
+  background-color: #FCEAEA;
+  color: #C14D56;
+}
+
+.detailStepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: $space-3 $space-3;
+  background-color: $surface-card;
+  border: 1px solid $border-subtle;
+  border-radius: $radius-lg;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #D8CEC3;
+    border-radius: 999px;
+  }
+}
+
+.detailStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 0;
+  min-width: 0;
+  scroll-snap-align: center;
+  padding: 0 2px;
+}
+
+.detailStepCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  flex-shrink: 0;
+}
+
+.detailStepLabel {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $text-ink2;
+  text-align: center;
+  line-height: 1.25;
+  word-break: break-word;
+  max-width: 100%;
+  padding: 0 2px;
+}
+
+.detailStepCompleted .detailStepCircle {
+  background-color: #2E8D61;
+  color: #FFFFFF;
+}
+
+.detailStepActive .detailStepCircle {
+  background-color: #2E8D61;
+  color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(46, 141, 97, 0.18);
+}
+
+.detailStepPending .detailStepCircle {
+  background-color: $surface-muted;
+  color: $text-muted;
+}
+
+.detailStepConnector {
+  flex: 1 1 0;
+  min-width: 8px;
+  height: 2px;
+  align-self: flex-start;
+  margin: 14px 2px 0;
+  background-color: $border-subtle;
+}
+
+.detailStepConnectorCompleted {
+  background-color: #2E8D61;
+}
+
+.detailStepperArea {
+  flex-shrink: 0;
+  height: $detail-stepper-height;
+  min-width: 0;
+  display: flex;
+
+  .detailStepper {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    overflow-x: visible;
+    padding: 8px 12px;
+  }
+
+  .detailStep {
+    gap: 4px;
+  }
+
+  .detailStepCircle {
+    width: 24px;
+    height: 24px;
+    font-size: $font-size-sm;
+  }
+
+  .detailStepLabel {
+    font-size: $font-size-sm;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .detailStepConnector {
+    margin-top: 12px;
+  }
+}
+
+.detailRightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.detailActivitySlot {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
+
+  > .detailSidebarAccordion {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+.detailMain {
+  flex: 1 1 auto;
+  background-color: #FFFFFF;
+  border: 1px solid #E7DACB;
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.detailTabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid $border-subtle;
+  padding: 0 $space-4;
+}
+
+.detailTab {
+  border: none;
+  background: transparent;
+  padding: 14px $space-4;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  color: $text-ink2;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+
+  &:focus-visible {
+    @include phvb-focus-ring;
+  }
+}
+
+.detailTabActive {
+  color: $primary-color;
+  border-bottom-color: $primary-color;
+}
+
+.detailTabPanel {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 18px 20px 22px;
+  overflow-y: auto;
+}
+
+.detailInfoLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detailInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.detailInfoNoteCallout {
+  background-color: $primary-light;
+  border-left: 4px solid $primary-color;
+  border-radius: 0 8px 8px 0;
+  padding: 14px 16px 16px;
+}
+
+.detailInfoNoteHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.detailInfoNoteIcon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: $primary-color;
+}
+
+.detailInfoNoteTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label;
+  color: $primary-color;
+  text-transform: uppercase;
+}
+
+.detailInfoNoteBody {
+  font-size: $font-size-base2;
+  line-height: $line-height-relaxed;
+  color: $text-ink;
+
+  strong {
+    font-weight: $font-weight-bold;
+    color: $primary-color;
+  }
+}
+
+.detailInfoSummaryBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detailInfoSummaryTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label;
+  color: $primary-color;
+  text-transform: uppercase;
+}
+
+.detailInfoSummaryBody {
+  font-size: $font-size-base2;
+  line-height: $line-height-relaxed;
+  color: $text-ink;
+}
+
+.detailField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detailFieldFull {
+  grid-column: 1 / -1;
+}
+
+.detailFieldLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label;
+  color: $text-ink3;
+  text-transform: uppercase;
+}
+
+.detailFieldValue {
+  font-size: $font-size-base2;
+  line-height: $line-height-relaxed;
+  color: $text-ink;
+}
+
+.detailPlaceholder {
+  color: $text-ink3;
+  font-style: italic;
+}
+
+.detailCheckboxReadonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: $text-ink2;
+}
+
+.detailDocuments {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.detailDocSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.detailDocSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.detailDocSectionTitle {
+  margin: 0;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-extrabold;
+  color: $primary-color;
+}
+
+.detailDocUploadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #D9D2C8;
+  background: #fff;
+  color: $text-ink2;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: $font-size-base;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.detailDocHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detailDocDeleteSelectedBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #F5C2C0;
+  background: #FFF5F5;
+  color: #B42318;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: $font-size-base;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.detailDocCheckCol {
+  width: 36px;
+  text-align: center;
+  vertical-align: middle;
+
+  input {
+    margin: 0;
+    cursor: pointer;
+  }
+}
+
+.detailDocEmpty {
+  margin: 0;
+  color: $text-ink3;
+  font-size: $font-size-base;
+}
+
+.detailDocTable {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #F0EBE4;
+    text-align: left;
+    font-size: $font-size-base;
+  }
+
+  th {
+    color: $text-ink3;
+    font-weight: $font-weight-bold;
+    background-color: #FAFAF8;
+  }
+}
+
+.detailDocActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.detailDocDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #B42318;
+  padding: 2px;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.detailDocFolder {
+  color: $text-ink3;
+  font-size: $font-size-md;
+}
+
+.detailDocLink {
+  color: #2F78A8;
+  font-weight: $font-weight-bold;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.detailHistoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailHistoryItem {
+  padding: $space-3 $space-4;
+  border: 1px solid $border-subtle;
+  border-radius: $radius-sm;
+  background-color: $bg-content;
+  @include phvb-document-spine;
+  padding-left: calc(#{$space-4} - #{$document-spine-width});
+}
+
+.detailHistoryHeader {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.detailHistoryDept {
+  color: $text-ink3;
+  font-size: $font-size-md;
+}
+
+.detailHistoryDate {
+  margin-left: auto;
+  color: $text-ink3;
+  font-size: $font-size-md;
+}
+
+.detailHistoryStatus {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background-color: #F5EDE4;
+  color: $primary-color;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+}
+
+.detailHistoryContent {
+  margin: 8px 0 0;
+  color: $text-ink2;
+  font-size: $font-size-base;
+  line-height: $line-height-relaxed;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detailHistoryContentCollapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.detailHistoryContentToggle {
+  margin: 4px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: $primary-color;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.detailSidebarAccordionFill {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .detailSidebarAccordionBody {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .detailActivityPanel,
+  .detailWorkflowPanel {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detailActivityFeed,
+  .detailWorkflowStepList {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+.detailSidebarAccordionCollapsed {
+  flex: 0 0 auto !important;
+  min-height: auto;
+  overflow: visible;
+}
+
+.detailSidebarAccordionCompact {
+  flex: 0 0 auto;
+}
+
+.detailSidebarAccordionFooter {
+  flex-shrink: 0;
+  padding: 0 16px 16px;
+  background-color: #FFFFFF;
+}
+
+.detailSidebarAccordion {
+  background-color: $surface-card;
+  border: 1px solid $border-subtle;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+  flex-shrink: 0;
+}
+
+.detailSidebarAccordionHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: none;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FBF8F4 100%);
+  cursor: pointer;
+  text-align: left;
+}
+
+.detailSidebarAccordionTitleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.detailSidebarAccordionTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label-wide;
+  color: $primary-color;
+  text-transform: uppercase;
+}
+
+.detailSidebarAccordionTitleSuffix {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label-wide;
+  color: $text-ink3;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.detailSidebarAccordionHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.detailSidebarAccordionHeaderActionsSlot {
+  display: inline-flex;
+  align-items: center;
+}
+
+.detailSidebarAccordionBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background-color: #F5EDE4;
+  color: $primary-color;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+}
+
+.detailSidebarAccordionChevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: #8B7C70;
+}
+
+.detailSidebarAccordionBody {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 16px 16px;
+}
+
+.detailSidebarSection {
+  background-color: #FFFFFF;
+  border: 1px solid #E7DACB;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.detailSidebarTitle {
+  margin: 0 0 14px;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: $letter-spacing-label-wide;
+  color: $primary-color;
+}
+
+.detailWorkflowPanel,
+.detailActivityPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.detailWorkflowTabPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.detailWorkflowTabHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detailWorkflowTabTitleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.detailWorkflowTabTitle {
+  margin: 0;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-extrabold;
+  color: $text-ink;
+}
+
+.detailWorkflowTabTitleSuffix {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $text-ink3;
+  text-transform: uppercase;
+  letter-spacing: $letter-spacing-label;
+}
+
+.detailActivityFilterBar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.detailActivityFilterBtn {
+  border: 1px solid #E7DACB;
+  background-color: #FBF8F4;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+  color: $text-ink2;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: $primary-light;
+    color: $primary-color;
+    border-color: rgba(123, 76, 44, 0.25);
+  }
+}
+
+.detailActivityFilterBtnActive {
+  background-color: $primary-color;
+  border-color: $primary-color;
+  color: #FFFFFF;
+
+  &:hover {
+    background-color: $primary-hover;
+    border-color: $primary-hover;
+    color: #FFFFFF;
+  }
+}
+
+.detailWorkflowStepList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detailWorkflowStepCard {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.detailWorkflowStepCardDone {
+  background-color: #EEF8F1;
+  border-color: #CFE8D6;
+}
+
+.detailWorkflowStepCardActive {
+  background-color: #F3EEFC;
+  border-color: #C9B8EA;
+}
+
+.detailWorkflowStepCardPending {
+  background-color: #F7F4F0;
+  border-color: #ECE6DE;
+  opacity: 0.72;
+}
+
+.detailWorkflowStepCardRejected {
+  background-color: #FFF5F5;
+  border-color: rgba(211, 47, 47, 0.25);
+}
+
+.detailWorkflowStepCardIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detailWorkflowStepCardIconDone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background-color: #FFFFFF;
+  color: #2F9B57;
+}
+
+.detailWorkflowStepCardIconActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background-color: #7B4C2C;
+  color: #FFFFFF;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+}
+
+.detailWorkflowStepCardIconPending {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background-color: #FFFFFF;
+  border: 1px solid #E2D6C8;
+  color: $text-ink3;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+}
+
+.detailWorkflowStepCardIconRejected {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background-color: #FFFFFF;
+  border: 1px solid rgba(211, 47, 47, 0.35);
+  color: $color-error;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+}
+
+.detailWorkflowStepCardMain {
+  min-width: 0;
+}
+
+.detailWorkflowStepCardTitleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detailWorkflowStepCardTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-extrabold;
+  color: $text-ink;
+  line-height: $line-height-tight;
+}
+
+.detailWorkflowStepCardCurrentBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: #7B4C2C;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: $font-weight-extrabold;
+  letter-spacing: 0.04em;
+}
+
+.detailWorkflowStepCardMeta {
+  margin-top: 4px;
+  font-size: $font-size-sm2;
+  color: $text-ink3;
+  line-height: $line-height-relaxed;
+}
+
+.detailWorkflowStepCardStatus {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detailWorkflowStepCardStatusChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+  white-space: nowrap;
+}
+
+.detailWorkflowStepCardStatusChipDone {
+  background-color: #FFFFFF;
+  color: #2F9B57;
+  border: 1px solid #B9E2C8;
+}
+
+.detailWorkflowStepCardStatusChipActive {
+  background-color: #FFFFFF;
+  color: #6B4AA8;
+  border: 1px solid #C9B8EA;
+}
+
+.detailWorkflowStepCardStatusChipPending {
+  background-color: #FFFFFF;
+  color: $text-ink3;
+  border: 1px solid #E2D6C8;
+}
+
+.detailWorkflowStepCardStatusChipRejected {
+  background-color: #FFFFFF;
+  color: $color-error;
+  border: 1px solid rgba(211, 47, 47, 0.35);
+}
+
+.detailWorkflowHint {
+  margin: 4px 0 0;
+  font-size: $font-size-md;
+  color: $text-ink3;
+  line-height: $line-height-relaxed;
+}
+
+.detailWorkflowEmpty {
+  margin: 0;
+  font-size: $font-size-md;
+  color: $text-ink3;
+}
+
+.detailActivityPanel {
+  gap: 10px;
+}
+
+.detailActivityFeed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailCommentComposer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #EFE5DA;
+
+  textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 72px;
+    padding: 10px 12px;
+    border: 1px solid #E7DACB;
+    border-radius: 10px;
+    font-family: $font-family-base;
+    font-size: $font-size-base;
+    background-color: #FAFAF8;
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.detailCommentFilePicker {
+  display: flex;
+  align-items: center;
+}
+
+.detailCommentFileInput {
+  display: none;
+}
+
+.detailCommentAttachBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #E0D2C3;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.detailCommentFileList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detailCommentFileChip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #E8E2D9;
+  border-radius: 8px;
+  background-color: #FAFAF8;
+}
+
+.detailCommentFileName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: $font-size-sm;
+  color: $text-ink2;
+}
+
+.detailCommentFileRemoveBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #8B5A39;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+}
+
+.detailCommentError {
+  margin: 0;
+  font-size: $font-size-sm;
+  color: #B42318;
+}
+
+.detailCommentActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detailCommentSubmitBtn,
+.detailCommentSubmitBtnDisabled {
+  min-height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: $font-weight-bold;
+}
+
+.detailCommentSubmitBtn {
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  cursor: pointer;
+}
+
+.detailCommentSubmitBtnDisabled {
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.detailCommentAttachmentList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detailCommentAttachmentLink {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: $font-size-sm;
+  color: #8B5A39;
+  text-decoration: underline;
+}
+
+.detailEmptyState,
+.detailErrorState {
+  padding: 24px;
+  border: 1px dashed #DDCFC1;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.8);
+  color: $text-ink2;
+  text-align: center;
+}
+
+.detailErrorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  .btnSecondary {
+    background-color: #FFFFFF;
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: $font-size-base2;
+    font-weight: $font-weight-bold;
+    color: $text-ink2;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 1100px) {
+  .contentPaneDetail {
+    overflow: hidden;
+  }
+
+  .detailPage {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .detailBodySplit {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .detailLeftColumn {
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .detailRightColumn {
+    order: 2;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .detailActivitySlot {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+
+    > .detailSidebarAccordion {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+  }
+
+  .detailStepperArea {
+    height: $detail-stepper-height;
+    flex-shrink: 0;
+
+    .detailStepper {
+      overflow-x: auto;
+      justify-content: flex-start;
+    }
+
+    .detailStep {
+      flex: 0 0 auto;
+      min-width: 72px;
+      max-width: 96px;
+    }
+
+    .detailStepLabel {
+      white-space: normal;
+      text-overflow: clip;
+    }
+
+    .detailStepConnector {
+      flex: 0 0 18px;
+      min-width: 18px;
+    }
+  }
+
+  .detailMain {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .detailStepperArea .detailStepper {
+    flex-direction: column;
+    align-items: stretch;
+    overflow-x: visible;
+    scroll-snap-type: none;
+    padding: 8px 10px;
+    gap: 0;
+  }
+
+  .detailStepConnector {
+    display: none;
+  }
+
+  .detailStep {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    min-width: 0;
+    max-width: none;
+    flex: 0 0 auto;
+    padding: 10px 8px 10px 12px;
+    margin-left: 10px;
+    border-left: 3px solid #E0D6CB;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .detailStepCompleted {
+    border-left-color: #2E8D61;
+  }
+
+  .detailStepActive {
+    border-left-color: #2E8D61;
+    background-color: #F4FBF6;
+  }
+
+  .detailStepLabel {
+    text-align: left;
+    font-size: $font-size-base;
+  }
+
+  .detailStepCircle {
+    width: 26px;
+    height: 26px;
+    font-size: $font-size-sm2;
+  }
+}
+
+@media (max-width: 720px) {
+  .detailInfoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .detailHeader {
+    flex-direction: column;
+  }
+
+  .detailActions {
+    width: 100%;
+  }
+}
+

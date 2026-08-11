@@ -1,0 +1,970 @@
+// -------------------------------------------------------------
+// 6. DASHBOARD REFRESH (merged into .contentPane above)
+// -------------------------------------------------------------
+
+.contentPaneTask {
+  padding: $space-3 $space-5 $space-4;
+  gap: $space-3;
+}
+
+.contentHeaderTask {
+  padding-bottom: 0;
+  gap: 10px;
+}
+
+.tableCardCompact {
+  .metricsGrid {
+    gap: 8px;
+  }
+
+  .metricCard {
+    padding: 10px 12px;
+    border-radius: 10px;
+    gap: 2px;
+  }
+
+  .listSectionHeader {
+    margin: 6px 0 4px;
+
+    .titleArea {
+      gap: 8px;
+    }
+  }
+
+  .requestToolBar {
+    padding: 0 0 8px;
+    gap: 8px;
+  }
+
+  .requestQuickFilters {
+    gap: 6px;
+  }
+
+  .taskList {
+    gap: 6px;
+  }
+
+  .taskCard {
+    padding: 10px 12px 10px 10px;
+    gap: 10px;
+    border-radius: 10px;
+  }
+
+  .taskCardBody {
+    gap: 4px;
+  }
+
+  .taskCardTitleRow {
+    gap: 10px;
+  }
+
+  .taskTagRow {
+    gap: 6px;
+  }
+
+  .skeletonRow {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .skeletonBlock {
+    gap: 6px;
+  }
+
+  .emptyState {
+    border-radius: 10px;
+    font-size: 12px;
+  }
+}
+
+@mixin request-board-flex-children {
+  .requestBoardHeader,
+  .metricsGrid,
+  .listSectionHeader,
+  .requestToolBar,
+  .requestToolBarStack,
+  .requestQuickFilters,
+  .requestControls,
+  .requestFooter {
+    flex-shrink: 0;
+  }
+
+  .requestTableWrap,
+  .taskList,
+  .skeletonContainer,
+  .emptyState {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+}
+
+.tableCard {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: hidden;
+
+  @include request-board-flex-children;
+
+  .taskList {
+    padding-right: 4px;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(139, 90, 57, 0.35);
+      border-radius: 999px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: transparent;
+    }
+  }
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metricCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 18px 20px;
+  background-color: $surface-card;
+  border: 1px solid #EDE2D7;
+  border-radius: $radius-lg;
+  box-shadow: $elevation-2;
+  @include phvb-document-spine;
+  padding-left: calc(20px - #{$document-spine-width});
+  @include phvb-reduced-motion;
+  transition: box-shadow $transition-base, transform $transition-base;
+
+  &:hover {
+    box-shadow: $elevation-3;
+    transform: translateY(-1px);
+  }
+}
+
+.metricDanger {
+  border-color: rgba(177, 59, 48, 0.16);
+}
+
+.metricWarning {
+  border-color: rgba(178, 132, 45, 0.18);
+}
+
+.metricInfo {
+  border-color: rgba(48, 110, 155, 0.16);
+}
+
+.metricSuccess {
+  border-color: rgba(31, 125, 82, 0.16);
+}
+
+.metricValue {
+  @include ty-stat-value;
+  margin-bottom: 4px;
+}
+
+.metricLabel {
+  @include ty-stat-label;
+}
+
+.metricHint {
+  font-size: $font-size-md;
+  font-weight: $font-weight-regular;
+  line-height: $line-height-body;
+  color: $text-ink3;
+  margin-top: 2px;
+}
+
+.metricDanger .metricValue,
+.cardDanger {
+  color: #B54033;
+}
+
+.metricWarning .metricValue,
+.cardWarning {
+  color: #B6872C;
+}
+
+.metricInfo .metricValue,
+.cardInfo {
+  color: #2F78A8;
+}
+
+.metricSuccess .metricValue,
+.cardSuccess {
+  color: #2A8A58;
+}
+
+.cardNeutral {
+  color: #8B7C70;
+}
+
+.listSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 18px 0 12px;
+
+  .titleArea {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+
+    h3 {
+      margin: 0;
+      @include ty-section-title;
+      color: $text-ink;
+    }
+  }
+}
+
+.countText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  color: $primary-color;
+  background-color: #F5EDE4;
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+
+.requestBoard {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+  border: 1px solid #E7DACB;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(123, 76, 44, 0.05);
+  overflow: hidden;
+
+  @include request-board-flex-children;
+}
+
+.requestBoardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px 8px;
+}
+
+.requestBoardTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+
+  h3 {
+    margin: 0;
+    @include ty-section-title;
+    color: $text-ink;
+  }
+
+  span {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $primary-color;
+    background-color: #F5EDE4;
+    border-radius: 20px;
+    padding: 2px 8px;
+  }
+}
+
+.requestCreateButton {
+  border: none;
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(123, 76, 44, 0.14);
+}
+
+.requestToolBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 18px 10px;
+  flex-wrap: wrap;
+
+  .requestQuickFilters {
+    padding: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .requestControls {
+    padding: 0;
+    margin-left: auto;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+}
+
+.requestToolBarStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 18px 12px;
+}
+
+.requestToolBarStack .requestControls {
+  padding: 0;
+  justify-content: flex-end;
+}
+
+.requestFilterBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.requestFilterField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.requestFilterLabel {
+  color: $text-ink2;
+  font-size: $font-size-base2;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.requestTableSortableHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0;
+  cursor: pointer;
+}
+
+.requestTableSortableHeaderActive {
+  color: $primary-color;
+}
+
+.requestTableSortIcon {
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.requestTableIndexCol {
+  width: 48px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.requestToolBarSearchOnly {
+  justify-content: flex-end;
+}
+
+.requestQuickFilters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px 10px;
+  flex-wrap: wrap;
+}
+
+.requestQuickFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid #E8E2D9;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+  min-height: 34px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  @include ty-chip;
+  font-family: $font-family-base;
+  cursor: pointer;
+}
+
+.requestQuickFilterIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.requestQuickFilterActive {
+  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+  border-color: transparent;
+  color: #FFFFFF;
+}
+
+.requestControls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 18px 10px;
+}
+
+.requestStatusSelect,
+.requestSearchBox input,
+.requestSearchButton,
+.requestPageSizeLabel select,
+.requestReloadButton,
+.requestPageButton {
+  min-height: auto;
+  border-radius: 7px;
+  font-family: $font-family-base;
+  font-size: $font-size-base2;
+}
+
+.requestStatusSelect,
+.requestPageSizeLabel select {
+  border: 1px solid #E7DACB;
+  background-color: #FFFFFF;
+  color: $text-main;
+  padding: 0 10px;
+}
+
+.requestSearchBox {
+  position: relative;
+  width: 220px;
+
+  .searchIcon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #A3968A;
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    padding: 0 12px 0 34px;
+    border: 1px solid #E7DACB;
+    background-color: #FFFFFF;
+    color: $text-main;
+    outline: none;
+  }
+}
+
+.requestSearchButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 6px 14px;
+  border: 1px solid #E8E2D9;
+  border-radius: 7px;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+
+  &:hover {
+    background-color: #F0EBE4;
+    color: $text-ink;
+  }
+}
+
+.requestReloadButton,
+.requestPageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E7DACB;
+  background-color: #FFFFFF;
+  color: $text-main;
+  padding: 0 12px;
+  font-weight: 700;
+  cursor: pointer;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background-color: #F7F3EE;
+    color: #A3968A;
+  }
+}
+
+.requestTableWrap {
+  border-top: 1px solid #EFE5DA;
+}
+
+.requestTable {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    padding: 8px 13px;
+    @include ty-table-head;
+    border-bottom: 1px solid #F0EBE4;
+    background-color: #FAFAF8;
+  }
+
+  td {
+    padding: 10px 13px;
+    border-bottom: 1px solid #F0EBE4;
+    @include ty-table-cell;
+    color: $text-ink2;
+    vertical-align: middle;
+  }
+}
+
+.requestTableRow {
+  cursor: pointer;
+  transition: background-color 0.16s ease;
+
+  &:hover {
+    background-color: #FFFCF8;
+  }
+}
+
+.requestTitleCell {
+  width: 34%;
+}
+
+.requestTitle {
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-normal;
+  color: $text-ink;
+  text-transform: none;
+}
+
+.requestSummaryCell {
+  width: 41%;
+  font-size: $font-size-md;
+  line-height: $line-height-loose;
+  color: $text-ink3;
+}
+
+.requestFolderCell {
+  color: #9B8D81;
+}
+
+.requestStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: auto;
+  padding: 2px 8px;
+  border-radius: 20px;
+  @include ty-badge;
+  line-height: $line-height-tight;
+}
+
+.requestStatusPending {
+  background-color: #FFF4D8;
+  color: #B18422;
+}
+
+.requestStatusRevision {
+  background-color: #FCE3E4;
+  color: #C14D56;
+}
+
+.requestStatusApproved {
+  background-color: #E0F4E8;
+  color: #2E8D61;
+}
+
+.requestStatusRejected {
+  background-color: #F1E7E7;
+  color: #9F5A59;
+}
+
+.requestFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+}
+
+.requestPager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #978A7E;
+}
+
+.requestPageSizeLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #9A8A7C;
+}
+
+.requestRangeText {
+  font-size: 12px;
+  color: #A08F80;
+}
+
+.requestSkeletonRow {
+  display: grid;
+  grid-template-columns: 34% 1fr 16% 20%;
+  gap: 16px;
+  padding: 14px 18px;
+  border-top: 1px solid #F3EADF;
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.taskCard {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px 18px 18px;
+  background-color: #FFFFFF;
+  border: 1px solid #E8DDD1;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(123, 76, 44, 0.04);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(123, 76, 44, 0.08);
+  }
+}
+
+.taskCardAccent {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 999px;
+  background-color: currentColor;
+  opacity: 0.92;
+}
+
+.taskIconBadge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  background-color: rgba(255, 255, 255, 0.92);
+}
+
+.cardDanger .taskIconBadge {
+  background-color: #FCEAE8;
+}
+
+.cardWarning .taskIconBadge {
+  background-color: #FCF3DE;
+}
+
+.cardInfo .taskIconBadge {
+  background-color: #EAF4FB;
+}
+
+.cardSuccess .taskIconBadge,
+.cardNeutral .taskIconBadge {
+  background-color: #EEF8F2;
+}
+
+.cardNeutral .taskIconBadge {
+  background-color: #F3EFEB;
+}
+
+.taskCardBody {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.taskCardTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.taskCardTitle {
+  margin: 0;
+  @include ty-inbox-title;
+  color: $text-ink;
+}
+
+.taskCardDescription {
+  margin: 0;
+  @include ty-inbox-sub;
+}
+
+.taskTagRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.taskMetaPill,
+.deptPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: auto;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-semibold;
+}
+
+.taskMetaPill {
+  background-color: #EEF1F6;
+  color: #536274;
+}
+
+.deptPill {
+  background-color: #F4EEE8;
+  color: #746659;
+}
+
+.taskCardMeta {
+  font-size: $font-size-md;
+  font-weight: $font-weight-regular;
+  color: $text-ink3;
+  line-height: $line-height-loose;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: 1px dashed #DDCFC1;
+  border-radius: 16px;
+}
+
+.skeletonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeletonRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #E8DDD1;
+  border-radius: 14px;
+  background-color: #FFFFFF;
+}
+
+.skeletonBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 1180px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .requestToolBar .requestControls {
+    margin-left: auto;
+    justify-content: flex-end;
+  }
+
+  .contentPane .contentHeader {
+    flex-direction: column;
+    align-items: stretch;
+
+    .headerActions {
+      justify-content: flex-start;
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .phvbContainer {
+    height: var(--phvb-available-height, 100vh);
+    height: var(--phvb-available-height, 100dvh);
+    max-height: var(--phvb-available-height, 100vh);
+    max-height: var(--phvb-available-height, 100dvh);
+    overflow: hidden;
+  }
+
+  .sidebar {
+    width: $sidebar-width-expanded;
+    padding-left: 12px;
+    padding-right: 12px;
+
+    &.sidebarCollapsed {
+      width: $sidebar-width-collapsed;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+  }
+
+  .contentPane {
+    padding: 22px 18px 30px;
+  }
+
+  .taskCard {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .requestTableWrap {
+    overflow-x: auto;
+  }
+
+  .taskCardAccent {
+    display: none;
+  }
+
+  .taskCardTitleRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .contentPane .contentHeader .headerActions .searchBox input {
+    width: 100%;
+  }
+
+  .requestSearchBox {
+    width: 100%;
+  }
+
+  .modalContent .modalBody .formRowTwoCol {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .phvbContainer {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid $border-color;
+    padding: 16px 12px;
+
+    .sidebarHeader {
+      margin-bottom: 18px;
+    }
+
+    .navMenu {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: stretch;
+
+      .navGroupLabel {
+        width: 100%;
+        margin: 10px 0 0 2px;
+      }
+
+      .navItem {
+        width: calc(50% - 4px);
+        justify-content: flex-start;
+      }
+    }
+
+    &.sidebarCollapsed {
+      width: 100%;
+    }
+  }
+
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .contentPane .contentHeader .headerActions {
+    width: 100%;
+
+    .searchBox,
+    .btnTemplate,
+    .btnCreate {
+      width: 100%;
+    }
+  }
+
+  .taskCard {
+    grid-template-columns: 1fr;
+  }
+
+  .requestBoardHeader,
+  .requestFooter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .requestToolBar {
+    flex-direction: column;
+    align-items: stretch;
+
+    .requestControls {
+      margin-left: 0;
+      justify-content: flex-end;
+    }
+  }
+
+  .requestPager {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .requestQuickFilters {
+    gap: 6px;
+  }
+
+  .taskIconBadge {
+    display: none;
+  }
+
+  .skeletonRow {
+    grid-template-columns: 1fr;
+  }
+}
+

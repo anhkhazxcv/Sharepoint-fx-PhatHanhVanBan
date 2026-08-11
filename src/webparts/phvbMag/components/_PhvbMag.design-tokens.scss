@@ -1,4 +1,5 @@
-// Enterprise UI design tokens — spacing, radius, surfaces
+// Enterprise UI design tokens — spacing, radius, surfaces, motion, z-index
+
 $space-1: 4px;
 $space-2: 8px;
 $space-3: 12px;
@@ -18,7 +19,43 @@ $shadow-card: 0 2px 8px rgba(123, 76, 44, 0.03);
 $focus-ring-color: rgba(123, 76, 44, 0.35);
 $focus-ring-width: 2px;
 
+// Z-index scale
+$z-dropdown: 100;
+$z-sticky: 200;
+$z-overlay: 600;
+$z-modal: 1300;
+
+// Motion
+$transition-fast: 0.15s ease;
+$transition-base: 0.18s ease;
+$transition-slow: 0.2s ease;
+
+// Elevation aliases (map to color shadows)
+$elevation-1: 0 2px 8px rgba(123, 76, 44, 0.03);
+$elevation-2: 0 8px 24px rgba(123, 76, 44, 0.05);
+$elevation-3: 0 16px 40px rgba(123, 76, 44, 0.08);
+
+// Component sizing
+$input-height: 42px;
+$table-row-height: 48px;
+$btn-min-height: 36px;
+
+// Document spine signature
+$document-spine-width: 3px;
+
 @mixin phvb-focus-ring {
   outline: none;
   box-shadow: 0 0 0 $focus-ring-width $focus-ring-color;
+}
+
+@mixin phvb-document-spine {
+  border-left: $document-spine-width solid $primary-color;
+}
+
+@mixin phvb-reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
 }
