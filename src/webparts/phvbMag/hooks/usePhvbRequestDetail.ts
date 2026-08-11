@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { IPhvbSiteContext, IRequestDetailData } from '../models/PhvbMag.models';
+import type { DetailRefreshScope, IPhvbSiteContext, IRequestDetailData } from '../models/PhvbMag.models';
 import { phvbDetailService } from '../services/PhvbMagDetail.service';
 
 interface IUsePhvbRequestDetailResult {
   data?: IRequestDetailData;
   isLoading: boolean;
   errorMessage?: string;
-  refetch: () => void;
+  refetch: (scope?: DetailRefreshScope | ReadonlyArray<DetailRefreshScope>) => void;
+}
+
+function normalizeRefreshScopes(
+  scope?: DetailRefreshScope | ReadonlyArray<DetailRefreshScope>
+): DetailRefreshScope[] {
+  if (!scope) {
+    return ['full'];
+  }
+
+  return Array.isArray(scope) ? scope.slice() : [scope];
 }
 
 export function usePhvbRequestDetail(
@@ -16,10 +26,16 @@ export function usePhvbRequestDetail(
   const [data, setData] = useState<IRequestDetailData | undefined>(undefined);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
-  const [reloadToken, setReloadToken] = useState<number>(0);
+  const [reloadRequest, setReloadRequest] = useState<{ token: number; scopes: DetailRefreshScope[] }>({
+    token: 0,
+    scopes: ['full']
+  });
 
-  const refetch = useCallback((): void => {
-    setReloadToken(previous => previous + 1);
+  const refetch = useCallback((scope?: DetailRefreshScope | ReadonlyArray<DetailRefreshScope>): void => {
+    setReloadRequest(previous => ({
+      token: previous.token + 1,
+      scopes: normalizeRefreshScopes(scope)
+    }));
   }, []);
 
   useEffect(() => {
@@ -31,34 +47,73 @@ export function usePhvbRequestDetail(
     }
 
     let isMounted = true;
+    const normalizedId = idYeuCau.trim();
+    const scopes = reloadRequest.scopes;
+    const isFullReload = scopes.length === 0 || scopes.indexOf('full') > -1;
 
     const loadDetail = async (): Promise<void> => {
-      setIsLoading(true);
+      if (isFullReload) {
+        setIsLoading(true);
+      }
+
       setErrorMessage(undefined);
 
       try {
-        const result = await phvbDetailService.loadRequestDetail(siteContext, idYeuCau.trim());
+        if (isFullReload) {
+          const result = await phvbDetailService.loadRequestDetail(siteContext, normalizedId);
+
+          if (!isMounted) {
+            return;
+          }
+
+          if (!result) {
+            setData(undefined);
+            setErrorMessage('Không tìm thấy yêu cầu với mã đã chọn.');
+            return;
+          }
+
+          setData(result);
+          return;
+        }
+
+        const partial = await phvbDetailService.loadRequestDetailPartial(siteContext, normalizedId, scopes);
 
         if (!isMounted) {
           return;
         }
 
-        if (!result) {
-          setData(undefined);
-          setErrorMessage('Không tìm thấy yêu cầu với mã đã chọn.');
-          return;
-        }
+        setData(previous => {
+          if (!previous) {
+            if (!partial.release) {
+              return undefined;
+            }
 
-        setData(result);
+            return {
+              release: partial.release,
+              attachments: partial.attachments || [],
+              history: partial.history || [],
+              comments: partial.comments || [],
+              workflowParticipants: partial.workflowParticipants || []
+            };
+          }
+
+          return {
+            ...previous,
+            ...partial
+          };
+        });
       } catch (error) {
         if (!isMounted) {
           return;
         }
 
-        setData(undefined);
+        if (isFullReload) {
+          setData(undefined);
+        }
+
         setErrorMessage(phvbDetailService.getRuntimeErrorMessage(error));
       } finally {
-        if (isMounted) {
+        if (isMounted && isFullReload) {
           setIsLoading(false);
         }
       }
@@ -69,7 +124,7 @@ export function usePhvbRequestDetail(
     return () => {
       isMounted = false;
     };
-  }, [siteContext, idYeuCau, reloadToken]);
+  }, [siteContext, idYeuCau, reloadRequest]);
 
   return {
     data,

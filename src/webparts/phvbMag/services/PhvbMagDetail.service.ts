@@ -15,6 +15,7 @@ import { groupCommentAttachmentsByCommentId } from '../utils/PhvbMagCommentAttac
 import type {
   IAllUserWorkflowItem,
   ICommentWithAttachments,
+  DetailRefreshScope,
   ILichSuThucHienItem,
   IPhvbSiteContext,
   IRequestDetailData,
@@ -38,6 +39,7 @@ const ALL_USER_SELECT_FIELDS: ReadonlyArray<string> = [
 const HISTORY_SELECT_FIELDS: ReadonlyArray<string> = [
   ...ALL_USER_SELECT_FIELDS,
   'IsComment',
+  'IsHasAttach',
   'Created'
 ];
 
@@ -195,8 +197,14 @@ async function enrichCommentsWithAttachments(
     return [];
   }
 
-  const commentIds = comments.map(comment => comment.Id);
-  const attachments = await phvbCommentAttachmentService.listFilesForComments(context, commentIds).catch(() => []);
+  const hasIsHasAttachField = comments.some(comment => comment.IsHasAttach !== undefined);
+  const commentIdsWithAttachments = hasIsHasAttachField
+    ? comments.filter(comment => comment.IsHasAttach === true).map(comment => comment.Id)
+    : comments.map(comment => comment.Id);
+
+  const attachments = commentIdsWithAttachments.length > 0
+    ? await phvbCommentAttachmentService.listFilesForComments(context, commentIdsWithAttachments).catch(() => [])
+    : [];
   const grouped = groupCommentAttachmentsByCommentId(attachments);
 
   return comments.map(comment => ({
@@ -207,12 +215,86 @@ async function enrichCommentsWithAttachments(
 
 export class PhvbDetailService {
   public async loadRequestDetail(context: IPhvbSiteContext, idYeuCau: string): Promise<IRequestDetailData | undefined> {
-    if (!hasSharePointSiteContext(context) || !idYeuCau.trim()) {
+    const partial = await this.loadRequestDetailPartial(context, idYeuCau, ['full']);
+
+    if (!partial.release) {
       return undefined;
     }
 
-    const normalizedId = idYeuCau.trim();
+    return {
+      release: partial.release,
+      attachments: partial.attachments || [],
+      history: partial.history || [],
+      comments: partial.comments || [],
+      workflowParticipants: partial.workflowParticipants || []
+    };
+  }
 
+  public async loadRequestDetailPartial(
+    context: IPhvbSiteContext,
+    idYeuCau: string,
+    scopes: ReadonlyArray<DetailRefreshScope>
+  ): Promise<Partial<IRequestDetailData>> {
+    if (!hasSharePointSiteContext(context) || !idYeuCau.trim()) {
+      return {};
+    }
+
+    const normalizedId = idYeuCau.trim();
+    const uniqueScopes = scopes.filter((scope, index, array) => array.indexOf(scope) === index);
+
+    if (uniqueScopes.length === 0 || uniqueScopes.indexOf('full') > -1) {
+      return this.loadRequestDetailFull(context, normalizedId);
+    }
+
+    const result: Partial<IRequestDetailData> = {};
+    const loaders: Array<Promise<void>> = [];
+
+    if (uniqueScopes.indexOf('release') > -1) {
+      loaders.push(
+        fetchReleaseItem(context, normalizedId).then(release => {
+          if (release) {
+            result.release = release;
+          }
+        })
+      );
+    }
+
+    if (uniqueScopes.indexOf('attachments') > -1) {
+      loaders.push(
+        phvbAttachmentService.listRequestFiles(context, normalizedId).catch(() => []).then(attachments => {
+          result.attachments = attachments;
+        })
+      );
+    }
+
+    if (uniqueScopes.indexOf('activity') > -1) {
+      loaders.push(
+        fetchHistoryItemsByIdYeuCau(context, normalizedId).catch(() => []).then(async historyItems => {
+          const { history, comments: rawComments } = splitHistoryAndComments(historyItems);
+          const comments = await enrichCommentsWithAttachments(context, rawComments);
+          result.history = history;
+          result.comments = comments;
+        })
+      );
+    }
+
+    if (uniqueScopes.indexOf('workflow') > -1) {
+      loaders.push(
+        Promise.all([
+          fetchAllUserItemsByIdYeuCau(context, normalizedId, ALL_USER_GOPY_LIST_TITLE).catch(() => []),
+          fetchAllUserItemsByIdYeuCau(context, normalizedId, ALL_USER_THAMDINH_LIST_TITLE).catch(() => []),
+          fetchAllUserItemsByIdYeuCau(context, normalizedId, ALL_USER_PHEDUYET_LIST_TITLE).catch(() => [])
+        ]).then(([gopYUsers, thamDinhUsers, pheDuyetUsers]) => {
+          result.workflowParticipants = mergeWorkflowParticipants(gopYUsers, thamDinhUsers, pheDuyetUsers);
+        })
+      );
+    }
+
+    await Promise.all(loaders);
+    return result;
+  }
+
+  private async loadRequestDetailFull(context: IPhvbSiteContext, normalizedId: string): Promise<Partial<IRequestDetailData>> {
     const [
       release,
       attachments,
@@ -230,7 +312,7 @@ export class PhvbDetailService {
     ]);
 
     if (!release) {
-      return undefined;
+      return {};
     }
 
     const { history, comments: rawComments } = splitHistoryAndComments(historyItems);
