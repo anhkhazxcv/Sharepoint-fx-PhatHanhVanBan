@@ -13,12 +13,14 @@ import {
 } from '../utils/PhvbMagSla.utils';
 import {
   collectAttachmentRemovalIds,
+  getDmvlFormRules,
   getRequestTypeFormRules,
   getRevokeExcludedFormFields,
   isRevokeRequestType,
   sanitizeRequestInputForSave,
   shouldSkipGopYStage
 } from '../utils/PhvbMagRequestForm.utils';
+import { resolveDmvlFolderStoragePath } from '../utils/PhvbMagDmvl.utils';
 import styles from './PhvbMag.module.scss';
 import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import {
@@ -43,15 +45,16 @@ interface IPhvbMagCreateModalProps {
   isSaving: boolean;
   isLoadingApprovers: boolean;
   isEditMode?: boolean;
+  variant?: 'standard' | 'dmvl';
   initialExistingTaiLieu?: IAttachmentLibraryItem[];
   initialExistingBieuMau?: IAttachmentLibraryItem[];
   defaultValues: ICreateRequestInput;
-  documentTypes: ReadonlyArray<string>;
-  departments: ReadonlyArray<string>;
   siteContext: IPhvbSiteContext;
   approvers: ReadonlyArray<IPhvbDirectoryUser>;
   onClose: () => void;
   onSubmit: (input: ICreateRequestInput, mode: SaveRequestMode) => Promise<boolean>;
+  onDmvlBanHanh?: (input: ICreateRequestInput) => Promise<boolean>;
+  externalSubmitError?: string;
 }
 
 interface IUserPickerProps {
@@ -211,14 +214,18 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     isSaving,
     isLoadingApprovers,
     isEditMode,
+    variant = 'standard',
     initialExistingTaiLieu,
     initialExistingBieuMau,
     defaultValues,
     siteContext,
     approvers,
     onClose,
-    onSubmit
+    onSubmit,
+    onDmvlBanHanh,
+    externalSubmitError
   } = props;
+  const isDmvlMode = variant === 'dmvl' && !isEditMode;
   const [formValues, setFormValues] = useState<ICreateRequestInput>({ ...defaultValues });
   const [existingTaiLieu, setExistingTaiLieu] = useState<IAttachmentLibraryItem[]>([]);
   const [existingBieuMau, setExistingBieuMau] = useState<IAttachmentLibraryItem[]>([]);
@@ -227,6 +234,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
   const [deadlineErrors, setDeadlineErrors] = useState<IDeadlineValidationResult>({ isValid: true });
   const [submitError, setSubmitError] = useState<string | undefined>(undefined);
   const [folderError, setFolderError] = useState<string | undefined>(undefined);
+  const [isDmvlFolderLoading, setIsDmvlFolderLoading] = useState(false);
   const [savingMode, setSavingMode] = useState<SaveRequestMode | undefined>(undefined);
 
   // Refs and Drag-over states for Drag-and-Drop files
@@ -243,7 +251,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
           ...defaultValues,
           ...calculateWorkflowDeadlines(defaultValues.loaiSla)
         };
-      const openRules = getRequestTypeFormRules(nextValues.requestType);
+      const openRules = isDmvlMode ? getDmvlFormRules() : getRequestTypeFormRules(nextValues.requestType);
       const nextExistingTaiLieu = openRules.showTaiLieuSoanThao ? (initialExistingTaiLieu || []).slice() : [];
       const nextExistingBieuMau = openRules.showBieuMauDinhKem ? (initialExistingBieuMau || []).slice() : [];
       const nextRemovedAttachmentIds = openRules.includeAttachmentsOnSave
@@ -266,7 +274,51 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
       setSubmitError(undefined);
       setFolderError(undefined);
     }
-  }, [defaultValues, isOpen, isEditMode, initialExistingTaiLieu, initialExistingBieuMau]);
+  }, [defaultValues, isOpen, isEditMode, isDmvlMode, initialExistingTaiLieu, initialExistingBieuMau]);
+
+  useEffect(() => {
+    if (!isOpen || !isDmvlMode) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadDmvlFolder = async (): Promise<void> => {
+      setIsDmvlFolderLoading(true);
+      setFolderError(undefined);
+
+      try {
+        const storagePath = await resolveDmvlFolderStoragePath(siteContext);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setFormValues(previousState => ({
+          ...previousState,
+          requestType: 'Viết mới',
+          folderLuuTru: storagePath,
+          folder: storagePath
+        }));
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setFolderError(error instanceof Error ? error.message : 'Không tải được thư mục DMVL.');
+      } finally {
+        if (isMounted) {
+          setIsDmvlFolderLoading(false);
+        }
+      }
+    };
+
+    loadDmvlFolder().catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, isDmvlMode, siteContext]);
 
   if (!isOpen) {
     return <></>;
@@ -380,7 +432,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     removedAttachmentIds: removedAttachmentIds.slice()
   });
 
-  const formRules = getRequestTypeFormRules(formValues.requestType);
+  const formRules = isDmvlMode ? getDmvlFormRules() : getRequestTypeFormRules(formValues.requestType);
   const hasTaiLieuAttachments = formValues.taiLieuFiles.length > 0 || existingTaiLieu.length > 0;
   const requiresTaiLieuAttachments = formRules.requireTaiLieuSoanThao;
 
@@ -523,8 +575,36 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     }));
   };
 
+  const handleDmvlBanHanhClick = async (): Promise<void> => {
+    setSubmitError(undefined);
+
+    if (!validateIssuanceFolder()) {
+      return;
+    }
+
+    if (requiresTaiLieuAttachments && !hasTaiLieuAttachments) {
+      setSubmitError('Vui lòng đính kèm ít nhất một tài liệu soạn thảo trước khi ban hành.');
+      return;
+    }
+
+    if (!onDmvlBanHanh) {
+      return;
+    }
+
+    const isSuccess = await onDmvlBanHanh(buildSubmitPayload());
+
+    if (isSuccess) {
+      setFormValues({ ...defaultValues });
+      setSubmitError(undefined);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+
+    if (isDmvlMode) {
+      return;
+    }
     setSubmitError(undefined);
 
     if (!validateIssuanceFolder()) {
@@ -589,11 +669,15 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     }
   };
 
-  const savingMessage = savingMode === 'draft'
-    ? 'Đang lưu nháp...'
-    : savingMode === 'submit'
-      ? 'Đang gửi yêu cầu...'
-      : 'Đang xử lý...';
+  const savingMessage = isDmvlMode && isSaving
+    ? 'Đang xử lý Trình DMVL...'
+    : savingMode === 'draft'
+      ? 'Đang lưu nháp...'
+      : savingMode === 'submit'
+        ? 'Đang gửi yêu cầu...'
+        : isDmvlFolderLoading
+          ? 'Đang tải thư mục DMVL...'
+          : 'Đang xử lý...';
 
   return (
     <div className={styles.modalOverlay}>
@@ -601,14 +685,14 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
         <div className={styles.modalHeader}>
           <div className={styles.modalHeaderTitleArea}>
             <ModalCreateIcon />
-            <h3>{isEditMode ? 'Chỉnh sửa bản nháp' : 'Tạo yêu cầu phát hành văn bản'}</h3>
+            <h3>{isEditMode ? 'Chỉnh sửa bản nháp' : isDmvlMode ? 'Trình DMVL' : 'Tạo yêu cầu phát hành văn bản'}</h3>
           </div>
           <button type="button" className={styles.btnClose} onClick={onClose} disabled={isSaving}>
             <CloseIcon />
           </button>
         </div>
 
-        <PhvbMagLoadingOverlay isOpen={isSaving} message={savingMessage} />
+        <PhvbMagLoadingOverlay isOpen={isSaving || isDmvlFolderLoading} message={savingMessage} />
 
         <form onSubmit={handleSubmit} className={styles.formContainer}>
           <div className={styles.modalBody}>
@@ -616,20 +700,29 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
             <div className={styles.formRowTwoCol}>
               <div className={styles.formGroup}>
                 <label className={styles.fieldLabel}>LOẠI YÊU CẦU</label>
-                <div className={styles.requestTypeGroup}>
-                  {(['Viết mới', 'Điều chỉnh'] as const).map(type => (
-                    <button
-                      key={type}
-                      type="button"
-                      className={`${styles.requestTypeBtn} ${formValues.requestType === type ? styles.requestTypeBtnActive : ''}`}
-                      onClick={() => handleRequestTypeChange(type)}
-                    >
-                      {type}
+                {isDmvlMode ? (
+                  <div className={styles.requestTypeGroup}>
+                    <button type="button" className={`${styles.requestTypeBtn} ${styles.requestTypeBtnActive}`} disabled>
+                      Viết mới
                     </button>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className={styles.requestTypeGroup}>
+                    {(['Viết mới', 'Điều chỉnh'] as const).map(type => (
+                      <button
+                        key={type}
+                        type="button"
+                        className={`${styles.requestTypeBtn} ${formValues.requestType === type ? styles.requestTypeBtnActive : ''}`}
+                        onClick={() => handleRequestTypeChange(type)}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
+              {!isDmvlMode ? (
               <div className={styles.formGroup}>
                 <label className={styles.fieldLabel}>THÔNG BÁO EMAIL</label>
                 <div
@@ -649,6 +742,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   {!isIssueNotify}
                 </div>
               </div>
+              ) : null}
             </div>
 
             {/* THƯ MỤC BAN HÀNH */}
@@ -663,14 +757,19 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                     <input
                       type="text"
                       readOnly
-                      placeholder="Chọn thư mục ban hành..."
+                      placeholder={isDmvlMode ? 'Đang tải thư mục DMVL...' : 'Chọn thư mục ban hành...'}
                       value={formValues.folderLuuTru}
                       className={styles.folderInputText}
-                      onClick={() => setShowFolderPicker(true)}
+                      onClick={() => {
+                        if (!isDmvlMode) {
+                          setShowFolderPicker(true);
+                        }
+                      }}
                       aria-invalid={Boolean(folderError)}
                       aria-describedby={folderError ? 'folderLuuTruError' : undefined}
                     />
                   </div>
+                  {!isDmvlMode ? (
                   <button
                     type="button"
                     className={styles.btnSelectFolder}
@@ -679,6 +778,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                     <FolderSelectIcon />
                     Chọn
                   </button>
+                  ) : null}
                 </div>
                 {folderError && (
                   <p id="folderLuuTruError" className={styles.deadlineError}>{folderError}</p>
@@ -938,6 +1038,8 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
             </div>
             )}
 
+            {!isDmvlMode ? (
+            <>
             {/* LOẠI SLA */}
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
@@ -1045,10 +1147,12 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 />
               </div>
             </div>
+            </>
+            ) : null}
           </div>
 
-          {submitError && (
-            <p className={styles.submitError} role="alert">{submitError}</p>
+          {(submitError || externalSubmitError) && (
+            <p className={styles.submitError} role="alert">{submitError || externalSubmitError}</p>
           )}
 
           <div className={styles.modalFooter}>
@@ -1060,7 +1164,18 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
             >
               Hủy
             </button>
-            
+
+            {isDmvlMode ? (
+              <button
+                type="button"
+                className={styles.btnSubmit}
+                onClick={handleDmvlBanHanhClick}
+                disabled={isSaving || isDmvlFolderLoading || Boolean(folderError)}
+              >
+                {isSaving ? 'Đang xử lý...' : 'Ban hành'}
+              </button>
+            ) : (
+              <>
             <button
               type="button"
               className={styles.btnDraft}
@@ -1084,6 +1199,8 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 </span>
               )}
             </button>
+              </>
+            )}
           </div>
         </form>
       </div>

@@ -3,11 +3,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { ALL_FILTER_VALUE, cloneDefaultRequestForm, DEPARTMENT_OPTIONS, DOCUMENT_TYPE_OPTIONS, PHVB_ROLES, resolveIssuanceLibraryTitle } from '../config/PhvbMag.configuration';
+import { ALL_FILTER_VALUE, cloneDefaultRequestForm, PHVB_ROLES, resolveIssuanceLibraryTitle } from '../config/PhvbMag.configuration';
 import { usePhvbBanHanh } from '../hooks/usePhvbBanHanh';
 import { usePhvbCapSo } from '../hooks/usePhvbCapSo';
 import { usePhvbComments } from '../hooks/usePhvbComments';
 import { usePhvbDetailDocuments, type DetailDocumentUploadKind } from '../hooks/usePhvbDetailDocuments';
+import { usePhvbDmvlFlow } from '../hooks/usePhvbDmvlFlow';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
 import { usePhvbDraftEdit } from '../hooks/usePhvbDraftEdit';
 import { usePhvbLabelCustomConfig } from '../hooks/usePhvbLabelCustomConfig';
@@ -18,16 +19,19 @@ import { usePhvbRoles } from '../hooks/usePhvbRoles';
 import { usePhvbWorkflowActions } from '../hooks/usePhvbWorkflowActions';
 import { usePhvbWorkflowParticipants } from '../hooks/usePhvbWorkflowParticipants';
 import { usePhvbTenantUsers } from '../hooks/usePhvbTenantUsers';
-import type { IAttachmentLibraryItem, IBanHanhNotifyDraft, ICreateRequestInput, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
+import type { IAttachmentLibraryItem, IBanHanhNotifyDraft, ICreateRequestInput, IRequestDetailData, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
-import { canAccessCapSoTab, canAccessQLVanBanTab } from '../utils/PhvbMagRole.utils';
+import { canAccessCapSoTab, canAccessDmvl, canAccessQLVanBanTab } from '../utils/PhvbMagRole.utils';
+import { canResumeDmvlBanHanh } from '../utils/PhvbMagDmvl.utils';
 import { selectFilteredItems } from '../utils/PhvbMag.selectors';
 import { isDraftStatus } from '../utils/PhvbMagDraftEdit.utils';
 import { resolveTabFromPathname } from '../utils/PhvbMagRoute.utils';
 import { ToastService } from '../utils/ToastService';
+import { phvbDetailService } from '../services/PhvbMagDetail.service';
 import styles from './PhvbMag.module.scss';
 import type { IPhvbMagProps } from './IPhvbMagProps';
 import type { BanHanhNotifyMode } from './PhvbMagBanHanhNotifyDialog';
+import { PhvbMagBanHanhNotifyDialog } from './PhvbMagBanHanhNotifyDialog';
 import { PhvbMagCreateModal } from './PhvbMagCreateModal';
 import { PhvbMagDetail } from './PhvbMagDetail';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
@@ -53,6 +57,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const location = useLocation();
 
   const isCreateRoute = /\/create$/.test(location.pathname);
+  const isDmvlCreateRoute = /\/create-dmvl$/.test(location.pathname);
   const isEditRoute = Boolean(editIdYeuCau);
   const isDetailRoute = Boolean(idYeuCau);
 
@@ -96,16 +101,6 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     roleGroupID
   }), [spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, issuanceLibraryTitle, endPointSendMail, endPointShortUrl, roleGroupID]);
 
-  const departmentOptions = useMemo(() => {
-    const nextDepartments = DEPARTMENT_OPTIONS.slice();
-
-    if (userDepartment && nextDepartments.indexOf(userDepartment) === -1) {
-      nextDepartments.unshift(userDepartment);
-    }
-
-    return nextDepartments;
-  }, [userDepartment]);
-
   const { workflowFilters, recentPublishedWindowDays } = usePhvbLabelCustomConfig({
     siteContext,
     enabled: true
@@ -117,6 +112,8 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     enabled: true
   });
 
+  const suspendTabItemsLoad = isDetailRoute || isEditRoute || isCreateRoute || isDmvlCreateRoute;
+
   const { activeTab, counts, items, isLoading, isSaving, errorMessage, setActiveTab, saveRequest, refetchCounts } = usePhvbDocuments({
     userDisplayName,
     userEmail,
@@ -126,7 +123,9 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     siteCollectionUrl,
     sourceSiteUrl,
     listTitle,
-    endPointSendMail
+    endPointSendMail,
+    suspendTabItemsLoad,
+    deferCountsLoad: suspendTabItemsLoad
   });
 
   const documentContext = useMemo(() => ({
@@ -145,6 +144,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   });
   const canAccessCapSo = canAccessCapSoTab(roles, userEmail);
   const canAccessQLVanBan = canAccessQLVanBanTab(roles, userEmail);
+  const canAccessDmvlFeature = canAccessDmvl(userDisplayName, roles, userEmail);
   const isProtectedRouteBlocked =
     (tabName === 'CapSo' && (isRolesLoading || !canAccessCapSo)) ||
     (tabName === 'QLVanBan' && (isRolesLoading || !canAccessQLVanBan));
@@ -157,9 +157,89 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   } = usePhvbRequestDetail(siteContext, isProtectedRouteBlocked ? undefined : idYeuCau);
 
   const handleDetailStatusChanged = useCallback((): void => {
-    refetchDetail();
+    refetchDetail(['release', 'activity', 'workflow']);
     refetchCounts().catch(() => undefined);
   }, [refetchDetail, refetchCounts]);
+
+  const handleDmvlPublished = useCallback((): void => {
+    refetchCounts().catch(() => undefined);
+
+    if (idYeuCau) {
+      refetchDetail(['release', 'activity', 'workflow']);
+    }
+  }, [idYeuCau, refetchCounts, refetchDetail]);
+
+  const {
+    isDmvlSaving,
+    isDmvlPublishing,
+    isDmvlNotifyLoading,
+    dmvlNotifyDraft,
+    dmvlDetail,
+    dmvlErrorMessage,
+    isDmvlNotifyOpen,
+    handleDmvlBanHanh,
+    handleResumeDmvlBanHanh,
+    handleDmvlNotifyCancel,
+    handleDmvlNotifyConfirm,
+    resetDmvlFlow
+  } = usePhvbDmvlFlow({
+    documentContext,
+    roles,
+    directoryUsers: tenantUsers,
+    onPublished: handleDmvlPublished
+  });
+
+  const canResumeDmvl = useMemo(() => {
+    if (!detailData?.release) {
+      return false;
+    }
+
+    return canResumeDmvlBanHanh(detailData.release, userDisplayName, roles, userEmail);
+  }, [detailData, roles, userDisplayName, userEmail]);
+
+  const handleOpenResumeDmvlBanHanh = useCallback((): void => {
+    if (!detailData || !idYeuCau) {
+      return;
+    }
+
+    const resumeWithFreshAttachments = async (): Promise<void> => {
+      const partial = await phvbDetailService.loadRequestDetailPartial(
+        siteContext,
+        idYeuCau.trim(),
+        ['attachments']
+      );
+
+      const freshDetail: IRequestDetailData = {
+        ...detailData,
+        attachments: partial.attachments ?? detailData.attachments
+      };
+
+      refetchDetail(['attachments']);
+      await handleResumeDmvlBanHanh(freshDetail);
+    };
+
+    resumeWithFreshAttachments().catch(() => undefined);
+  }, [detailData, handleResumeDmvlBanHanh, idYeuCau, refetchDetail, siteContext]);
+
+  const handleDmvlNotifyConfirmWrapper = async (
+    notify: IBanHanhNotifyDraft,
+    options?: { mainDocumentId?: number }
+  ): Promise<void> => {
+    const succeeded = await handleDmvlNotifyConfirm(notify, options?.mainDocumentId);
+
+    if (succeeded) {
+      ToastService.success('Đã trình DMVL và ban hành văn bản thành công.');
+
+      if (isDmvlCreateRoute) {
+        navigate(`/tab/${activeTab}`);
+      }
+    }
+  };
+
+  const handleDmvlCreateClose = (): void => {
+    resetDmvlFlow();
+    navigate(`/tab/${activeTab}`);
+  };
 
   const {
     actionContext,
@@ -183,7 +263,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     documentContext,
     idYeuCau,
     onCompleted: () => {
-      refetchDetail();
+      refetchDetail('activity');
     }
   });
 
@@ -251,7 +331,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     detail: detailData,
     roles,
     onCompleted: () => {
-      refetchDetail();
+      refetchDetail('attachments');
     }
   });
 
@@ -530,7 +610,8 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const isRecentViewsTab = resolvedTabName === 'XemGanDay';
   const isHomeTab = resolvedTabName === 'TrangChu';
   const modalDefaultValues = isEditRoute && draftEdit ? draftEdit.form : defaultRequestForm;
-  const isModalOpen = isCreateRoute || (isEditRoute && Boolean(draftEdit));
+  const isModalOpen = isCreateRoute || isDmvlCreateRoute || (isEditRoute && Boolean(draftEdit));
+  const createModalVariant = isDmvlCreateRoute ? 'dmvl' : 'standard';
 
   return (
     <PhvbRecentViewsProvider documentContext={documentContext} activeTab={resolvedTabName}>
@@ -648,6 +729,10 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
                 onUploadDocuments={handleUploadDocuments}
                 onDeleteDocument={handleDeleteDocument}
                 onDeleteDocuments={handleDeleteDocuments}
+                canResumeDmvlBanHanh={canResumeDmvl}
+                isDmvlResumeBusy={isDmvlNotifyLoading || isDmvlPublishing}
+                dmvlResumeErrorMessage={!isDmvlNotifyOpen ? dmvlErrorMessage : undefined}
+                onOpenResumeDmvlBanHanh={handleOpenResumeDmvlBanHanh}
               />
             )}
             <PhvbMagWorkflowParticipantModal
@@ -678,7 +763,9 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
             <PhvbMagToolbar
               activeTab={activeTab}
               canCreate={Boolean(currentWebUrl || siteCollectionUrl || sourceSiteUrl)}
+              canAccessDmvl={canAccessDmvlFeature}
               onOpenCreate={() => navigate(`/tab/${activeTab}/create`)}
+              onOpenDmvl={() => navigate(`/tab/${activeTab}/create-dmvl`)}
               onOpenTemplate={() => setIsTemplateModalOpen(true)}
             />
 
@@ -705,18 +792,33 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
       <PhvbMagCreateModal
         isOpen={isModalOpen}
-        isSaving={isSaving}
+        isSaving={isDmvlCreateRoute ? isDmvlSaving : isSaving}
         isLoadingApprovers={isLoadingTenantUsers}
         isEditMode={isEditRoute}
+        variant={createModalVariant}
         initialExistingTaiLieu={draftEdit?.existingTaiLieuAttachments}
         initialExistingBieuMau={draftEdit?.existingBieuMauAttachments}
         defaultValues={modalDefaultValues}
-        documentTypes={DOCUMENT_TYPE_OPTIONS}
-        departments={departmentOptions}
         siteContext={siteContext}
         approvers={tenantUsers}
-        onClose={() => navigate(`/tab/${activeTab}`)}
+        onClose={isDmvlCreateRoute ? handleDmvlCreateClose : () => navigate(`/tab/${activeTab}`)}
         onSubmit={handleSaveRequest}
+        onDmvlBanHanh={handleDmvlBanHanh}
+        externalSubmitError={isDmvlCreateRoute && !isDmvlNotifyOpen ? dmvlErrorMessage : undefined}
+      />
+
+      <PhvbMagBanHanhNotifyDialog
+        isOpen={isDmvlNotifyOpen}
+        mode="prepare"
+        requireMainDocument={true}
+        mainDocumentCandidates={dmvlDetail?.attachments || []}
+        isLoading={isDmvlNotifyLoading}
+        isProcessing={isDmvlPublishing}
+        errorMessage={dmvlErrorMessage}
+        draft={dmvlNotifyDraft}
+        confirmLabel="Ban hành"
+        onCancel={handleDmvlNotifyCancel}
+        onConfirm={handleDmvlNotifyConfirmWrapper}
       />
     </div>
     </PhvbSavedDocumentsProvider>
@@ -735,6 +837,7 @@ export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
         <Route path="/tab/:tabName" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/detail/:idYeuCau" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/edit/:editIdYeuCau" element={<PhvbMagInner {...props} />} />
+        <Route path="/tab/:tabName/create-dmvl" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/create" element={<PhvbMagInner {...props} />} />
         <Route path="/tab/:tabName/item/:itemId" element={<Navigate to="../" replace />} />
         <Route path="*" element={<Navigate to="/tab/TrangChu" replace />} />

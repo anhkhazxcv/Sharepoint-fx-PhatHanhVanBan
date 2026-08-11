@@ -44,6 +44,10 @@ interface IPhvbMagDetailHeaderProps {
     mainDocumentId?: number
   ) => Promise<boolean>;
   onReturnBanHanhToAdmin?: (comment: string) => Promise<boolean>;
+  canResumeDmvlBanHanh?: boolean;
+  isDmvlResumeBusy?: boolean;
+  dmvlResumeErrorMessage?: string;
+  onOpenResumeDmvlBanHanh?: () => void;
 }
 
 export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHeaderProps>(
@@ -78,7 +82,11 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       onPrepareBanHanh,
       onPublishBanHanh,
       onUpdateBanHanhNotify,
-      onReturnBanHanhToAdmin
+      onReturnBanHanhToAdmin,
+      canResumeDmvlBanHanh = false,
+      isDmvlResumeBusy = false,
+      dmvlResumeErrorMessage,
+      onOpenResumeDmvlBanHanh
     } = props;
     const tabLabel = TAB_LABELS[tabName] || tabName;
     const [pendingAction, setPendingAction] = useState<CommentConfirmActionKey | undefined>(undefined);
@@ -86,17 +94,20 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
     const [isNotifyDialogOpen, setIsNotifyDialogOpen] = useState<boolean>(false);
 
     const canApprove = Boolean(availableActions?.approve);
-    const canRequestRevision = Boolean(availableActions?.requestRevision);
     const canReject = Boolean(availableActions?.reject);
-    const hasWorkflowActions = canApprove || canRequestRevision || canReject;
+    const hasWorkflowActions = canApprove || canReject;
     const hasPostApprovalActions =
-      canAssignDocumentNumber || canPrepareBanHanh || canPublishBanHanh || canEditBanHanhNotify;
+      canAssignDocumentNumber ||
+      canPrepareBanHanh ||
+      canPublishBanHanh ||
+      canEditBanHanhNotify ||
+      canResumeDmvlBanHanh;
     const isWorkflowDialogOpen = Boolean(pendingAction);
     const isAnyDialogOpen =
       isWorkflowDialogOpen ||
       isCapSoDialogOpen ||
       isNotifyDialogOpen;
-    const isBusy = isProcessing || isCapSoSaving || isBanHanhSaving || isBanHanhNotifyLoading;
+    const isBusy = isProcessing || isCapSoSaving || isBanHanhSaving || isBanHanhNotifyLoading || isDmvlResumeBusy;
 
     const openActionDialog = (action: WorkflowActionKey): void => {
       if (isBusy) {
@@ -269,6 +280,14 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
         </div>
 
         <div className={styles.detailHeaderActionsArea}>
+          {canResumeDmvlBanHanh ? (
+            <div className={styles.connectionBanner} role="status">
+              <span>
+                Yêu cầu chưa ban hành. Vui lòng chọn văn bản chính và xác nhận ban hành.
+              </span>
+            </div>
+          ) : null}
+
           {!isAnyDialogOpen && errorMessage ? (
             <p className={styles.detailActionError} role="alert">{errorMessage}</p>
           ) : null}
@@ -281,8 +300,23 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
             <p className={styles.detailActionError} role="alert">{banHanhErrorMessage}</p>
           ) : null}
 
+          {!isDmvlResumeBusy && dmvlResumeErrorMessage ? (
+            <p className={styles.detailActionError} role="alert">{dmvlResumeErrorMessage}</p>
+          ) : null}
+
           {hasPostApprovalActions || hasWorkflowActions ? (
             <div className={styles.detailActions}>
+              {canResumeDmvlBanHanh ? (
+                <button
+                  type="button"
+                  className={styles.detailActionApprove}
+                  disabled={isBusy}
+                  onClick={() => onOpenResumeDmvlBanHanh?.()}
+                >
+                  Tiếp tục ban hành DMVL
+                </button>
+              ) : null}
+
               {canAssignDocumentNumber ? (
                 <button
                   type="button"
@@ -335,17 +369,6 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
                   onClick={() => openActionDialog('approve')}
                 >
                   {approveLabel}
-                </button>
-              ) : null}
-
-              {canRequestRevision ? (
-                <button
-                  type="button"
-                  className={styles.detailActionEdit}
-                  disabled={isBusy}
-                  onClick={() => openActionDialog('requestRevision')}
-                >
-                  Yêu cầu chỉnh sửa
                 </button>
               ) : null}
 

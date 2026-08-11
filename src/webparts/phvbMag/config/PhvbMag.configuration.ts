@@ -28,6 +28,8 @@ export const SAVED_DOCUMENTS_LIST_TITLE = 'lstVanBanDaLuu';
 export const RECENT_VIEWS_LIST_TITLE = 'lstVanBanXemGanDay';
 export const RECENT_VIEWS_TOP = 50;
 export const RECENT_VIEWS_HYDRATE_CHUNK_SIZE = 25;
+export const COMMENT_ATTACHMENT_CHUNK_SIZE = 8;
+export const TAB_COUNTS_CACHE_STALE_MS = 60 * 1000;
 export const COMMENT_HISTORY_STATUS = 'Bình luận';
 export const ALL_USER_GOPY_LIST_TITLE = 'AllUser_GopY';
 export const ALL_USER_THAMDINH_LIST_TITLE = 'AllUser_ThamDinh';
@@ -36,6 +38,10 @@ export const ATTACHMENT_FORM_SUBFOLDER = 'Biểu Mẫu';
 export const DRAFT_DOCUMENT_ACCEPT = '.docx,.pdf,.xlsx,.xls';
 export const FORM_ATTACHMENT_ACCEPT = '.docx,.pdf,.xlsx,.xls';
 export const ALL_FILTER_VALUE = 'All';
+
+export const DMVL_FOLDER_NAME = 'Danh mục vật liệu dự án';
+export const DMVL_DEFAULT_SO_VAN_BAN = 'Văn bản không cần cấp số';
+export const DMVL_DESIGN_NAME_TOKEN = 'design';
 
 export const REQUEST_STATUS = {
   BAN_HANH: 'Ban hành',
@@ -49,8 +55,7 @@ export const REQUEST_STATUS = {
   CHO_SUPER_ADMIN_THU_HOI: 'Chờ supper admin thu hồi',
   THU_HOI: 'Thu hồi',
   BAN_NHAP: 'Bản nháp',
-  TU_CHOI: 'Từ chối',
-  YEU_CAU_CHINH_SUA: 'Yêu cầu chỉnh sửa'
+  TU_CHOI: 'Từ chối'
 } as const;
 
 export type RequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
@@ -97,7 +102,7 @@ export const BAN_HANH_MAIL_LABELS = {
 export const BAN_HANH_NOTIFY_DEFAULTS = {
   BO_PHAN_GUI_TV: 'Bộ phận Quản lý VBNB',
   BO_PHAN_GUI_TA: 'Internal Document Management Team',
-  PRIORITY_FOLDER: '2.Quản Trị Theo Chức Năng'
+  PRIORITY_FOLDER: '2. Quản Trị Theo Chức Năng'
 } as const;
 
 export const EXECUTION_HISTORY_STATUS = {
@@ -108,7 +113,6 @@ export const EXECUTION_HISTORY_STATUS = {
   XAC_NHAN_THAM_DINH: 'Xác nhận thẩm định',
   PHE_DUYET: 'Phê duyệt',
   TU_CHOI: 'Từ chối',
-  YEU_CAU_CHINH_SUA: 'Yêu cầu chỉnh sửa',
   NHAC_HAN: 'Nhắc hạn',
   CAP_NHAT_BAN_NHAP: 'Cập nhật bản nháp',
   CAP_NHAT_YEU_CAU: 'Cập nhật yêu cầu',
@@ -127,7 +131,6 @@ export const EXECUTION_HISTORY_STATUS_LIST: ReadonlyArray<ExecutionHistoryStatus
   EXECUTION_HISTORY_STATUS.XAC_NHAN_THAM_DINH,
   EXECUTION_HISTORY_STATUS.PHE_DUYET,
   EXECUTION_HISTORY_STATUS.TU_CHOI,
-  EXECUTION_HISTORY_STATUS.YEU_CAU_CHINH_SUA,
   EXECUTION_HISTORY_STATUS.NHAC_HAN,
   EXECUTION_HISTORY_STATUS.CAP_NHAT_BAN_NHAP,
   EXECUTION_HISTORY_STATUS.CAP_NHAT_YEU_CAU,
@@ -139,6 +142,7 @@ export const EXECUTION_HISTORY_STATUS_LIST: ReadonlyArray<ExecutionHistoryStatus
 export const WORKFLOW_PARTICIPANT_STATUS = {
   CHUA_XAC_NHAN: 'Chưa xác nhận',
   DA_XAC_NHAN: 'Đã xác nhận',
+  DA_TU_CHOI: 'Đã từ chối',
   /** Trạng thái cũ — tương đương Chưa xác nhận */
   CHUA_DEN_LUOT: 'Chưa đến lượt'
 } as const;
@@ -161,7 +165,7 @@ export const DOCUMENT_COUNT_SUFFIX = 'tài liệu';
 
 /** Label trong lstConfigLabelCustom — pipe-separated filter options cho workflow table. */
 export const WORKFLOW_FILTER_STATUS_LABEL = 'workflowFilterTrangThai';
-export const WORKFLOW_FILTER_LOAI_VB_LABEL = 'workflowFilterLoaiVB';
+export const WORKFLOW_FILTER_LOAI_YEU_CAU_LABEL = 'workflowFilterLoaiYeuCau';
 export const WORKFLOW_FILTER_PHONG_BAN_LABEL = 'workflowFilterPhongBan';
 export const WORKFLOW_FILTER_NAM_TAO_YEU_CAU_LABEL = 'workflowFilterNamTaoYeuCau';
 
@@ -170,39 +174,6 @@ export const GUIDE_PDF_URL_LABEL = 'urlSoTayHuongDan';
 
 /** Subtitle trên tab Hướng dẫn (header view). */
 export const GUIDE_VIEW_SUBTITLE = 'Hướng dẫn sử dụng hệ thống và biểu mẫu';
-
-export const DOCUMENT_TYPE_OPTIONS: ReadonlyArray<string> = [
-  'Tiêu chuẩn',
-  'Quy chế',
-  'Quyết định',
-  'Chính sách',
-  'Hướng dẫn',
-  'Biểu mẫu'
-];
-
-export const DEPARTMENT_OPTIONS: ReadonlyArray<string> = [
-  'Ops. Control',
-  'Corporate Gov.',
-  'Business Program',
-  'Nhân sự',
-  'Tài chính',
-  'Marketing',
-  'Công nghệ TT',
-  'Thiết kế'
-];
-
-export const FOLDER_OPTIONS: ReadonlyArray<string> = [
-  '1. Quản trị chung/Tiêu chuẩn',
-  '1. Quản trị chung/Quy chế',
-  '1. Quản trị chung/Quyết định',
-  '1. Quản trị chung/Chính sách',
-  '1. Quản trị chung/Hướng dẫn',
-  'Nhân sự',
-  'Tài chính',
-  'Marketing',
-  'Công nghệ TT',
-  'Thiết kế'
-];
 
 export interface ISlaOption {
   value: string;
@@ -236,7 +207,7 @@ export const DEFAULT_REQUEST_FORM: ICreateRequestInput = {
   title: '',
   code: '',
   type: 'Tiêu chuẩn',
-  department: 'Ops. Control',
+  department: '',
   approvalUsers: [],
   summary: '',
   contact: '',
@@ -321,8 +292,6 @@ export function getWorkflowStepFromStatus(statusApproved?: string): number {
 
   switch (status) {
     case REQUEST_STATUS.BAN_NHAP:
-      return 1;
-    case REQUEST_STATUS.YEU_CAU_CHINH_SUA:
       return 1;
     case REQUEST_STATUS.TU_CHOI:
       return 1;

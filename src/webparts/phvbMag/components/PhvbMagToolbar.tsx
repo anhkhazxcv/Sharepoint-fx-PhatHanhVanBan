@@ -1,19 +1,21 @@
 import * as React from 'react';
 import { TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { TabType } from '../models/PhvbMag.models';
-import { CreateActionIcon } from './PhvbMagIcons';
+import { CreateActionIcon, SidebarNumberingIcon } from './PhvbMagIcons';
 import { PhvbMagPageHeader } from './PhvbMagPageHeader';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagToolbarProps {
   activeTab: TabType;
   canCreate: boolean;
+  canAccessDmvl?: boolean;
   onOpenCreate: () => void;
+  onOpenDmvl?: () => void;
   onOpenTemplate: () => void;
 }
 
 export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement {
-  const { activeTab, canCreate, onOpenCreate, onOpenTemplate } = props;
+  const { activeTab, canCreate, canAccessDmvl = false, onOpenCreate, onOpenDmvl, onOpenTemplate } = props;
 
   return (
     <PhvbMagPageHeader
@@ -22,6 +24,15 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
       className={[styles.contentHeader, activeTab === 'ViecCanLam' ? styles.contentHeaderTask : ''].filter(Boolean).join(' ')}
       headerActions={(
         <div className={styles.headerActions}>
+          {canAccessDmvl && onOpenDmvl ? (
+            <button type="button" className={styles.btnDmvl} onClick={onOpenDmvl}>
+              <span className={styles.btnDmvlContent}>
+                <SidebarNumberingIcon />
+                Trình DMVL
+              </span>
+            </button>
+          ) : null}
+
           <button type="button" className={styles.btnTemplate} onClick={onOpenTemplate}>
             <span>Template</span>
           </button>

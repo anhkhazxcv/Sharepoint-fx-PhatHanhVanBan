@@ -32,7 +32,12 @@ export interface IPhvbMagWebPartProps {
   roleGroupID?: string;
 }
 
+const PHVB_MIN_SHELL_HEIGHT_PX = 200;
+
 export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPartProps> {
+  private _resizeObserver: ResizeObserver | undefined;
+  private _windowResizeHandler: (() => void) | undefined;
+
   protected get propertiesMetadata(): IWebPartPropertiesMetadata {
     return {};
   }
@@ -54,7 +59,33 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
 
     this.ensureTypographyFontLoaded();
 
-    return super.onInit();
+    return super.onInit().then(() => {
+      this._setupAvailableHeightTracking();
+    });
+  }
+
+  private _setupAvailableHeightTracking(): void {
+    this._updateAvailableHeight();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      this._resizeObserver = new ResizeObserver(() => {
+        this._updateAvailableHeight();
+      });
+      this._resizeObserver.observe(this.domElement);
+    }
+
+    this._windowResizeHandler = (): void => {
+      this._updateAvailableHeight();
+    };
+    window.addEventListener('resize', this._windowResizeHandler);
+  }
+
+  private _updateAvailableHeight(): void {
+    const top = this.domElement.getBoundingClientRect().top;
+    const availableHeight = Math.max(PHVB_MIN_SHELL_HEIGHT_PX, Math.floor(window.innerHeight - top));
+
+    this.domElement.style.height = `${availableHeight}px`;
+    this.domElement.style.setProperty('--phvb-available-height', `${availableHeight}px`);
   }
 
   private ensureTypographyFontLoaded(): void {
@@ -93,6 +124,7 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
     );
 
     ReactDom.render(element, this.domElement);
+    this._updateAvailableHeight();
   }
 
   protected onThemeChanged(currentTheme: IReadonlyTheme | undefined): void {
@@ -112,6 +144,14 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
   }
 
   protected onDispose(): void {
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = undefined;
+
+    if (this._windowResizeHandler) {
+      window.removeEventListener('resize', this._windowResizeHandler);
+      this._windowResizeHandler = undefined;
+    }
+
     ReactDom.unmountComponentAtNode(this.domElement);
   }
 

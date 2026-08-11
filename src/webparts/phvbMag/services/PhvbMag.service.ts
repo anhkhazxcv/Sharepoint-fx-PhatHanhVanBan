@@ -1,4 +1,4 @@
-import { hasSharePointSiteContext, REQUEST_STATUS, resolveListTitle, EXECUTION_HISTORY_STATUS } from '../config/PhvbMag.configuration';
+import { hasSharePointSiteContext, REQUEST_STATUS, resolveListTitle, EXECUTION_HISTORY_STATUS, TAB_COUNTS_CACHE_STALE_MS, DMVL_DEFAULT_SO_VAN_BAN } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE, toRuntimeMessage } from './PhvbMag.error';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { phvbAttachmentService } from './PhvbMagAttachment.service';
@@ -12,7 +12,7 @@ import {
   resolveDocumentStatusAfterSkippingEmptyStages,
   resolveStatusForWorkflowStage
 } from '../utils/PhvbMagWorkflowState.utils';
-import type { IAllUserWorkflowItem, ICreateRequestInput, IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbLogContext, IPhvbSiteContext, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
+import type { IAllUserWorkflowItem, ICreateRequestInput, IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbLogContext, IPhvbSiteContext, ITabCounts, IVanBanItem, RequestSubmissionFlow, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 
 const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -54,6 +54,17 @@ const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
 
 export const RELEASE_SELECT_FIELDS = DOCUMENT_SELECT_FIELDS;
 
+const TAB_COUNT_SELECT_FIELDS: ReadonlyArray<string> = [
+  'Id',
+  'StatusApproved',
+  'EmailNguoiTao',
+  'PheDuyet',
+  'NguoiGopY',
+  'ThamDinh'
+];
+
+const TAB_COUNT_FETCH_TOP = 5000;
+
 interface ILoadTabItemsOptions extends IPhvbSiteContext {
   userEmail: string;
   tab: TabType;
@@ -62,6 +73,7 @@ interface ILoadTabItemsOptions extends IPhvbSiteContext {
 interface ICreateRequestOptions extends IPhvbDocumentContext {
   input: ICreateRequestInput;
   saveMode: SaveRequestMode;
+  submissionFlow?: RequestSubmissionFlow;
   directoryUsers?: ReadonlyArray<IPhvbDirectoryUser>;
   logContext?: IPhvbLogContext;
 }
@@ -149,12 +161,122 @@ function isTodoItemForUser(item: IVanBanItem, userEmail: string): boolean {
   );
 }
 
+function normalizeUserEmail(email?: string): string {
+  return (email || '').trim().toLowerCase();
+}
+
+function isCreatorEmailMatch(item: IVanBanItem, userEmail: string): boolean {
+  const normalizedUserEmail = normalizeUserEmail(userEmail);
+
+  if (!normalizedUserEmail) {
+    return false;
+  }
+
+  return normalizeUserEmail(item.EmailNguoiTao) === normalizedUserEmail;
+}
+
+function isItemInTabForCount(item: IVanBanItem, tab: TabType, userEmail: string): boolean {
+  const status = (item.StatusApproved || '').trim();
+
+  switch (tab) {
+    case 'ViecCanLam':
+      return isTodoItemForUser(item, userEmail);
+    case 'YeuCauCuaToi':
+      return isCreatorEmailMatch(item, userEmail) && status !== REQUEST_STATUS.BAN_NHAP;
+    case 'BanNhap':
+      return isCreatorEmailMatch(item, userEmail) && status === REQUEST_STATUS.BAN_NHAP;
+    case 'CapSo':
+      return status === REQUEST_STATUS.CHO_CAP_SO;
+    default:
+      return false;
+  }
+}
+
+function countItemsByTab(items: IVanBanItem[], userEmail: string): ITabCounts {
+  const counts: ITabCounts = {
+    viecCanLam: 0,
+    yeuCauCuaToi: 0,
+    banNhap: 0,
+    capSo: 0,
+    qlVanBan: items.length,
+    admin: items.length
+  };
+
+  items.forEach(item => {
+    if (isItemInTabForCount(item, 'ViecCanLam', userEmail)) {
+      counts.viecCanLam += 1;
+    }
+
+    if (isItemInTabForCount(item, 'YeuCauCuaToi', userEmail)) {
+      counts.yeuCauCuaToi += 1;
+    }
+
+    if (isItemInTabForCount(item, 'BanNhap', userEmail)) {
+      counts.banNhap += 1;
+    }
+
+    if (isItemInTabForCount(item, 'CapSo', userEmail)) {
+      counts.capSo += 1;
+    }
+  });
+
+  return counts;
+}
+
 function filterItemsForTab(items: IVanBanItem[], tab: TabType, userEmail: string): IVanBanItem[] {
   if (!isTodoTab(tab)) {
     return items;
   }
 
   return items.filter(item => isTodoItemForUser(item, userEmail));
+}
+
+interface ITabCountsCacheEntry {
+  counts: ITabCounts;
+  fetchedAt: number;
+}
+
+const tabCountsCacheByKey = new Map<string, ITabCountsCacheEntry>();
+const tabCountsPromiseByKey = new Map<string, Promise<ITabCounts>>();
+
+function resolveTabCountsCacheKey(options: IPhvbDocumentContext): string {
+  return [
+    options.sourceSiteUrl || '',
+    options.currentWebUrl || '',
+    options.siteCollectionUrl || '',
+    resolveListTitle(options.listTitle),
+    options.userEmail || ''
+  ].join('|');
+}
+
+function isTabCountsCacheFresh(entry: ITabCountsCacheEntry | undefined): boolean {
+  if (!entry) {
+    return false;
+  }
+
+  return Date.now() - entry.fetchedAt < TAB_COUNTS_CACHE_STALE_MS;
+}
+
+export function invalidateTabCountsCache(cacheKey?: string): void {
+  if (cacheKey) {
+    tabCountsCacheByKey.delete(cacheKey);
+    tabCountsPromiseByKey.delete(cacheKey);
+    return;
+  }
+
+  tabCountsCacheByKey.clear();
+  tabCountsPromiseByKey.clear();
+}
+
+async function fetchTabCountsUncached(options: IPhvbDocumentContext): Promise<ITabCounts> {
+  const items = await phvbRepository.fetchItems({
+    ...options,
+    selectFields: TAB_COUNT_SELECT_FIELDS,
+    top: TAB_COUNT_FETCH_TOP,
+    orderBy: 'Id desc'
+  });
+
+  return countItemsByTab(items, options.userEmail);
 }
 
 function formatCurrentDate(): string {
@@ -199,17 +321,20 @@ function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenc
   const input = sanitizeRequestInputForSave(options.input);
   const today = formatCurrentDate();
   const requestType = input.requestType || input.type;
+  const isDmvlFlow = options.submissionFlow === 'dmvl';
   const statusApproved = options.saveMode === 'draft'
     ? REQUEST_STATUS.BAN_NHAP
-    : resolveInitialSubmitStatus(input);
+    : isDmvlFlow
+      ? REQUEST_STATUS.CHO_BAN_HANH
+      : resolveInitialSubmitStatus(input);
   const payload: ICreateSharePointPayload = {
     IdYeuCau: requestReferenceId,
     Title: input.title,
     Tenvanban: input.title,
-    SoVanBan: input.code || '',
-    LoaiYeuCau: requestType, // Map LoaiYeuCau to 'Viết mới' / 'Điều chỉnh' / 'Thu hồi'
+    SoVanBan: isDmvlFlow ? DMVL_DEFAULT_SO_VAN_BAN : (input.code || ''),
+    LoaiYeuCau: isDmvlFlow ? 'Viết mới' : requestType,
     KhoaPhongNguoiTao: input.department || '',
-    PheDuyet: input.approvalUsers.join('; '),
+    PheDuyet: isDmvlFlow ? '' : input.approvalUsers.join('; '),
     NgayPhatHanh: today,
     NgayTaoYeuCau: formatCurrentExecutionDateTime(),
     HieuLucTu: input.hieuLucTu || today,
@@ -219,19 +344,18 @@ function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenc
     EmailNguoiTao: options.userEmail || '',
     LienHe: input.contact || '',
     StatusApproved: statusApproved,
-    ThuMucBanHanh: input.folderLuuTru || input.folder, // Map to new storage folder
+    ThuMucBanHanh: input.folderLuuTru || input.folder,
     NoiLuuBanCung: input.noiLuu || '',
 
-    // Redesigned form columns mapping:
     TenVanBan_ENG: input.titleEn || '',
-    Loai_SLA: input.loaiSla || '',
-    NguoiGopY: input.nguoiGopY ? input.nguoiGopY.join('; ') : '',
-    Date_GopY: input.deadlineGopY || '',
-    ThamDinh: input.nguoiThamDinh ? input.nguoiThamDinh.join('; ') : '',
-    Date_ThamDinh: input.deadlineThamDinh || '',
-    Date_PheDuyet: input.deadlinePheDuyet || '',
-    IsSendMailNotify: input.isSendMailNotify,
-    GhiChuChoThamDinh: input.ghiChuThamDinh || ''
+    Loai_SLA: isDmvlFlow ? '' : (input.loaiSla || ''),
+    NguoiGopY: isDmvlFlow ? '' : (input.nguoiGopY ? input.nguoiGopY.join('; ') : ''),
+    Date_GopY: isDmvlFlow ? '' : (input.deadlineGopY || ''),
+    ThamDinh: isDmvlFlow ? '' : (input.nguoiThamDinh ? input.nguoiThamDinh.join('; ') : ''),
+    Date_ThamDinh: isDmvlFlow ? '' : (input.deadlineThamDinh || ''),
+    Date_PheDuyet: isDmvlFlow ? '' : (input.deadlinePheDuyet || ''),
+    IsSendMailNotify: isDmvlFlow ? true : input.isSendMailNotify,
+    GhiChuChoThamDinh: isDmvlFlow ? '' : (input.ghiChuThamDinh || '')
   };
 
   if (shouldIncludeFolderOldId(requestType) && input.idFolderOld) {
@@ -242,50 +366,50 @@ function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenc
 }
 
 export class PhvbDocumentsService {
-  public async loadTabCounts(options: IPhvbDocumentContext): Promise<ITabCounts> {
+  public async loadTabCounts(options: IPhvbDocumentContext, bypassCache: boolean = false): Promise<ITabCounts> {
     if (!hasSharePointSiteContext(options)) {
       return DEFAULT_TAB_COUNTS;
     }
 
-    const [todoItems, myRequestItems, banNhapItems, qlVanBanItems, capSoItems] = await Promise.all([
-      phvbRepository.fetchItems({
-        ...options,
-        selectFields: ['Id', 'StatusApproved', 'PheDuyet', 'NguoiGopY', 'ThamDinh'],
-        top: 5000
-      }),
-      phvbRepository.fetchItems({
-        ...options,
-        selectFields: ['Id'],
-        filter: getUserScopedFilter('YeuCauCuaToi', options.userEmail),
-        top: 5000
-      }),
-      phvbRepository.fetchItems({
-        ...options,
-        selectFields: ['Id'],
-        filter: getUserScopedFilter('BanNhap', options.userEmail),
-        top: 5000
-      }),
-      phvbRepository.fetchItems({
-        ...options,
-        selectFields: ['Id'],
-        top: 5000
-      }),
-      phvbRepository.fetchItems({
-        ...options,
-        selectFields: ['Id'],
-        filter: getUserScopedFilter('CapSo', options.userEmail),
-        top: 5000
-      })
-    ]);
+    const cacheKey = resolveTabCountsCacheKey(options);
 
-    return {
-      viecCanLam: filterItemsForTab(todoItems, 'ViecCanLam', options.userEmail).length,
-      yeuCauCuaToi: myRequestItems.length,
-      banNhap: banNhapItems.length,
-      capSo: capSoItems.length,
-      qlVanBan: qlVanBanItems.length,
-      admin: qlVanBanItems.length
-    };
+    if (!bypassCache) {
+      const cachedEntry = tabCountsCacheByKey.get(cacheKey);
+
+      if (isTabCountsCacheFresh(cachedEntry)) {
+        return { ...cachedEntry!.counts };
+      }
+
+      const pendingPromise = tabCountsPromiseByKey.get(cacheKey);
+
+      if (pendingPromise) {
+        const counts = await pendingPromise;
+        return { ...counts };
+      }
+    }
+
+    const requestPromise = fetchTabCountsUncached(options).then(counts => {
+      tabCountsCacheByKey.set(cacheKey, {
+        counts,
+        fetchedAt: Date.now()
+      });
+      return counts;
+    });
+
+    tabCountsPromiseByKey.set(cacheKey, requestPromise);
+
+    try {
+      const counts = await requestPromise;
+      return { ...counts };
+    } finally {
+      if (tabCountsPromiseByKey.get(cacheKey) === requestPromise) {
+        tabCountsPromiseByKey.delete(cacheKey);
+      }
+    }
+  }
+
+  public invalidateTabCountsCache(cacheKey?: string): void {
+    invalidateTabCountsCache(cacheKey);
   }
 
   public async loadTabItems(options: ILoadTabItemsOptions): Promise<IVanBanItem[]> {
@@ -434,6 +558,7 @@ export class PhvbDocumentsService {
       creatorEmail: options.userEmail,
       directoryUsers: options.directoryUsers || [],
       saveMode: options.saveMode,
+      submissionFlow: options.submissionFlow,
       isUpdate
     });
 

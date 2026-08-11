@@ -33,6 +33,19 @@ const ADJUST_FORM_RULES: IRequestTypeFormRules = {
   requireTaiLieuSoanThao: false
 };
 
+const DMVL_FORM_RULES: IRequestTypeFormRules = {
+  showNguoiGopY: false,
+  showNguoiThamDinh: false,
+  showTaiLieuSoanThao: true,
+  showBieuMauDinhKem: true,
+  showGhiChuThamDinh: false,
+  requireTaiLieuSoanThao: true,
+  requireNguoiGopY: false,
+  requireNguoiThamDinh: false,
+  includeGopYThamDinhWorkflow: false,
+  includeAttachmentsOnSave: true
+};
+
 const REVOKE_FORM_RULES: IRequestTypeFormRules = {
   showNguoiGopY: false,
   showNguoiThamDinh: false,
@@ -45,6 +58,10 @@ const REVOKE_FORM_RULES: IRequestTypeFormRules = {
   includeGopYThamDinhWorkflow: false,
   includeAttachmentsOnSave: false
 };
+
+export function getDmvlFormRules(): IRequestTypeFormRules {
+  return DMVL_FORM_RULES;
+}
 
 export function getRequestTypeFormRules(requestType: RequestTypeValue): IRequestTypeFormRules {
   if (requestType === 'Thu hồi') {

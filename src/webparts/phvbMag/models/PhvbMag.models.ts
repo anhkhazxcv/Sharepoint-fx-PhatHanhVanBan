@@ -49,6 +49,8 @@ export interface ILichSuThucHienItem {
   Created?: string;
   /** Chỉ có trên list LichSuThucHien */
   IsComment?: boolean;
+  /** Yes/No — comment có file đính kèm trong library CommentAttach */
+  IsHasAttach?: boolean;
 }
 
 export interface IAllUserWorkflowItem {
@@ -100,7 +102,21 @@ export interface IRequestDetailData {
   workflowParticipants: IWorkflowParticipantItem[];
 }
 
+export type DetailRefreshScope =
+  | 'full'
+  | 'activity'
+  | 'attachments'
+  | 'workflow'
+  | 'release';
+
 export type SaveRequestMode = 'submit' | 'draft';
+
+export type RequestSubmissionFlow = 'standard' | 'dmvl';
+
+export interface ISaveRequestOptions {
+  submissionFlow?: RequestSubmissionFlow;
+  deferRefresh?: boolean;
+}
 
 export interface ISaveRequestResult {
   requestReferenceId: string;
@@ -140,7 +156,7 @@ export interface ILabelCustomConfigItem {
 
 export interface IWorkflowFilterOptions {
   status: ReadonlyArray<string>;
-  loaiVB: ReadonlyArray<string>;
+  loaiYeuCau: ReadonlyArray<string>;
   phongBan: ReadonlyArray<string>;
   namTaoYeuCau: ReadonlyArray<string>;
 }
@@ -353,6 +369,9 @@ export interface ISendMailPayload {
 
 export interface IBanHanhPublishOptions {
   mainDocumentId?: number;
+  soVanBanOverride?: string;
+  skipPermissionCheck?: boolean;
+  historyNoiDung?: string;
 }
 
 export interface IPhvbSiteContext {

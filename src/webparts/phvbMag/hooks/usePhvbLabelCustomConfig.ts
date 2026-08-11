@@ -6,7 +6,7 @@ import { createEmptyLabelCustomSnapshot } from '../utils/PhvbMagBanHanhNotify.ut
 
 const EMPTY_WORKFLOW_FILTERS: IWorkflowFilterOptions = {
   status: [],
-  loaiVB: [],
+  loaiYeuCau: [],
   phongBan: [],
   namTaoYeuCau: []
 };

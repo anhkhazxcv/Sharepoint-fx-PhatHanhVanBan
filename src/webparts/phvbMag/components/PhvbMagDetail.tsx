@@ -67,6 +67,10 @@ interface IPhvbMagDetailProps {
   onUploadDocuments?: (kind: DetailDocumentUploadKind, files: FileList | File[]) => Promise<boolean>;
   onDeleteDocument?: (file: IAttachmentLibraryItem) => Promise<boolean>;
   onDeleteDocuments?: (files: IAttachmentLibraryItem[]) => Promise<boolean>;
+  canResumeDmvlBanHanh?: boolean;
+  isDmvlResumeBusy?: boolean;
+  dmvlResumeErrorMessage?: string;
+  onOpenResumeDmvlBanHanh?: () => void;
 }
 
 const DETAIL_TABS: ReadonlyArray<{ key: DetailTabKey; label: string }> = [
@@ -121,7 +125,11 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     documentErrorMessage,
     onUploadDocuments,
     onDeleteDocument,
-    onDeleteDocuments
+    onDeleteDocuments,
+    canResumeDmvlBanHanh,
+    isDmvlResumeBusy,
+    dmvlResumeErrorMessage,
+    onOpenResumeDmvlBanHanh
   } = props;
   const [activeTab, setActiveTab] = useState<DetailTabKey>('info');
   const [isRemindDialogOpen, setIsRemindDialogOpen] = useState<boolean>(false);
@@ -216,6 +224,10 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
         onPublishBanHanh={onPublishBanHanh}
         onUpdateBanHanhNotify={onUpdateBanHanhNotify}
         onReturnBanHanhToAdmin={onReturnBanHanhToAdmin}
+        canResumeDmvlBanHanh={canResumeDmvlBanHanh}
+        isDmvlResumeBusy={isDmvlResumeBusy}
+        dmvlResumeErrorMessage={dmvlResumeErrorMessage}
+        onOpenResumeDmvlBanHanh={onOpenResumeDmvlBanHanh}
       />
 
       <div className={styles.detailBodySplit}>

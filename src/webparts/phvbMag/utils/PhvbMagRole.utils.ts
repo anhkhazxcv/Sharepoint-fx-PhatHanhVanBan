@@ -56,6 +56,23 @@ export function canAccessQLVanBanTab(
   ]);
 }
 
+export function canAccessDmvl(
+  userDisplayName: string | undefined,
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  userEmail?: string
+): boolean {
+  const normalizedName = (userDisplayName || '').trim().toLowerCase();
+
+  if (normalizedName.indexOf('design') > -1) {
+    return true;
+  }
+
+  return userHasAnyRole(roles, userEmail, [
+    PHVB_ROLES.ADMIN,
+    PHVB_ROLES.SUPER_ADMIN
+  ]);
+}
+
 export function getRoleEmails(roles: ReadonlyArray<IPhvbRoleEntry>, role: string): string[] {
   const normalizedRole = normalizeRoleName(role);
 
