@@ -11,6 +11,7 @@ import { usePhvbDetailDocuments, type DetailDocumentUploadKind } from '../hooks/
 import { usePhvbDmvlFlow } from '../hooks/usePhvbDmvlFlow';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
 import { usePhvbDraftEdit } from '../hooks/usePhvbDraftEdit';
+import { usePhvbDuplicateRequest } from '../hooks/usePhvbDuplicateRequest';
 import { usePhvbLabelCustomConfig } from '../hooks/usePhvbLabelCustomConfig';
 import { usePhvbRecentPublishedFolderCount } from '../hooks/usePhvbRecentPublishedFolderCount';
 import { usePhvbRemindDeadline } from '../hooks/usePhvbRemindDeadline';
@@ -48,17 +49,19 @@ import { PhvbMagRecentViewsView } from './PhvbMagRecentViewsView';
 import { PhvbMagHomeView } from './PhvbMagHomeView';
 import { PhvbSavedDocumentsProvider } from '../context/PhvbMagSavedDocuments.context';
 import { PhvbRecentViewsProvider } from '../context/PhvbMagRecentViews.context';
+import { PhvbBusyProvider } from '../context/PhvbMagBusy.context';
 
 function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, issuanceLibraryTitle, endPointSendMail, endPointShortUrl, roleGroupID } = props;
 
-  const { tabName, idYeuCau, editIdYeuCau } = useParams<{ tabName: string; idYeuCau?: string; editIdYeuCau?: string }>();
+  const { tabName, idYeuCau, editIdYeuCau, duplicateIdYeuCau } = useParams<{ tabName: string; idYeuCau?: string; editIdYeuCau?: string; duplicateIdYeuCau?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
 
   const isCreateRoute = /\/create$/.test(location.pathname);
   const isDmvlCreateRoute = /\/create-dmvl$/.test(location.pathname);
   const isEditRoute = Boolean(editIdYeuCau);
+  const isDuplicateRoute = Boolean(duplicateIdYeuCau);
   const isDetailRoute = Boolean(idYeuCau);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -112,7 +115,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     enabled: true
   });
 
-  const suspendTabItemsLoad = isDetailRoute || isEditRoute || isCreateRoute || isDmvlCreateRoute;
+  const suspendTabItemsLoad = isDetailRoute || isEditRoute || isDuplicateRoute || isCreateRoute || isDmvlCreateRoute;
 
   const { activeTab, counts, items, isLoading, isSaving, errorMessage, setActiveTab, saveRequest, refetchCounts } = usePhvbDocuments({
     userDisplayName,
@@ -194,8 +197,8 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       return false;
     }
 
-    return canResumeDmvlBanHanh(detailData.release, userDisplayName, roles, userEmail);
-  }, [detailData, roles, userDisplayName, userEmail]);
+    return canResumeDmvlBanHanh(detailData.release, roles, userEmail);
+  }, [detailData, roles, userEmail]);
 
   const handleOpenResumeDmvlBanHanh = useCallback((): void => {
     if (!detailData || !idYeuCau) {
@@ -492,6 +495,14 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     return succeeded;
   };
 
+  const handleDuplicateRequest = (): void => {
+    if (!detailData) {
+      return;
+    }
+
+    navigate(`/tab/${activeTab}/duplicate/${detailData.release.IdYeuCau}`);
+  };
+
   const handleWorkflowAction = async (action: WorkflowActionKey, comment?: string): Promise<boolean> => {
     const succeeded = await runWorkflowAction(action, comment);
 
@@ -509,6 +520,16 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   } = usePhvbDraftEdit(
     siteContext,
     isProtectedRouteBlocked ? undefined : editIdYeuCau,
+    tenantUsers
+  );
+
+  const {
+    duplicateRequest,
+    isLoading: isDuplicateLoading,
+    errorMessage: duplicateErrorMessage
+  } = usePhvbDuplicateRequest(
+    siteContext,
+    isProtectedRouteBlocked ? undefined : duplicateIdYeuCau,
     tenantUsers
   );
 
@@ -577,8 +598,9 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     const editContext = draftEdit
       ? { itemId: draftEdit.itemId, idYeuCau: draftEdit.idYeuCau }
       : undefined;
+    const duplicateFromIdYeuCau = !editContext && isDuplicateRoute ? duplicateRequest?.sourceIdYeuCau : undefined;
 
-    const result = await saveRequest(input, mode, tenantUsers, editContext);
+    const result = await saveRequest(input, mode, tenantUsers, editContext, duplicateFromIdYeuCau);
 
     if (!result) {
       return false;
@@ -609,8 +631,15 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const isSavedTab = resolvedTabName === 'DaLuu';
   const isRecentViewsTab = resolvedTabName === 'XemGanDay';
   const isHomeTab = resolvedTabName === 'TrangChu';
-  const modalDefaultValues = isEditRoute && draftEdit ? draftEdit.form : defaultRequestForm;
-  const isModalOpen = isCreateRoute || isDmvlCreateRoute || (isEditRoute && Boolean(draftEdit));
+  const modalDefaultValues = isEditRoute && draftEdit
+    ? draftEdit.form
+    : isDuplicateRoute && duplicateRequest
+      ? duplicateRequest.form
+      : defaultRequestForm;
+  const isModalOpen = isCreateRoute
+    || isDmvlCreateRoute
+    || (isEditRoute && Boolean(draftEdit))
+    || (isDuplicateRoute && Boolean(duplicateRequest));
   const createModalVariant = isDmvlCreateRoute ? 'dmvl' : 'standard';
 
   return (
@@ -668,6 +697,13 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
           <div className={styles.connectionBanner}>
             <strong>Chỉnh sửa bản nháp:</strong>
             <span>{draftEditErrorMessage}</span>
+          </div>
+        )}
+
+        {isDuplicateRoute && duplicateErrorMessage && !isDuplicateLoading && (
+          <div className={styles.connectionBanner}>
+            <strong>Nhân bản yêu cầu:</strong>
+            <span>{duplicateErrorMessage}</span>
           </div>
         )}
 
@@ -733,6 +769,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
                 isDmvlResumeBusy={isDmvlNotifyLoading || isDmvlPublishing}
                 dmvlResumeErrorMessage={!isDmvlNotifyOpen ? dmvlErrorMessage : undefined}
                 onOpenResumeDmvlBanHanh={handleOpenResumeDmvlBanHanh}
+                onDuplicate={handleDuplicateRequest}
               />
             )}
             <PhvbMagWorkflowParticipantModal
@@ -783,6 +820,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       </main>
 
       <PhvbMagLoadingOverlay isOpen={isEditRoute && isDraftLoading} message="Đang tải bản nháp..." />
+      <PhvbMagLoadingOverlay isOpen={isDuplicateRoute && isDuplicateLoading} message="Đang tải dữ liệu để nhân bản..." />
 
       <PhvbMagTemplateModal
         isOpen={isTemplateModalOpen}
@@ -812,6 +850,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         mode="prepare"
         requireMainDocument={true}
         mainDocumentCandidates={dmvlDetail?.attachments || []}
+        storedMainDocumentId={dmvlDetail?.release.IdVanBanChinh}
         isLoading={isDmvlNotifyLoading}
         isProcessing={isDmvlPublishing}
         errorMessage={dmvlErrorMessage}
@@ -829,20 +868,23 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
   return (
     <HashRouter>
-      <Routes>
-        <Route path="/tab/TrangChu/*" element={<PhvbMagInner {...props} />} />
-        <Route path="/tab/TrangChu" element={<PhvbMagInner {...props} />} />
-        <Route path="/tab/ThuVienTaiLieu/*" element={<PhvbMagInner {...props} />} />
-        <Route path="/tab/ThuVienTaiLieu" element={<Navigate to="/tab/ThuVienTaiLieu/all" replace />} />
-        <Route path="/tab/:tabName" element={<PhvbMagInner {...props} />} />
-        <Route path="/tab/:tabName/detail/:idYeuCau" element={<PhvbMagInner {...props} />} />
-        <Route path="/tab/:tabName/edit/:editIdYeuCau" element={<PhvbMagInner {...props} />} />
-        <Route path="/tab/:tabName/create-dmvl" element={<PhvbMagInner {...props} />} />
-        <Route path="/tab/:tabName/create" element={<PhvbMagInner {...props} />} />
-        <Route path="/tab/:tabName/item/:itemId" element={<Navigate to="../" replace />} />
-        <Route path="*" element={<Navigate to="/tab/TrangChu" replace />} />
-      </Routes>
-      <ToastContainer />
+      <PhvbBusyProvider>
+        <Routes>
+          <Route path="/tab/TrangChu/*" element={<PhvbMagInner {...props} />} />
+          <Route path="/tab/TrangChu" element={<PhvbMagInner {...props} />} />
+          <Route path="/tab/ThuVienTaiLieu/*" element={<PhvbMagInner {...props} />} />
+          <Route path="/tab/ThuVienTaiLieu" element={<Navigate to="/tab/ThuVienTaiLieu/all" replace />} />
+          <Route path="/tab/:tabName" element={<PhvbMagInner {...props} />} />
+          <Route path="/tab/:tabName/detail/:idYeuCau" element={<PhvbMagInner {...props} />} />
+          <Route path="/tab/:tabName/edit/:editIdYeuCau" element={<PhvbMagInner {...props} />} />
+          <Route path="/tab/:tabName/duplicate/:duplicateIdYeuCau" element={<PhvbMagInner {...props} />} />
+          <Route path="/tab/:tabName/create-dmvl" element={<PhvbMagInner {...props} />} />
+          <Route path="/tab/:tabName/create" element={<PhvbMagInner {...props} />} />
+          <Route path="/tab/:tabName/item/:itemId" element={<Navigate to="../" replace />} />
+          <Route path="*" element={<Navigate to="/tab/TrangChu" replace />} />
+        </Routes>
+        <ToastContainer />
+      </PhvbBusyProvider>
     </HashRouter>
   );
 }

@@ -4,6 +4,7 @@ import { escapeODataValue, getCandidateSiteUrls, normalizeSiteUrl } from '../inf
 import { buildSharePointFileOpenUrl } from '../infrastructure/SharePointFile.utils';
 import { ensureSharePointResponseOk } from '../infrastructure/SharePointHttp.utils';
 import { buildApiLogParams } from './PhvbMagLog.service';
+import { assertValidateUpdateSucceeded } from '../utils/PhvbMagSharePoint.utils';
 import type { IAttachmentLibraryItem, ICreateRequestInput, IPhvbLogContext, IPhvbSiteContext } from '../models/PhvbMag.models';
 
 interface IUploadRequestFilesOptions extends IPhvbSiteContext {
@@ -41,7 +42,7 @@ interface IListFormValue {
 
 function buildODataParameterQuery(parameters: Record<string, string>): string {
   return Object.keys(parameters)
-    .map(key => `${key}='${escapeODataValue(parameters[key])}'`)
+    .map(key => `${encodeURIComponent(key)}='${encodeURIComponent(escapeODataValue(parameters[key]))}'`)
     .join('&');
 }
 
@@ -71,7 +72,6 @@ interface ISharePointAttachmentItem {
   FileDirRef?: string;
   Modified?: string;
   FSObjType?: number;
-  LoaiVanBan?: string;
 }
 
 const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -81,8 +81,7 @@ const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'FileRef',
   'FileDirRef',
   'Modified',
-  'FSObjType',
-  'LoaiVanBan'
+  'FSObjType'
 ];
 
 function buildRequestIdFormValue(requestReferenceId: string): IListFormValue {
@@ -101,35 +100,6 @@ function sanitizeSharePointFolderName(value: string): string {
     .trim();
 }
 
-interface IValidateUpdateFieldResult {
-  HasException?: boolean;
-  ErrorMessage?: string;
-  FieldName?: string;
-}
-
-function assertValidateUpdateSucceeded(payload: unknown): void {
-  const results = (payload && typeof payload === 'object' && 'value' in payload
-    ? (payload as { value?: IValidateUpdateFieldResult[] }).value
-    : undefined) || [];
-
-  for (let index = 0; index < results.length; index += 1) {
-    const fieldResult = results[index];
-    if (!fieldResult) {
-      continue;
-    }
-
-    const errorMessage = (fieldResult.ErrorMessage || '').trim();
-    if (fieldResult.HasException || errorMessage) {
-      const fieldName = (fieldResult.FieldName || '').trim() || 'unknown';
-      throw new Error(
-        errorMessage
-          ? `Không cập nhật được field ${fieldName}: ${errorMessage}`
-          : `Không cập nhật được field ${fieldName}.`
-      );
-    }
-  }
-}
-
 function mapAttachmentItem(item: ISharePointAttachmentItem, siteUrl: string): IAttachmentLibraryItem {
   const fileRef = item.FileRef || '';
   const fileDirRef = item.FileDirRef || '';
@@ -145,8 +115,7 @@ function mapAttachmentItem(item: ISharePointAttachmentItem, siteUrl: string): IA
     }),
     modified: item.Modified,
     folderPath: fileDirRef,
-    isFormAttachment: fileDirRef.indexOf(`/${ATTACHMENT_FORM_SUBFOLDER}`) > -1,
-    loaiVanBan: (item.LoaiVanBan || '').trim() || undefined
+    isFormAttachment: fileDirRef.indexOf(`/${ATTACHMENT_FORM_SUBFOLDER}`) > -1
   };
 }
 
@@ -311,9 +280,10 @@ export class PhvbAttachmentService {
     file: File,
     requestReferenceId: string
   ): Promise<void> {
+    const uploadFileName = file.name.toLocaleUpperCase('vi-VN');
     const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/Files/add(url=@fileName,overwrite=true)?${buildODataParameterQuery({
       '@folderPath': folderPath,
-      '@fileName': file.name
+      '@fileName': uploadFileName
     })}`;
     const fileBuffer = await readFileAsArrayBuffer(file);
     const response = await context.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
@@ -325,26 +295,124 @@ export class PhvbAttachmentService {
       }
     });
 
-    await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_CREATE', file.name);
+    await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_CREATE', uploadFileName);
     const data = await response.json() as { ListItemAllFields?: { Id?: number } };
     let listItemId = data.ListItemAllFields && data.ListItemAllFields.Id ? data.ListItemAllFields.Id : 0;
 
     if (!listItemId) {
-      const uploadedFilePath = joinServerRelativePath(folderPath, file.name);
-      const metadataUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFileByServerRelativeUrl(@filePath)/ListItemAllFields?$select=Id&${buildODataParameterQuery({
-        '@filePath': uploadedFilePath
-      })}`;
-      const metadataResponse = await context.spHttpClient.get(metadataUrl, SPHttpClient.configurations.v1);
-      await ensureAttachmentResponseOk(metadataResponse, metadataUrl, context, 'SP_GET');
-      const metadata = await metadataResponse.json() as { Id?: number };
-      listItemId = metadata.Id || 0;
+      const uploadedFilePath = joinServerRelativePath(folderPath, uploadFileName);
+      listItemId = await this.resolveListItemIdByFilePath(siteUrl, context, uploadedFilePath);
     }
 
     if (!listItemId) {
-      throw new Error(`Uploaded file ${file.name} but could not resolve list item id.`);
+      throw new Error(`Uploaded file ${uploadFileName} but could not resolve list item id.`);
     }
 
     await this.applyListItemMetadataOnCreate(siteUrl, context, listItemId, requestReferenceId);
+  }
+
+  private async resolveListItemIdByFilePath(
+    siteUrl: string,
+    context: IAttachmentServiceContext,
+    filePath: string
+  ): Promise<number> {
+    const metadataUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFileByServerRelativeUrl(@filePath)/ListItemAllFields?$select=Id&${buildODataParameterQuery({
+      '@filePath': filePath
+    })}`;
+    const metadataResponse = await context.spHttpClient.get(metadataUrl, SPHttpClient.configurations.v1);
+    await ensureAttachmentResponseOk(metadataResponse, metadataUrl, context, 'SP_GET');
+    const metadata = await metadataResponse.json() as { Id?: number };
+    return metadata.Id || 0;
+  }
+
+  private async copyFileTo(
+    siteUrl: string,
+    context: IAttachmentServiceContext,
+    sourcePath: string,
+    targetPath: string
+  ): Promise<void> {
+    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFileByServerRelativeUrl(@fileUrl)/copyTo(strnewurl=@newUrl,boverwrite=true)?${buildODataParameterQuery({
+      '@fileUrl': sourcePath,
+      '@newUrl': targetPath
+    })}`;
+    const response = await context.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
+      headers: {
+        accept: 'application/json;odata=nometadata',
+        'content-type': 'application/json;odata=nometadata',
+        'odata-version': ''
+      }
+    });
+
+    await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_COPY', { sourcePath, targetPath });
+  }
+
+  public async copyRequestFiles(
+    context: IAttachmentServiceContext,
+    params: {
+      targetRequestReferenceId: string;
+      taiLieu: IAttachmentLibraryItem[];
+      bieuMau: IAttachmentLibraryItem[];
+    }
+  ): Promise<void> {
+    const { targetRequestReferenceId, taiLieu, bieuMau } = params;
+
+    if (taiLieu.length === 0 && bieuMau.length === 0) {
+      return;
+    }
+
+    if (!targetRequestReferenceId.trim()) {
+      throw new Error('Thiếu ID yêu cầu đích để copy file đính kèm.');
+    }
+
+    const candidates = getCandidateSiteUrls(context);
+
+    if (candidates.length === 0) {
+      throw new Error('Missing SharePoint site context.');
+    }
+
+    let lastError: unknown = null;
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const siteUrl = candidates[index];
+
+      try {
+        const documentFolderName = resolveDocumentFolderName(targetRequestReferenceId);
+        const libraryRootPath = await this.getLibraryRootFolder(siteUrl, context);
+        const documentFolderPath = await this.ensureFolderPath(
+          siteUrl,
+          context,
+          libraryRootPath,
+          documentFolderName,
+          targetRequestReferenceId
+        );
+
+        const formFolderPath = bieuMau.length > 0
+          ? await this.ensureFolderPath(siteUrl, context, documentFolderPath, ATTACHMENT_FORM_SUBFOLDER, targetRequestReferenceId)
+          : undefined;
+
+        const copyAttachment = async (attachment: IAttachmentLibraryItem, targetFolderPath: string): Promise<void> => {
+          const sourcePath = joinServerRelativePath(attachment.folderPath || '', attachment.name);
+          const targetPath = joinServerRelativePath(targetFolderPath, attachment.name);
+          await this.copyFileTo(siteUrl, context, sourcePath, targetPath);
+          const listItemId = await this.resolveListItemIdByFilePath(siteUrl, context, targetPath);
+
+          if (listItemId) {
+            await this.applyListItemMetadataOnCreate(siteUrl, context, listItemId, targetRequestReferenceId);
+          }
+        };
+
+        await Promise.all([
+          ...taiLieu.map(attachment => copyAttachment(attachment, documentFolderPath)),
+          ...bieuMau.map(attachment => copyAttachment(attachment, formFolderPath!))
+        ]);
+
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error('Unable to copy attachment files.');
   }
 
   public async uploadRequestFiles(options: IUploadRequestFilesOptions): Promise<void> {
@@ -466,8 +534,7 @@ export class PhvbAttachmentService {
         }),
         modified: file.TimeLastModified,
         folderPath,
-        isFormAttachment,
-        loaiVanBan: undefined
+        isFormAttachment
       });
     }
 

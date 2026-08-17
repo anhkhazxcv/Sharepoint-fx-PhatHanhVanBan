@@ -34,6 +34,7 @@ interface IPhvbMagDetailHeaderProps {
   requireMainDocument?: boolean;
   mainDocumentReadOnly?: boolean;
   mainDocumentCandidates?: ReadonlyArray<IAttachmentLibraryItem>;
+  storedMainDocumentId?: number;
   onOpenPrepareBanHanh?: () => void;
   onOpenPublishBanHanh?: () => void;
   onOpenEditBanHanhNotify?: () => void;
@@ -48,6 +49,8 @@ interface IPhvbMagDetailHeaderProps {
   isDmvlResumeBusy?: boolean;
   dmvlResumeErrorMessage?: string;
   onOpenResumeDmvlBanHanh?: () => void;
+  canDuplicate?: boolean;
+  onDuplicate?: () => void;
 }
 
 export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHeaderProps>(
@@ -76,6 +79,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       requireMainDocument = false,
       mainDocumentReadOnly = false,
       mainDocumentCandidates = [],
+      storedMainDocumentId,
       onOpenPrepareBanHanh,
       onOpenPublishBanHanh,
       onOpenEditBanHanhNotify,
@@ -86,7 +90,9 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       canResumeDmvlBanHanh = false,
       isDmvlResumeBusy = false,
       dmvlResumeErrorMessage,
-      onOpenResumeDmvlBanHanh
+      onOpenResumeDmvlBanHanh,
+      canDuplicate = false,
+      onDuplicate
     } = props;
     const tabLabel = TAB_LABELS[tabName] || tabName;
     const [pendingAction, setPendingAction] = useState<CommentConfirmActionKey | undefined>(undefined);
@@ -101,7 +107,8 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       canPrepareBanHanh ||
       canPublishBanHanh ||
       canEditBanHanhNotify ||
-      canResumeDmvlBanHanh;
+      canResumeDmvlBanHanh ||
+      canDuplicate;
     const isWorkflowDialogOpen = Boolean(pendingAction);
     const isAnyDialogOpen =
       isWorkflowDialogOpen ||
@@ -361,6 +368,17 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
                 </button>
               ) : null}
 
+              {canDuplicate ? (
+                <button
+                  type="button"
+                  className={styles.detailActionEdit}
+                  disabled={isBusy}
+                  onClick={() => onDuplicate?.()}
+                >
+                  Nhân bản
+                </button>
+              ) : null}
+
               {canApprove ? (
                 <button
                   type="button"
@@ -424,6 +442,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
           requireMainDocument={requireMainDocument}
           mainDocumentReadOnly={mainDocumentReadOnly}
           mainDocumentCandidates={mainDocumentCandidates}
+          storedMainDocumentId={storedMainDocumentId}
           isLoading={isBanHanhNotifyLoading}
           isProcessing={isBanHanhSaving}
           errorMessage={isNotifyDialogOpen ? banHanhErrorMessage : undefined}

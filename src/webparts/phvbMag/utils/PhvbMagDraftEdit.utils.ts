@@ -7,6 +7,10 @@ export function isDraftStatus(status?: string): boolean {
   return (status || '').trim() === REQUEST_STATUS.BAN_NHAP;
 }
 
+export function canDuplicateRelease(status?: string): boolean {
+  return !isDraftStatus(status);
+}
+
 export function parseSemicolonSeparatedValues(value?: string): string[] {
   if (!value || !value.trim()) {
     return [];

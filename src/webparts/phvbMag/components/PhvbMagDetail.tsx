@@ -5,6 +5,7 @@ import type { DetailDocumentUploadKind } from '../hooks/usePhvbDetailDocuments';
 import type { IRemindDeadlineContext } from '../utils/PhvbMagRemindDeadline.utils';
 import type { IWorkflowActionAvailability } from '../utils/PhvbMagWorkflowPermission.utils';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
+import { canDuplicateRelease } from '../utils/PhvbMagDraftEdit.utils';
 import styles from './PhvbMag.module.scss';
 import { PhvbMagDetailActivityFeed } from './PhvbMagDetailActivityFeed';
 import { PhvbMagDetailDocumentsTab } from './PhvbMagDetailDocumentsTab';
@@ -71,6 +72,7 @@ interface IPhvbMagDetailProps {
   isDmvlResumeBusy?: boolean;
   dmvlResumeErrorMessage?: string;
   onOpenResumeDmvlBanHanh?: () => void;
+  onDuplicate?: () => void;
 }
 
 const DETAIL_TABS: ReadonlyArray<{ key: DetailTabKey; label: string }> = [
@@ -129,11 +131,13 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     canResumeDmvlBanHanh,
     isDmvlResumeBusy,
     dmvlResumeErrorMessage,
-    onOpenResumeDmvlBanHanh
+    onOpenResumeDmvlBanHanh,
+    onDuplicate
   } = props;
   const [activeTab, setActiveTab] = useState<DetailTabKey>('info');
   const [isRemindDialogOpen, setIsRemindDialogOpen] = useState<boolean>(false);
   const title = data.release.Tenvanban || data.release.IdYeuCau || 'Chi tiết văn bản';
+  const canDuplicate = canDuplicateRelease(data.release.StatusApproved);
   const isFullIssuancePublish =
     (data.release.LoaiYeuCau || '').trim() === 'Viết mới' ||
     (data.release.LoaiYeuCau || '').trim() === 'Điều chỉnh';
@@ -217,6 +221,7 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
         requireMainDocument={requireMainDocument}
         mainDocumentReadOnly={mainDocumentReadOnly}
         mainDocumentCandidates={mainDocumentCandidates}
+        storedMainDocumentId={data.release.IdVanBanChinh}
         onOpenPrepareBanHanh={onOpenPrepareBanHanh}
         onOpenPublishBanHanh={onOpenPublishBanHanh}
         onOpenEditBanHanhNotify={onOpenEditBanHanhNotify}
@@ -227,6 +232,8 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
         canResumeDmvlBanHanh={canResumeDmvlBanHanh}
         isDmvlResumeBusy={isDmvlResumeBusy}
         dmvlResumeErrorMessage={dmvlResumeErrorMessage}
+        canDuplicate={canDuplicate}
+        onDuplicate={onDuplicate}
         onOpenResumeDmvlBanHanh={onOpenResumeDmvlBanHanh}
       />
 

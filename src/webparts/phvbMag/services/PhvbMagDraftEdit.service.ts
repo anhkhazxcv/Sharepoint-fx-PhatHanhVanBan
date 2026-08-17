@@ -21,6 +21,11 @@ export interface IDraftEditData {
   existingBieuMauAttachments: IAttachmentLibraryItem[];
 }
 
+export interface IDuplicateRequestData {
+  sourceIdYeuCau: string;
+  form: ICreateRequestInput;
+}
+
 function escapeODataValue(value: string): string {
   return value.replace(/'/g, "''");
 }
@@ -61,6 +66,47 @@ async function fetchAllUserItems(context: IPhvbSiteContext, idYeuCau: string, li
 }
 
 export class PhvbDraftEditService {
+  public async loadReleaseForDuplicate(
+    context: IPhvbSiteContext,
+    idYeuCau: string,
+    directoryUsers?: ReadonlyArray<IPhvbDirectoryUser>
+  ): Promise<IDuplicateRequestData | undefined> {
+    if (!hasSharePointSiteContext(context) || !idYeuCau.trim()) {
+      return undefined;
+    }
+
+    const normalizedId = idYeuCau.trim();
+    const [release, attachments, gopYUsers, thamDinhUsers, pheDuyetUsers] = await Promise.all([
+      fetchReleaseByIdYeuCau(context, normalizedId),
+      phvbAttachmentService.listRequestFiles(context, normalizedId).catch(() => [] as IAttachmentLibraryItem[]),
+      fetchAllUserItems(context, normalizedId, ALL_USER_GOPY_LIST_TITLE).catch(() => []),
+      fetchAllUserItems(context, normalizedId, ALL_USER_THAMDINH_LIST_TITLE).catch(() => []),
+      fetchAllUserItems(context, normalizedId, ALL_USER_PHEDUYET_LIST_TITLE).catch(() => [])
+    ]);
+
+    if (!release || release.StatusApproved === REQUEST_STATUS.BAN_NHAP) {
+      return undefined;
+    }
+
+    const form = mapReleaseToCreateRequestInput({
+      release,
+      gopYUsers,
+      thamDinhUsers,
+      pheDuyetUsers,
+      directoryUsers
+    });
+
+    return {
+      sourceIdYeuCau: release.IdYeuCau || normalizedId,
+      form: {
+        ...form,
+        code: '',
+        existingTaiLieuAttachments: attachments.filter(item => !item.isFormAttachment),
+        existingBieuMauAttachments: attachments.filter(item => item.isFormAttachment)
+      }
+    };
+  }
+
   public async loadDraftForEdit(
     context: IPhvbSiteContext,
     idYeuCau: string,
@@ -73,7 +119,7 @@ export class PhvbDraftEditService {
     const normalizedId = idYeuCau.trim();
     const [release, attachments, gopYUsers, thamDinhUsers, pheDuyetUsers] = await Promise.all([
       fetchReleaseByIdYeuCau(context, normalizedId),
-      phvbAttachmentService.listRequestFiles(context, normalizedId).catch(() => []),
+      phvbAttachmentService.listRequestFiles(context, normalizedId).catch(() => [] as IAttachmentLibraryItem[]),
       fetchAllUserItems(context, normalizedId, ALL_USER_GOPY_LIST_TITLE).catch(() => []),
       fetchAllUserItems(context, normalizedId, ALL_USER_THAMDINH_LIST_TITLE).catch(() => []),
       fetchAllUserItems(context, normalizedId, ALL_USER_PHEDUYET_LIST_TITLE).catch(() => [])

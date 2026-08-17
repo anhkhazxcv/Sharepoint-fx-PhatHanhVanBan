@@ -6,6 +6,7 @@ import { phvbDocumentsService } from '../services/PhvbMag.service';
 import type { ICreateRequestInput, IEditRequestContext, IPhvbDirectoryUser, IPhvbLogContext, ISaveRequestResult, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 import { createFlowRunId } from '../services/PhvbMagLog.service';
+import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 
 interface IUsePhvbDocumentsOptions {
   userDisplayName: string;
@@ -33,7 +34,8 @@ interface IUsePhvbDocumentsResult {
     input: ICreateRequestInput,
     mode: SaveRequestMode,
     directoryUsers?: ReadonlyArray<IPhvbDirectoryUser>,
-    editContext?: IEditRequestContext
+    editContext?: IEditRequestContext,
+    duplicateFromIdYeuCau?: string
   ) => Promise<ISaveRequestResult | undefined>;
   refetchCounts: () => Promise<void>;
 }
@@ -58,6 +60,7 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
+  const { runBusy } = usePhvbBusy();
 
   const resolvedListTitle = resolveListTitle(listTitle);
   const siteContext = useMemo(() => ({
@@ -186,7 +189,8 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     input: ICreateRequestInput,
     mode: SaveRequestMode,
     directoryUsers?: ReadonlyArray<IPhvbDirectoryUser>,
-    editContext?: IEditRequestContext
+    editContext?: IEditRequestContext,
+    duplicateFromIdYeuCau?: string
   ): Promise<ISaveRequestResult | undefined> => {
     if (!hasAnySiteContext) {
       setErrorMessage(SITE_CONTEXT_ERROR_MESSAGE);
@@ -203,47 +207,51 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
       itemId: editContext?.idYeuCau
     };
 
+    const busyMessage = mode === 'draft' ? 'Đang lưu nháp...' : 'Đang gửi yêu cầu...';
+
     try {
-      const requestReferenceId = editContext
-        ? await phvbDocumentsService.updateRequest({
-          ...documentContext,
-          input,
-          saveMode: mode,
-          directoryUsers,
-          itemId: editContext.itemId,
-          existingIdYeuCau: editContext.idYeuCau,
-          logContext
-        })
-        : await phvbDocumentsService.createRequest({
-          ...documentContext,
-          input,
-          saveMode: mode,
-          directoryUsers,
-          logContext
-        });
+      return await runBusy(busyMessage, async () => {
+        const requestReferenceId = editContext
+          ? await phvbDocumentsService.updateRequest({
+            ...documentContext,
+            input,
+            saveMode: mode,
+            directoryUsers,
+            itemId: editContext.itemId,
+            existingIdYeuCau: editContext.idYeuCau,
+            logContext
+          })
+          : await phvbDocumentsService.createRequest({
+            ...documentContext,
+            input,
+            saveMode: mode,
+            directoryUsers,
+            logContext
+          }, duplicateFromIdYeuCau);
 
-      const targetTab: TabType = mode === 'draft' ? 'BanNhap' : activeTab;
+        const targetTab: TabType = mode === 'draft' ? 'BanNhap' : activeTab;
 
-      phvbDocumentsService.invalidateTabCountsCache();
+        phvbDocumentsService.invalidateTabCountsCache();
 
-      const [nextCounts, nextItems] = await Promise.all([
-        phvbDocumentsService.loadTabCounts(documentContext, true),
-        phvbDocumentsService.loadTabItems({
-          ...siteContext,
-          userEmail,
-          tab: targetTab
-        })
-      ]);
+        const [nextCounts, nextItems] = await Promise.all([
+          phvbDocumentsService.loadTabCounts(documentContext, true),
+          phvbDocumentsService.loadTabItems({
+            ...siteContext,
+            userEmail,
+            tab: targetTab
+          })
+        ]);
 
-      setActiveTab(targetTab);
-      setCounts(nextCounts);
-      setItems(nextItems);
-      setErrorMessage(undefined);
+        setActiveTab(targetTab);
+        setCounts(nextCounts);
+        setItems(nextItems);
+        setErrorMessage(undefined);
 
-      return {
-        requestReferenceId,
-        mode
-      };
+        return {
+          requestReferenceId,
+          mode
+        };
+      });
     } catch (error) {
       setErrorMessage(phvbDocumentsService.getRuntimeErrorMessage(error, resolvedListTitle));
       return undefined;

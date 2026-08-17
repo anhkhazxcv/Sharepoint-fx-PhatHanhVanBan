@@ -5,7 +5,7 @@ import { phvbAttachmentService } from './PhvbMagAttachment.service';
 import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
 import { phvbWorkflowWriteService } from './PhvbMagWorkflowWrite.service';
 import { generateRequestReferenceId } from '../utils/PhvbMagRequestId.utils';
-import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
+import { sharePointRestNull, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
 import { sanitizeRequestInputForSave, getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
 import {
   IWorkflowStageParticipants,
@@ -32,7 +32,7 @@ const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'LienHe',
   'StatusApproved',
   'LoaiYeuCau',
-  'NgayTaoYeuCau',
+  'Created',
   'ThamDinh',
   'NguoiGopY',
   'SoVanBan',
@@ -45,6 +45,7 @@ const DOCUMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'Date_PheDuyet',
   'ThuMucBanHanh',
   'IDFolderOld',
+  'IdVanBanChinh',
   'GhiChuChoThamDinh',
   'IsSendMailNotify',
   'EmailNhanBanHanh',
@@ -84,7 +85,7 @@ interface IUpdateRequestOptions extends ICreateRequestOptions {
 }
 
 interface ICreateSharePointPayload {
-  [fieldName: string]: string | boolean | number;
+  [fieldName: string]: string | boolean | number | undefined;
   Title: string;
   Tenvanban: string;
   SoVanBan: string;
@@ -93,7 +94,7 @@ interface ICreateSharePointPayload {
   PheDuyet: string;
   NgayPhatHanh: string;
   HieuLucTu: string;
-  HieuLucDen: string;
+  HieuLucDen?: string;
   TomTatNoiDung: string;
   NguoiTao: string;
   EmailNguoiTao: string;
@@ -106,15 +107,21 @@ interface ICreateSharePointPayload {
   TenVanBan_ENG: string;
   Loai_SLA: string;
   NguoiGopY: string;
-  Date_GopY: string;
+  Date_GopY?: string;
   ThamDinh: string;
-  Date_ThamDinh: string;
-  Date_PheDuyet: string;
+  Date_ThamDinh?: string;
+  Date_PheDuyet?: string;
   IsSendMailNotify: boolean;
   GhiChuChoThamDinh: string;
-  NgayTaoYeuCau: string;
   IdYeuCau: string;
 }
+
+const OPTIONAL_DATETIME_FIELDS: ReadonlyArray<'HieuLucDen' | 'Date_GopY' | 'Date_ThamDinh' | 'Date_PheDuyet'> = [
+  'HieuLucDen',
+  'Date_GopY',
+  'Date_ThamDinh',
+  'Date_PheDuyet'
+];
 
 function escapeODataValue(value: string): string {
   return value.replace(/'/g, "''");
@@ -279,10 +286,6 @@ async function fetchTabCountsUncached(options: IPhvbDocumentContext): Promise<IT
   return countItemsByTab(items, options.userEmail);
 }
 
-function formatCurrentDate(): string {
-  return new Date().toLocaleDateString('vi-VN');
-}
-
 function shouldIncludeFolderOldId(requestType: ICreateRequestInput['requestType']): boolean {
   return requestType === 'Điều chỉnh' || requestType === 'Thu hồi';
 }
@@ -317,9 +320,36 @@ function resolveInitialSubmitStatus(input: ICreateRequestInput): string {
   return skippedStatus || REQUEST_STATUS.DANG_GOP_Y;
 }
 
+function omitUndefinedPayloadFields(payload: ICreateSharePointPayload): Record<string, string | boolean | number> {
+  const nextPayload: Record<string, string | boolean | number> = {};
+  const keys = Object.keys(payload);
+
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index];
+    const value = payload[key];
+    if (value !== undefined) {
+      nextPayload[key] = value;
+    }
+  }
+
+  return nextPayload;
+}
+
+function applyDateTimeClears(payload: Record<string, string | boolean | number>): Record<string, string | boolean | number> {
+  const nextPayload: Record<string, string | boolean | number> = { ...payload };
+
+  OPTIONAL_DATETIME_FIELDS.forEach(field => {
+    if (nextPayload[field] === undefined) {
+      nextPayload[field] = sharePointRestNull();
+    }
+  });
+
+  return nextPayload;
+}
+
 function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenceId: string): ICreateSharePointPayload {
   const input = sanitizeRequestInputForSave(options.input);
-  const today = formatCurrentDate();
+  const todayIso = toSharePointDateOnlyIso(new Date()) || '1970-01-01T00:00:00';
   const requestType = input.requestType || input.type;
   const isDmvlFlow = options.submissionFlow === 'dmvl';
   const statusApproved = options.saveMode === 'draft'
@@ -335,14 +365,15 @@ function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenc
     LoaiYeuCau: isDmvlFlow ? 'Viết mới' : requestType,
     KhoaPhongNguoiTao: input.department || '',
     PheDuyet: isDmvlFlow ? '' : input.approvalUsers.join('; '),
-    NgayPhatHanh: today,
-    NgayTaoYeuCau: formatCurrentExecutionDateTime(),
-    HieuLucTu: input.hieuLucTu || today,
-    HieuLucDen: (input.hieuLucDen || '').trim(),
+    NgayPhatHanh: todayIso,
+    HieuLucTu: toSharePointDateOnlyIso(input.hieuLucTu) || todayIso,
+    HieuLucDen: toSharePointDateOnlyIso(input.hieuLucDen),
     TomTatNoiDung: input.summary,
     NguoiTao: options.userDisplayName || '',
     EmailNguoiTao: options.userEmail || '',
-    LienHe: input.contact || '',
+    LienHe: isDmvlFlow
+      ? ((input.contact || '').trim() || options.userDisplayName || options.userEmail || '')
+      : (input.contact || ''),
     StatusApproved: statusApproved,
     ThuMucBanHanh: input.folderLuuTru || input.folder,
     NoiLuuBanCung: input.noiLuu || '',
@@ -350,10 +381,10 @@ function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenc
     TenVanBan_ENG: input.titleEn || '',
     Loai_SLA: isDmvlFlow ? '' : (input.loaiSla || ''),
     NguoiGopY: isDmvlFlow ? '' : (input.nguoiGopY ? input.nguoiGopY.join('; ') : ''),
-    Date_GopY: isDmvlFlow ? '' : (input.deadlineGopY || ''),
+    Date_GopY: isDmvlFlow ? undefined : toSharePointDateOnlyIso(input.deadlineGopY),
     ThamDinh: isDmvlFlow ? '' : (input.nguoiThamDinh ? input.nguoiThamDinh.join('; ') : ''),
-    Date_ThamDinh: isDmvlFlow ? '' : (input.deadlineThamDinh || ''),
-    Date_PheDuyet: isDmvlFlow ? '' : (input.deadlinePheDuyet || ''),
+    Date_ThamDinh: isDmvlFlow ? undefined : toSharePointDateOnlyIso(input.deadlineThamDinh),
+    Date_PheDuyet: isDmvlFlow ? undefined : toSharePointDateOnlyIso(input.deadlinePheDuyet),
     IsSendMailNotify: isDmvlFlow ? true : input.isSendMailNotify,
     GhiChuChoThamDinh: isDmvlFlow ? '' : (input.ghiChuThamDinh || '')
   };
@@ -432,7 +463,7 @@ export class PhvbDocumentsService {
     return filterItemsForTab(items, options.tab, options.userEmail);
   }
 
-  public async createRequest(options: ICreateRequestOptions): Promise<string> {
+  public async createRequest(options: ICreateRequestOptions, duplicateFromIdYeuCau?: string): Promise<string> {
     if (!hasSharePointSiteContext(options)) {
       throw new Error(SITE_CONTEXT_ERROR_MESSAGE);
     }
@@ -442,12 +473,42 @@ export class PhvbDocumentsService {
     await phvbRepository.createItem({
       ...options,
       logContext: options.logContext,
-      payload: mapCreateRequestPayload(options, requestReferenceId)
+      payload: omitUndefinedPayloadFields(mapCreateRequestPayload(options, requestReferenceId))
     });
 
-    await this.writeWorkflowAndAttachments(options, requestReferenceId);
+    if (duplicateFromIdYeuCau) {
+      await this.copyDuplicatedAttachments(options, requestReferenceId);
+    }
+
+    await this.writeWorkflowAndAttachments(options, requestReferenceId, false, Boolean(duplicateFromIdYeuCau));
 
     return requestReferenceId;
+  }
+
+  private async copyDuplicatedAttachments(
+    options: ICreateRequestOptions,
+    targetRequestReferenceId: string
+  ): Promise<void> {
+    const rawInput = options.input;
+    const rules = getRequestTypeFormRules(rawInput.requestType);
+
+    if (!rules.includeAttachmentsOnSave) {
+      return;
+    }
+
+    const removedIds = rawInput.removedAttachmentIds || [];
+    const keptTaiLieu = (rawInput.existingTaiLieuAttachments || []).filter(item => removedIds.indexOf(item.id) === -1);
+    const keptBieuMau = (rawInput.existingBieuMauAttachments || []).filter(item => removedIds.indexOf(item.id) === -1);
+
+    if (keptTaiLieu.length === 0 && keptBieuMau.length === 0) {
+      return;
+    }
+
+    await phvbAttachmentService.copyRequestFiles(options, {
+      targetRequestReferenceId,
+      taiLieu: keptTaiLieu,
+      bieuMau: keptBieuMau
+    });
   }
 
   public async updateRequest(options: IUpdateRequestOptions): Promise<string> {
@@ -456,8 +517,7 @@ export class PhvbDocumentsService {
     }
 
     const fullPayload = mapCreateRequestPayload(options, options.existingIdYeuCau);
-    const updatePayload: Record<string, string | boolean | number> = { ...fullPayload };
-    delete updatePayload.NgayTaoYeuCau;
+    const updatePayload = applyDateTimeClears(omitUndefinedPayloadFields(fullPayload));
     delete updatePayload.NgayPhatHanh;
     delete updatePayload.NguoiTao;
     delete updatePayload.EmailNguoiTao;
@@ -502,10 +562,11 @@ export class PhvbDocumentsService {
 
   private async syncAttachments(
     options: ICreateRequestOptions,
-    requestReferenceId: string
+    requestReferenceId: string,
+    skipRemoval: boolean = false
   ): Promise<void> {
     const input = sanitizeRequestInputForSave(options.input);
-    const removedIds = input.removedAttachmentIds || [];
+    const removedIds = skipRemoval ? [] : (input.removedAttachmentIds || []);
 
     if (removedIds.length > 0) {
       const removedNames = this.resolveRemovedAttachmentNames(input);
@@ -546,7 +607,8 @@ export class PhvbDocumentsService {
   private async writeWorkflowAndAttachments(
     options: ICreateRequestOptions,
     requestReferenceId: string,
-    isUpdate: boolean = false
+    isUpdate: boolean = false,
+    skipAttachmentRemoval: boolean = false
   ): Promise<void> {
     const input = sanitizeRequestInputForSave(options.input);
     const normalizedOptions = { ...options, input };
@@ -563,12 +625,12 @@ export class PhvbDocumentsService {
     });
 
     const hasAttachmentChanges =
-      (input.removedAttachmentIds || []).length > 0 ||
+      (!skipAttachmentRemoval && (input.removedAttachmentIds || []).length > 0) ||
       input.taiLieuFiles.length > 0 ||
       input.bieuMauFiles.length > 0;
 
     if (hasAttachmentChanges) {
-      await this.syncAttachments(normalizedOptions, requestReferenceId);
+      await this.syncAttachments(normalizedOptions, requestReferenceId, skipAttachmentRemoval);
     }
   }
 
