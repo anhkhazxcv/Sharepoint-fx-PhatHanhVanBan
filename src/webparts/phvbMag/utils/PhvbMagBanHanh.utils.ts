@@ -1,6 +1,7 @@
 import { PHVB_ROLES, REQUEST_STATUS } from '../config/PhvbMag.configuration';
 import type { IVanBanItem } from '../models/PhvbMag.models';
 import { isRevokeRelease } from './PhvbMagCapSo.utils';
+import { isDmvlSubmissionRelease } from './PhvbMagDmvl.utils';
 import { userHasRole } from './PhvbMagRole.utils';
 import type { IPhvbRoleEntry } from '../models/PhvbMag.models';
 
@@ -9,6 +10,10 @@ export function canPrepareBanHanh(
   roles: ReadonlyArray<IPhvbRoleEntry>,
   userEmail?: string
 ): boolean {
+  if (isDmvlSubmissionRelease(release)) {
+    return false;
+  }
+
   const status = (release.StatusApproved || '').trim();
   const hasDocumentNumber = Boolean((release.SoVanBan || '').trim());
 
@@ -25,6 +30,10 @@ export function canPublishBanHanh(
   roles: ReadonlyArray<IPhvbRoleEntry>,
   userEmail?: string
 ): boolean {
+  if (isDmvlSubmissionRelease(release)) {
+    return false;
+  }
+
   const status = (release.StatusApproved || '').trim();
 
   return (
@@ -39,6 +48,10 @@ export function canEditBanHanhNotify(
   roles: ReadonlyArray<IPhvbRoleEntry>,
   userEmail?: string
 ): boolean {
+  if (isDmvlSubmissionRelease(release)) {
+    return false;
+  }
+
   const status = (release.StatusApproved || '').trim();
 
   return (

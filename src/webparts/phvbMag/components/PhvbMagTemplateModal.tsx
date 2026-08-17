@@ -80,14 +80,14 @@ export function PhvbMagTemplateModal(props: IPhvbMagTemplateModalProps): React.R
         aria-labelledby="template-modal-title"
         onClick={event => event.stopPropagation()}
       >
-        <div className={styles.templateModalHeader}>
+        <div className={styles.dialogHeader}>
           <div className={styles.templateModalTitleRow}>
             <span className={styles.templateModalTitleIcon} aria-hidden="true">
-              <FormTemplateFileIcon style={{ width: 22, height: 22 }} />
+              <FormTemplateFileIcon style={{ width: 22, height: 22, color: '#FFFFFF' }} />
             </span>
             <h4 id="template-modal-title">Template mẫu soạn thảo</h4>
           </div>
-          <button type="button" className={styles.templateModalClose} onClick={onClose} aria-label="Đóng">
+          <button type="button" className={styles.dialogHeaderClose} onClick={onClose} aria-label="Đóng">
             <CloseIcon />
           </button>
         </div>

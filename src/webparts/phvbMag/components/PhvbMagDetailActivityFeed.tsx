@@ -246,7 +246,7 @@ function ActivityCommentComposer(props: IActivityCommentComposerProps): React.Re
             handleSubmit().catch(() => undefined);
           }}
         >
-          {isSaving ? 'Đang gửi...' : 'Gửi'}
+          Gửi
         </button>
       </div>
     </div>

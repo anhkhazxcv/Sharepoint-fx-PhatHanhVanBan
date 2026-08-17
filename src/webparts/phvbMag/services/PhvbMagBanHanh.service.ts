@@ -17,8 +17,8 @@ import {
   validateBanHanhNotifyDraft
 } from '../utils/PhvbMagBanHanhNotify.utils';
 import { RETURN_BAN_HANH_TO_ADMIN_COMMENT_REQUIRED_MESSAGE } from '../utils/PhvbMagWorkflowActionDialog.utils';
-import { canAccessDmvl, getRoleEmails } from '../utils/PhvbMagRole.utils';
-import { isDmvlSubmissionRelease } from '../utils/PhvbMagDmvl.utils';
+import { getRoleEmails } from '../utils/PhvbMagRole.utils';
+import { isDmvlBanHanhActor, isDmvlSubmissionRelease } from '../utils/PhvbMagDmvl.utils';
 import {
   buildTraLaiAdminBanHanhPayload,
   buildXacNhanBanHanhPayload,
@@ -29,8 +29,10 @@ import { phvbRoleService } from './PhvbMagRole.service';
 import { phvbSendMailService } from './PhvbMagSendMail.service';
 import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
 import { phvbBanHanhConfigService } from './PhvbMagBanHanhConfig.service';
+import { phvbDetailService } from './PhvbMagDetail.service';
 import {
   isFullIssuancePublishRequest,
+  parseStoredMainDocumentId,
   phvbIssuancePublishService,
   resolveMainDocumentId,
   validateMainDocumentCandidate
@@ -58,6 +60,19 @@ const PREPARE_BAN_HANH_HISTORY_STATUS = 'Chuẩn bị ban hành';
 const PUBLISH_BAN_HANH_HISTORY_STATUS = 'Ban hành';
 const RETURN_BAN_HANH_TO_ADMIN_HISTORY_STATUS = 'Trả về admin ban hành';
 const EDIT_BAN_HANH_NOTIFY_HISTORY_STATUS = 'Sửa nội dung ban hành';
+
+function appendIdVanBanChinh(
+  payload: Record<string, string | boolean | number>,
+  mainDocumentId?: number
+): Record<string, string | boolean | number> {
+  const parsed = parseStoredMainDocumentId(mainDocumentId);
+
+  if (parsed) {
+    payload.IdVanBanChinh = parsed;
+  }
+
+  return payload;
+}
 
 function assertBanHanhMailReady(
   context: IPhvbDocumentContext,
@@ -162,7 +177,11 @@ export async function publishIssuanceWithNotify(
   auditLogger: ReturnType<typeof createBanHanhPublishAuditLogger>
 ): Promise<void> {
   const idYeuCau = (detail.release.IdYeuCau || '').trim();
-  const mainDocumentId = resolveMainDocumentId(detail.attachments, options?.mainDocumentId);
+  const mainDocumentId = resolveMainDocumentId(
+    detail.attachments,
+    options?.mainDocumentId,
+    detail.release.IdVanBanChinh
+  );
   const mainDocumentError = validateMainDocumentCandidate(detail.attachments, mainDocumentId);
 
   if (mainDocumentError) {
@@ -362,12 +381,6 @@ export class PhvbBanHanhService {
       if (mainDocumentError) {
         throw new Error(mainDocumentError);
       }
-
-      await phvbIssuancePublishService.markMainDocumentForRequest(
-        { ...context, logContext },
-        idYeuCau,
-        options?.mainDocumentId as number
-      );
     }
 
     const documentInfo = assertBanHanhMailReady(context, roles, detail.release);
@@ -382,12 +395,15 @@ export class PhvbBanHanhService {
       logContext,
       listTitle: DEFAULT_LIST_TITLE,
       itemId: detail.release.Id,
-      payload: {
-        StatusApproved: REQUEST_STATUS.CHO_BAN_HANH,
-        EmailNhanBanHanh: notify.recipient.trim(),
-        SubjectBanHanh: notify.subject.trim(),
-        BodyEmail: notify.body.trim()
-      }
+      payload: appendIdVanBanChinh(
+        {
+          StatusApproved: REQUEST_STATUS.CHO_BAN_HANH,
+          EmailNhanBanHanh: notify.recipient.trim(),
+          SubjectBanHanh: notify.subject.trim(),
+          BodyEmail: notify.body.trim()
+        },
+        isFullIssuancePublishRequest(detail.release) ? options?.mainDocumentId : undefined
+      )
     });
 
     await createExecutionHistoryRecord(
@@ -440,12 +456,6 @@ export class PhvbBanHanhService {
       if (mainDocumentError) {
         throw new Error(mainDocumentError);
       }
-
-      await phvbIssuancePublishService.markMainDocumentForRequest(
-        { ...context, logContext },
-        idYeuCau,
-        options?.mainDocumentId as number
-      );
     }
 
     await phvbRepository.updateItem({
@@ -453,10 +463,13 @@ export class PhvbBanHanhService {
       logContext,
       listTitle: DEFAULT_LIST_TITLE,
       itemId: detail.release.Id,
-      payload: {
-        SubjectBanHanh: notify.subject.trim(),
-        BodyEmail: notify.body.trim()
-      }
+      payload: appendIdVanBanChinh(
+        {
+          SubjectBanHanh: notify.subject.trim(),
+          BodyEmail: notify.body.trim()
+        },
+        isFullIssuancePublishRequest(detail.release) ? options?.mainDocumentId : undefined
+      )
     });
 
     await createExecutionHistoryRecord(
@@ -612,12 +625,17 @@ export class PhvbBanHanhService {
       throw new Error('Chưa có site context SharePoint.');
     }
 
-    if (!canAccessDmvl(context.userDisplayName, roles, context.userEmail)) {
-      throw new Error('Bạn không có quyền trình DMVL cho yêu cầu này.');
-    }
-
     if (!isDmvlSubmissionRelease(detail.release)) {
       throw new Error('Yêu cầu không thuộc luồng DMVL.');
+    }
+
+    const status = (detail.release.StatusApproved || '').trim();
+    if (status !== REQUEST_STATUS.CHO_BAN_HANH) {
+      throw new Error('Yêu cầu không ở trạng thái Chờ ban hành.');
+    }
+
+    if (!isDmvlBanHanhActor(detail.release, roles, context.userEmail)) {
+      throw new Error('Bạn không có quyền trình DMVL cho yêu cầu này.');
     }
 
     const idYeuCau = (detail.release.IdYeuCau || '').trim();
@@ -630,7 +648,19 @@ export class PhvbBanHanhService {
       throw new Error(validationError);
     }
 
-    const mainDocumentError = validateMainDocumentCandidate(detail.attachments, options?.mainDocumentId);
+    const refreshedPartial = await phvbDetailService.loadRequestDetailPartial(
+      context,
+      idYeuCau,
+      ['release', 'attachments']
+    );
+    const refreshedRelease = refreshedPartial.release;
+
+    if (!refreshedRelease) {
+      throw new Error('Không tải được dữ liệu yêu cầu trước khi ban hành.');
+    }
+
+    const refreshedAttachments = refreshedPartial.attachments || detail.attachments;
+    const mainDocumentError = validateMainDocumentCandidate(refreshedAttachments, options?.mainDocumentId);
     if (mainDocumentError) {
       throw new Error(mainDocumentError);
     }
@@ -639,24 +669,29 @@ export class PhvbBanHanhService {
       ...context,
       logContext,
       listTitle: DEFAULT_LIST_TITLE,
-      itemId: detail.release.Id,
-      payload: {
-        EmailNhanBanHanh: notify.recipient.trim(),
-        SubjectBanHanh: notify.subject.trim(),
-        BodyEmail: notify.body.trim(),
-        SoVanBan: DMVL_DEFAULT_SO_VAN_BAN
-      }
+      itemId: refreshedRelease.Id,
+      payload: appendIdVanBanChinh(
+        {
+          EmailNhanBanHanh: notify.recipient.trim(),
+          SubjectBanHanh: notify.subject.trim(),
+          BodyEmail: notify.body.trim(),
+          SoVanBan: DMVL_DEFAULT_SO_VAN_BAN
+        },
+        options?.mainDocumentId
+      )
     });
 
     const publishDetail: IRequestDetailData = {
       ...detail,
       release: {
-        ...detail.release,
+        ...refreshedRelease,
         EmailNhanBanHanh: notify.recipient.trim(),
         SubjectBanHanh: notify.subject.trim(),
         BodyEmail: notify.body.trim(),
-        SoVanBan: DMVL_DEFAULT_SO_VAN_BAN
-      }
+        SoVanBan: DMVL_DEFAULT_SO_VAN_BAN,
+        IdVanBanChinh: parseStoredMainDocumentId(options?.mainDocumentId)
+      },
+      attachments: refreshedAttachments
     };
 
     const auditLogger = createBanHanhPublishAuditLogger(context, logContext || {}, idYeuCau);

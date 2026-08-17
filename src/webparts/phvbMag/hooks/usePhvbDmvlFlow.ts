@@ -4,6 +4,7 @@ import { phvbDetailService } from '../services/PhvbMagDetail.service';
 import { phvbDocumentsService } from '../services/PhvbMag.service';
 import { createFlowRunId } from '../services/PhvbMagLog.service';
 import { prepareDmvlNotifyDraft } from '../utils/PhvbMagDmvl.utils';
+import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 import type {
   IBanHanhNotifyDraft,
   ICreateRequestInput,
@@ -46,6 +47,7 @@ const DMVL_CREATE_CANCEL_MESSAGE =
 
 export function usePhvbDmvlFlow(options: IUsePhvbDmvlFlowOptions): IUsePhvbDmvlFlowResult {
   const { documentContext, roles, directoryUsers, onPublished } = options;
+  const { runBusy } = usePhvbBusy();
   const [isDmvlSaving, setIsDmvlSaving] = useState(false);
   const [isDmvlPublishing, setIsDmvlPublishing] = useState(false);
   const [isDmvlNotifyLoading, setIsDmvlNotifyLoading] = useState(false);
@@ -89,7 +91,9 @@ export function usePhvbDmvlFlow(options: IUsePhvbDmvlFlowOptions): IUsePhvbDmvlF
     setDmvlErrorMessage(undefined);
 
     try {
-      const draft = await prepareDmvlNotifyDraft(documentContext, detail.release);
+      const draft = await runBusy('Đang tải nội dung thông báo...', async () => {
+        return prepareDmvlNotifyDraft(documentContext, detail.release);
+      });
       setDmvlNotifyDraft(draft);
     } catch (error) {
       setDmvlErrorMessage(phvbDocumentsService.getRuntimeErrorMessage(error));
@@ -100,7 +104,7 @@ export function usePhvbDmvlFlow(options: IUsePhvbDmvlFlowOptions): IUsePhvbDmvlF
     } finally {
       setIsDmvlNotifyLoading(false);
     }
-  }, [documentContext]);
+  }, [documentContext, runBusy]);
 
   const handleDmvlBanHanh = useCallback(async (input: ICreateRequestInput): Promise<boolean> => {
     setIsDmvlSaving(true);
@@ -114,32 +118,34 @@ export function usePhvbDmvlFlow(options: IUsePhvbDmvlFlowOptions): IUsePhvbDmvlF
     };
 
     try {
-      const requestReferenceId = await phvbDocumentsService.createRequest({
-        ...documentContext,
-        input,
-        saveMode: 'submit',
-        submissionFlow: 'dmvl',
-        directoryUsers,
-        logContext
+      const detail = await runBusy('Đang xử lý Trình DMVL...', async () => {
+        const requestReferenceId = await phvbDocumentsService.createRequest({
+          ...documentContext,
+          input,
+          saveMode: 'submit',
+          submissionFlow: 'dmvl',
+          directoryUsers,
+          logContext
+        });
+
+        const detailPartial = await phvbDetailService.loadRequestDetailPartial(
+          documentContext,
+          requestReferenceId,
+          ['attachments', 'release']
+        );
+
+        if (!detailPartial?.release) {
+          throw new Error('Không tải được dữ liệu yêu cầu sau khi tạo.');
+        }
+
+        return {
+          release: detailPartial.release,
+          attachments: detailPartial.attachments || [],
+          history: [],
+          comments: [],
+          workflowParticipants: []
+        } as IRequestDetailData;
       });
-
-      const detailPartial = await phvbDetailService.loadRequestDetailPartial(
-        documentContext,
-        requestReferenceId,
-        ['attachments', 'release']
-      );
-
-      if (!detailPartial?.release) {
-        throw new Error('Không tải được dữ liệu yêu cầu sau khi tạo.');
-      }
-
-      const detail: IRequestDetailData = {
-        release: detailPartial.release,
-        attachments: detailPartial.attachments || [],
-        history: [],
-        comments: [],
-        workflowParticipants: []
-      };
 
       await openDmvlNotifyDialog(detail, 'create');
       return true;
@@ -150,7 +156,7 @@ export function usePhvbDmvlFlow(options: IUsePhvbDmvlFlowOptions): IUsePhvbDmvlF
     } finally {
       setIsDmvlSaving(false);
     }
-  }, [directoryUsers, documentContext, openDmvlNotifyDialog]);
+  }, [directoryUsers, documentContext, openDmvlNotifyDialog, runBusy]);
 
   const handleResumeDmvlBanHanh = useCallback(async (detail: IRequestDetailData): Promise<boolean> => {
     setDmvlErrorMessage(undefined);
@@ -185,14 +191,16 @@ export function usePhvbDmvlFlow(options: IUsePhvbDmvlFlowOptions): IUsePhvbDmvlF
     };
 
     try {
-      await phvbBanHanhService.publishDmvlBanHanh(
-        documentContext,
-        dmvlDetail,
-        notify,
-        { mainDocumentId },
-        logContext,
-        roles
-      );
+      await runBusy('Đang ban hành...', async () => {
+        await phvbBanHanhService.publishDmvlBanHanh(
+          documentContext,
+          dmvlDetail,
+          notify,
+          { mainDocumentId },
+          logContext,
+          roles
+        );
+      });
 
       phvbDocumentsService.invalidateTabCountsCache();
       resetDmvlFlow();
@@ -204,7 +212,7 @@ export function usePhvbDmvlFlow(options: IUsePhvbDmvlFlowOptions): IUsePhvbDmvlF
     } finally {
       setIsDmvlPublishing(false);
     }
-  }, [dmvlDetail, dmvlFlowMode, documentContext, onPublished, resetDmvlFlow, roles]);
+  }, [dmvlDetail, dmvlFlowMode, documentContext, onPublished, resetDmvlFlow, roles, runBusy]);
 
   return {
     isDmvlSaving,

@@ -16,7 +16,7 @@ export interface IVanBanItem {
   LienHe?: string;
   StatusApproved?: string;
   LoaiYeuCau?: string;
-  NgayTaoYeuCau?: string;
+  Created?: string;
   ThamDinh?: string;
   NguoiGopY?: string;
   SoVanBan?: string;
@@ -29,6 +29,7 @@ export interface IVanBanItem {
   Date_PheDuyet?: string;
   ThuMucBanHanh?: string;
   IDFolderOld?: number;
+  IdVanBanChinh?: number;
   GhiChuChoThamDinh?: string;
   IsSendMailNotify?: boolean;
   EmailNhanBanHanh?: string;
@@ -79,7 +80,6 @@ export interface IAttachmentLibraryItem {
   modified?: string;
   folderPath?: string;
   isFormAttachment?: boolean;
-  loaiVanBan?: string;
 }
 
 export interface ICommentAttachmentItem {

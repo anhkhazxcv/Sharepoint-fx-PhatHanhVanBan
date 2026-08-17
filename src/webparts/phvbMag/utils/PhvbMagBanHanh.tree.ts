@@ -3,6 +3,7 @@ import type {
   IBanHanhLibraryItem,
   ILibraryFolderEntry
 } from '../models/PhvbMag.models';
+import { formatDateOnlyVi } from './PhvbMagDateTime.utils';
 
 const FOLDER_TYPE = 1;
 const FILE_TYPE = 0;
@@ -183,21 +184,7 @@ export function getFilesInFolder(items: IBanHanhLibraryItem[], folderPath: strin
 }
 
 export function formatBanHanhDate(value?: string): string {
-  if (!value) {
-    return '';
-  }
-
-  const parsedDate = new Date(value);
-  if (isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  const dayValue = parsedDate.getDate();
-  const monthValue = parsedDate.getMonth() + 1;
-  const day = dayValue < 10 ? `0${dayValue}` : `${dayValue}`;
-  const month = monthValue < 10 ? `0${monthValue}` : `${monthValue}`;
-  const year = parsedDate.getFullYear();
-  return `${day}/${month}/${year}`;
+  return formatDateOnlyVi(value);
 }
 
 export function getStoragePathAfterLibrary(serverRelativePath: string, libraryTitle: string): string {

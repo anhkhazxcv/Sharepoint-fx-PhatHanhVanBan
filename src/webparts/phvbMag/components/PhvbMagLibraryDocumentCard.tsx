@@ -11,8 +11,7 @@ import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import {
   DownloadIcon,
   EyeIcon,
-  LibraryFileTypeIcon,
-  type LibraryFileTypeIconName
+  LibraryFileTypeIcon
 } from './PhvbMagIcons';
 import { PhvbMagSaveBookmarkButton } from './PhvbMagSaveBookmarkButton';
 import { usePhvbRecentViewsOptional } from '../context/PhvbMagRecentViews.context';
@@ -28,14 +27,6 @@ export interface IPhvbMagLibraryDocumentCardProps {
   badgeContent?: React.ReactNode;
   className?: string;
 }
-
-const LIBRARY_FILE_TYPE_CLASS: Record<LibraryFileTypeIconName, string> = {
-  pdf: styles.libraryFileTypePdf,
-  word: styles.libraryFileTypeWord,
-  excel: styles.libraryFileTypeExcel,
-  powerpoint: styles.libraryFileTypePowerpoint,
-  file: styles.libraryFileTypeFile
-};
 
 function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps): React.ReactElement {
   const {
@@ -70,7 +61,10 @@ function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps
       <div className={styles.libraryDocumentFileType}>
         <LibraryFileTypeIcon
           iconName={fileType.iconName}
-          className={`${styles.libraryFileTypeIcon} ${LIBRARY_FILE_TYPE_CLASS[fileType.iconName]}`}
+          className={[
+            styles.libraryFileTypeIcon,
+            fileType.iconName === 'file' ? styles.libraryFileTypeFile : undefined
+          ].filter(Boolean).join(' ')}
         />
       </div>
 

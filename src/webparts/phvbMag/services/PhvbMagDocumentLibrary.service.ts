@@ -15,7 +15,7 @@ import {
   buildSharePointFileDownloadUrl,
   buildSharePointFileOpenUrl
 } from '../infrastructure/SharePointFile.utils';
-import { escapeODataValue, getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
+import { escapeODataValue, getCandidateSiteUrls, getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { buildApiLogParams } from '../services/PhvbMagLog.service';
 import {
   buildLibrarySearchAbsolutePath,
@@ -168,7 +168,8 @@ const SEARCH_POST_JSON_HEADERS = {
   'Content-Type': 'application/json;odata=nometadata'
 };
 
-const RECENT_PUBLISHED_FOLDER_FILTER_CHUNK_SIZE = 20;
+const RECENT_PUBLISHED_GET_URL_MAX_LENGTH = 1800;
+const RECENT_PUBLISHED_FILE_FETCH_CONCURRENCY = 4;
 const MOST_VIEWED_SEARCH_SELECT_PROPERTIES = [
   'Path',
   'Filename',
@@ -245,7 +246,7 @@ function toServerRelativePathFromSearchPath(path: string): string {
 
 function buildODataParameterQuery(parameters: Record<string, string>): string {
   return Object.keys(parameters)
-    .map(key => `${encodeURIComponent(key)}='${encodeURIComponent(parameters[key])}'`)
+    .map(key => `${encodeURIComponent(key)}='${encodeURIComponent(escapeODataValue(parameters[key]))}'`)
     .join('&');
 }
 
@@ -371,6 +372,67 @@ function buildRecentPublishedFileDirRefFilter(folderPaths: string[]): string | u
   }
 
   return clauses.join(' or ');
+}
+
+function resolveLongestCandidateSiteUrl(context: IPhvbSiteContext): string {
+  const candidates = getCandidateSiteUrls(context);
+  let longest = '';
+
+  candidates.forEach(candidate => {
+    if (candidate.length > longest.length) {
+      longest = candidate;
+    }
+  });
+
+  return longest;
+}
+
+function buildRecentPublishedFilesRequestUrl(
+  siteUrl: string,
+  libraryTitle: string,
+  folderPaths: string[]
+): string {
+  const dirRefFilter = buildRecentPublishedFileDirRefFilter(folderPaths);
+  const filter = dirRefFilter
+    ? `FSObjType eq 0 and (${dirRefFilter})`
+    : 'FSObjType eq 0';
+
+  return `${getLibraryItemsEndpoint(siteUrl, libraryTitle)}?${buildLibraryItemsQuery({
+    selectFields: RECENT_PUBLISHED_SELECT_FIELDS,
+    filter,
+    top: RECENT_PUBLISHED_FILE_BATCH_TOP,
+    orderBy: 'FileDirRef,FileLeafRef'
+  })}`;
+}
+
+function packRecentPublishedFolderChunks(
+  siteUrl: string,
+  libraryTitle: string,
+  folderPaths: string[]
+): string[][] {
+  const chunks: string[][] = [];
+  let current: string[] = [];
+
+  folderPaths.forEach(folderPath => {
+    const candidate = current.concat([folderPath]);
+    const encodedLength = encodeURI(
+      buildRecentPublishedFilesRequestUrl(siteUrl, libraryTitle, candidate)
+    ).length;
+
+    if (current.length > 0 && encodedLength > RECENT_PUBLISHED_GET_URL_MAX_LENGTH) {
+      chunks.push(current);
+      current = [folderPath];
+      return;
+    }
+
+    current = candidate;
+  });
+
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+
+  return chunks;
 }
 
 function isHomeDataCacheFresh(entry: IRecentPublishedDataCacheEntry | undefined, windowDays: number): boolean {
@@ -626,7 +688,7 @@ export class PhvbDocumentLibraryService {
     );
   }
 
-  private loadRecentPublishedFilesForFolders(
+  private async loadRecentPublishedFilesForFolders(
     context: IPhvbSiteContext,
     folderPaths: string[]
   ): Promise<IBanHanhLibraryItem[]> {
@@ -636,42 +698,46 @@ export class PhvbDocumentLibraryService {
       .filter(path => Boolean(path));
 
     if (normalizedPaths.length === 0) {
-      return Promise.resolve([]);
+      return [];
     }
 
-    const chunks: string[][] = [];
-    for (let index = 0; index < normalizedPaths.length; index += RECENT_PUBLISHED_FOLDER_FILTER_CHUNK_SIZE) {
-      chunks.push(normalizedPaths.slice(index, index + RECENT_PUBLISHED_FOLDER_FILTER_CHUNK_SIZE));
-    }
+    const longestSiteUrl = resolveLongestCandidateSiteUrl(context);
+    const chunks = packRecentPublishedFolderChunks(
+      longestSiteUrl || normalizeSiteUrl(context.currentWebUrl),
+      libraryTitle,
+      normalizedPaths
+    );
+    const merged: IBanHanhLibraryItem[] = [];
 
-    const chunkPromises = chunks.map(chunk => {
-      const dirRefFilter = buildRecentPublishedFileDirRefFilter(chunk);
+    for (let index = 0; index < chunks.length; index += RECENT_PUBLISHED_FILE_FETCH_CONCURRENCY) {
+      const batch = chunks.slice(index, index + RECENT_PUBLISHED_FILE_FETCH_CONCURRENCY);
+      const batchResults = await Promise.all(
+        batch.map(chunk => {
+          const dirRefFilter = buildRecentPublishedFileDirRefFilter(chunk);
 
-      if (!dirRefFilter) {
-        return Promise.resolve([] as IBanHanhLibraryItem[]);
-      }
+          if (!dirRefFilter) {
+            return Promise.resolve([] as IBanHanhLibraryItem[]);
+          }
 
-      return loadDocumentLibraryItems(
-        context,
-        libraryTitle,
-        {
-          selectFields: RECENT_PUBLISHED_SELECT_FIELDS,
-          filter: `FSObjType eq 0 and (${dirRefFilter})`,
-          top: RECENT_PUBLISHED_FILE_BATCH_TOP,
-          orderBy: 'FileDirRef,FileLeafRef'
-        },
-        (item, siteUrl) => mapBanHanhLibraryItem(item, siteUrl, {
-          uniqueId: item.UniqueId,
-          canDownload: hasOpenItemsPermission(item.EffectiveBasePermissions)
-        }),
-        'Unable to load recently published documents.'
+          return loadDocumentLibraryItems(
+            context,
+            libraryTitle,
+            {
+              selectFields: RECENT_PUBLISHED_SELECT_FIELDS,
+              filter: `FSObjType eq 0 and (${dirRefFilter})`,
+              top: RECENT_PUBLISHED_FILE_BATCH_TOP,
+              orderBy: 'FileDirRef,FileLeafRef'
+            },
+            (item, siteUrl) => mapBanHanhLibraryItem(item, siteUrl, {
+              uniqueId: item.UniqueId,
+              canDownload: hasOpenItemsPermission(item.EffectiveBasePermissions)
+            }),
+            'Unable to load recently published documents.'
+          );
+        })
       );
-    });
 
-    return Promise.all(chunkPromises).then(chunkResults => {
-      const merged: IBanHanhLibraryItem[] = [];
-
-      chunkResults.forEach(items => {
+      batchResults.forEach(items => {
         items.forEach(item => {
           if (
             item.fsObjType === 0
@@ -684,9 +750,9 @@ export class PhvbDocumentLibraryService {
           }
         });
       });
+    }
 
-      return merged;
-    });
+    return merged;
   }
 
   public loadRecentPublishedData(

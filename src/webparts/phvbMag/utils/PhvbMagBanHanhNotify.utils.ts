@@ -10,7 +10,8 @@ import {
   WORKFLOW_FILTER_PHONG_BAN_LABEL,
   WORKFLOW_FILTER_STATUS_LABEL
 } from '../config/PhvbMag.configuration';
-import { parseExecutionDateTime } from './PhvbMagDateTime.utils';
+import { formatDateOnlyVi } from './PhvbMagDateTime.utils';
+import { parseDateOnlyToLocalMidnight } from './PhvbMagLibrary.utils';
 import type {
   IBanHanhNotifyDraft,
   ILabelCustomConfigItem,
@@ -20,25 +21,14 @@ import type {
   IWorkflowFilterOptions
 } from '../models/PhvbMag.models';
 
-function pad2(value: number): string {
-  return value < 10 ? `0${value}` : `${value}`;
+export function formatDateVi(value?: string): string {
+  return formatDateOnlyVi(value);
 }
 
-function formatDateVi(value?: string): string {
-  const parsed = parseExecutionDateTime(value);
-
-  if (!parsed || isNaN(parsed.getTime())) {
-    return (value || '').trim();
-  }
-
-  return `${pad2(parsed.getDate())}/${pad2(parsed.getMonth() + 1)}/${parsed.getFullYear()}`;
-}
-
-/* Tạm tắt — dùng cho nội dung tiếng Anh
 function formatDateEn(value?: string): string {
-  const parsed = parseExecutionDateTime(value);
+  const parsed = parseDateOnlyToLocalMidnight(value);
 
-  if (!parsed || isNaN(parsed.getTime())) {
+  if (!parsed) {
     return (value || '').trim();
   }
 
@@ -48,7 +38,6 @@ function formatDateEn(value?: string): string {
     day: '2-digit'
   });
 }
-*/
 
 export function resolveHanhDong(loaiYeuCau?: string): string {
   const type = (loaiYeuCau || '').trim();
@@ -279,9 +268,7 @@ export function buildBanHanhNotifyBody(
 
   const templateVn = getLabelValue(labelConfig, BAN_HANH_MAIL_LABELS.CONTENT_VN);
   const contentVn = replaceTokens(templateVn, vnTokens);
-  return contentVn;
 
-  /* Tạm tắt nội dung tiếng Anh
   const titleEn = (release.TenVanBan_ENG || '').trim();
   const ngayHieuLucEn = formatDateEn(release.HieuLucTu);
 
@@ -292,6 +279,7 @@ export function buildBanHanhNotifyBody(
   const enTokens: Record<string, string> = {
     '{{TenVanBan_TV}}': titleVi,
     '{{TenVanBan_TA}}': titleEn,
+    '{{HanhDong}}': hanhDong,
     '{{NgayHieuLuc}}': ngayHieuLucVi,
     '{{NgayHieuLuc_EN}}': ngayHieuLucEn,
     '{{LinkFile}}': '{{LinkFile}}',
@@ -303,16 +291,7 @@ export function buildBanHanhNotifyBody(
   const templateEn = getLabelValue(labelConfig, BAN_HANH_MAIL_LABELS.CONTENT_ENG);
   const contentEn = replaceTokens(templateEn, enTokens);
 
-  if (!contentVn) {
-    return contentEn;
-  }
-
-  if (!contentEn) {
-    return contentVn;
-  }
-
-  return `${contentVn}<br/><br/>${contentEn}`;
-  */
+  return contentEn || contentVn;
 }
 
 export function buildBanHanhNotifyDraft(

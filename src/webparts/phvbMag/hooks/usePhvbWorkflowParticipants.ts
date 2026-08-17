@@ -8,6 +8,7 @@ import {
   IWorkflowParticipantsByStage
 } from '../utils/PhvbMagWorkflowParticipant.utils';
 import type { IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbLogContext, IRequestDetailData } from '../models/PhvbMag.models';
+import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 
 interface IUsePhvbWorkflowParticipantsOptions {
   documentContext: IPhvbDocumentContext;
@@ -30,6 +31,7 @@ export function usePhvbWorkflowParticipants(
   options: IUsePhvbWorkflowParticipantsOptions
 ): IUsePhvbWorkflowParticipantsResult {
   const { documentContext, detail, directoryUsers, onCompleted } = options;
+  const { runBusy } = usePhvbBusy();
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 
@@ -67,21 +69,23 @@ export function usePhvbWorkflowParticipants(
     setErrorMessage(undefined);
 
     try {
-      const logContext: IPhvbLogContext = {
-        flowRunId: createFlowRunId(),
-        screenName: 'PhvbMagWorkflowParticipantModal',
-        actionName: 'Workflow_UpdateParticipants',
-        userEmail: documentContext.userEmail,
-        itemId: detail.release.IdYeuCau || detail.release.Id
-      };
+      await runBusy('Đang lưu người tham gia...', async () => {
+        const logContext: IPhvbLogContext = {
+          flowRunId: createFlowRunId(),
+          screenName: 'PhvbMagWorkflowParticipantModal',
+          actionName: 'Workflow_UpdateParticipants',
+          userEmail: documentContext.userEmail,
+          itemId: detail.release.IdYeuCau || detail.release.Id
+        };
 
-      await phvbWorkflowParticipantService.applyParticipantChanges({
-        ...documentContext,
-        detail,
-        directoryUsers,
-        changes,
-        finalDraft: currentDraft,
-        logContext
+        await phvbWorkflowParticipantService.applyParticipantChanges({
+          ...documentContext,
+          detail,
+          directoryUsers,
+          changes,
+          finalDraft: currentDraft,
+          logContext
+        });
       });
 
       if (onCompleted) {
@@ -95,7 +99,7 @@ export function usePhvbWorkflowParticipants(
     } finally {
       setIsSaving(false);
     }
-  }, [detail, documentContext, directoryUsers, onCompleted]);
+  }, [detail, documentContext, directoryUsers, onCompleted, runBusy]);
 
   return {
     canOpen,

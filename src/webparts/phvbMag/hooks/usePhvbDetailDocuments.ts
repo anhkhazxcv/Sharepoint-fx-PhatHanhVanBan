@@ -8,6 +8,7 @@ import { phvbAttachmentService } from '../services/PhvbMagAttachment.service';
 import { createExecutionHistoryRecord } from '../services/PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from '../services/PhvbMag.error';
 import { canManageDetailDocuments } from '../utils/PhvbMagDetailDocuments.utils';
+import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 import type {
   IAttachmentLibraryItem,
   IPhvbDocumentContext,
@@ -54,6 +55,7 @@ export function usePhvbDetailDocuments(
   options: IUsePhvbDetailDocumentsOptions
 ): IUsePhvbDetailDocumentsResult {
   const { documentContext, detail, roles, onCompleted } = options;
+  const { runBusy } = usePhvbBusy();
   const [isMutating, setIsMutating] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 
@@ -90,39 +92,41 @@ export function usePhvbDetailDocuments(
     setErrorMessage(undefined);
 
     try {
-      const logContext: IPhvbLogContext = {
-        flowRunId: createFlowRunId(),
-        screenName: 'PhvbMagDetailDocuments',
-        actionName: kind === 'form' ? 'Document_UploadForm' : 'Document_UploadDraft',
-        userEmail: documentContext.userEmail,
-        itemId: requestReferenceId
-      };
+      await runBusy('Đang cập nhật tài liệu...', async () => {
+        const logContext: IPhvbLogContext = {
+          flowRunId: createFlowRunId(),
+          screenName: 'PhvbMagDetailDocuments',
+          actionName: kind === 'form' ? 'Document_UploadForm' : 'Document_UploadDraft',
+          userEmail: documentContext.userEmail,
+          itemId: requestReferenceId
+        };
 
-      const input = cloneDefaultRequestForm();
-      input.department = detail.release.KhoaPhongNguoiTao || '';
-      if (kind === 'form') {
-        input.bieuMauFiles = selectedFiles;
-      } else {
-        input.taiLieuFiles = selectedFiles;
-      }
-
-      await phvbAttachmentService.uploadRequestFiles({
-        ...documentContext,
-        logContext,
-        requestReferenceId,
-        input
-      });
-
-      await createExecutionHistoryRecord(
-        { ...documentContext, logContext },
-        {
-          idYeuCau: requestReferenceId,
-          historyStatus: EXECUTION_HISTORY_STATUS.THEM_TAI_LIEU,
-          noiDung: selectedFiles.map(file => file.name).join('; '),
-          department: detail.release.KhoaPhongNguoiTao,
-          isComment: false
+        const input = cloneDefaultRequestForm();
+        input.department = detail.release.KhoaPhongNguoiTao || '';
+        if (kind === 'form') {
+          input.bieuMauFiles = selectedFiles;
+        } else {
+          input.taiLieuFiles = selectedFiles;
         }
-      );
+
+        await phvbAttachmentService.uploadRequestFiles({
+          ...documentContext,
+          logContext,
+          requestReferenceId,
+          input
+        });
+
+        await createExecutionHistoryRecord(
+          { ...documentContext, logContext },
+          {
+            idYeuCau: requestReferenceId,
+            historyStatus: EXECUTION_HISTORY_STATUS.THEM_TAI_LIEU,
+            noiDung: selectedFiles.map(file => file.name).join('; '),
+            department: detail.release.KhoaPhongNguoiTao,
+            isComment: false
+          }
+        );
+      });
 
       if (onCompleted) {
         onCompleted();
@@ -135,7 +139,7 @@ export function usePhvbDetailDocuments(
     } finally {
       setIsMutating(false);
     }
-  }, [canManage, detail, documentContext, onCompleted]);
+  }, [canManage, detail, documentContext, onCompleted, runBusy]);
 
   const deleteFiles = useCallback(async (files: IAttachmentLibraryItem[]): Promise<boolean> => {
     if (!detail || !canManage) {
@@ -159,29 +163,31 @@ export function usePhvbDetailDocuments(
     setErrorMessage(undefined);
 
     try {
-      const logContext: IPhvbLogContext = {
-        flowRunId: createFlowRunId(),
-        screenName: 'PhvbMagDetailDocuments',
-        actionName: 'Document_Delete',
-        userEmail: documentContext.userEmail,
-        itemId: requestReferenceId
-      };
+      await runBusy('Đang cập nhật tài liệu...', async () => {
+        const logContext: IPhvbLogContext = {
+          flowRunId: createFlowRunId(),
+          screenName: 'PhvbMagDetailDocuments',
+          actionName: 'Document_Delete',
+          userEmail: documentContext.userEmail,
+          itemId: requestReferenceId
+        };
 
-      await phvbAttachmentService.deleteRequestFiles(
-        { ...documentContext, logContext },
-        targets.map(file => file.id)
-      );
+        await phvbAttachmentService.deleteRequestFiles(
+          { ...documentContext, logContext },
+          targets.map(file => file.id)
+        );
 
-      await createExecutionHistoryRecord(
-        { ...documentContext, logContext },
-        {
-          idYeuCau: requestReferenceId,
-          historyStatus: EXECUTION_HISTORY_STATUS.XOA_TAI_LIEU,
-          noiDung: targets.map(file => file.name || String(file.id)).join('; '),
-          department: detail.release.KhoaPhongNguoiTao,
-          isComment: false
-        }
-      );
+        await createExecutionHistoryRecord(
+          { ...documentContext, logContext },
+          {
+            idYeuCau: requestReferenceId,
+            historyStatus: EXECUTION_HISTORY_STATUS.XOA_TAI_LIEU,
+            noiDung: targets.map(file => file.name || String(file.id)).join('; '),
+            department: detail.release.KhoaPhongNguoiTao,
+            isComment: false
+          }
+        );
+      });
 
       if (onCompleted) {
         onCompleted();
@@ -194,7 +200,7 @@ export function usePhvbDetailDocuments(
     } finally {
       setIsMutating(false);
     }
-  }, [canManage, detail, documentContext, onCompleted]);
+  }, [canManage, detail, documentContext, onCompleted, runBusy]);
 
   const deleteFile = useCallback(async (file: IAttachmentLibraryItem): Promise<boolean> => {
     return deleteFiles([file]);

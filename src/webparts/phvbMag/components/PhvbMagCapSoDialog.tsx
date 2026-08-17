@@ -66,7 +66,7 @@ export function PhvbMagCapSoDialog(props: IPhvbMagCapSoDialogProps): React.React
             disabled={isProcessing}
             onClick={handleConfirm}
           >
-            {isProcessing ? 'Đang cấp số...' : 'Cấp số'}
+            Cấp số
           </button>
         </>
       )}

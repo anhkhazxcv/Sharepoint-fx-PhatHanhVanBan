@@ -24,7 +24,6 @@ import {
   HomeTrendingIcon,
   SearchIcon,
   SidebarHelpIcon,
-  SidebarNewReleaseIcon,
   SidebarRecentViewsIcon,
   SidebarSavedIcon
 } from './PhvbMagIcons';
@@ -175,6 +174,16 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
                 value={searchDraft}
                 onChange={event => setSearchDraft(event.target.value)}
               />
+              {searchDraft.trim() ? (
+                <button
+                  type="button"
+                  className={styles.homeHeroSearchClear}
+                  onClick={() => setSearchDraft('')}
+                  aria-label="Xóa nội dung tìm kiếm"
+                >
+                  <CloseIcon />
+                </button>
+              ) : null}
             </form>
           </div>
           <div className={styles.homeHeroStats}>
@@ -266,7 +275,7 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
 
         <PhvbMagSectionShell
           title={`Mới ban hành (${homeData.windowDays} ngày)`}
-          icon={<SidebarNewReleaseIcon className={styles.homeSectionIcon} />}
+          icon={<HomeCategoryIcon className={styles.homeSectionIcon} />}
           action={(
             <button
               type="button"

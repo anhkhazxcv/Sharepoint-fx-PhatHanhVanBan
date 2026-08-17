@@ -2,7 +2,7 @@ import { COMMENT_HISTORY_STATUS, hasSharePointSiteContext, HISTORY_LIST_TITLE } 
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { toRuntimeMessage } from './PhvbMag.error';
 import { phvbCommentAttachmentService } from './PhvbMagCommentAttachment.service';
-import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
+import { toSharePointDateTimeIso } from '../utils/PhvbMagDateTime.utils';
 import { validateCommentAttachmentFiles } from '../utils/PhvbMagCommentAttachment.utils';
 import type { IPhvbDocumentContext, IPhvbLogContext } from '../models/PhvbMag.models';
 
@@ -39,7 +39,7 @@ export class PhvbCommentService {
       throw new Error(attachmentValidationError);
     }
 
-    const performedAt = formatCurrentExecutionDateTime();
+    const performedAt = toSharePointDateTimeIso();
     const payload: Record<string, string | boolean | number> = {
       Title: COMMENT_HISTORY_STATUS,
       IDYeuCau: normalizedIdYeuCau,

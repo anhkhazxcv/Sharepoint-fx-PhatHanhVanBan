@@ -5,6 +5,7 @@ Focus on **measurable** issues: API calls per user action, rows fetched, re-rend
 ## SharePoint REST / repository
 
 - [ ] OData queries use `$select` for needed fields only
+- [ ] `$select` / query URLs do not include removed fields or dead endpoints (400 / wasted payload)
 - [ ] `$filter` applied server-side where possible (not fetch-all-then-filter)
 - [ ] `$top` / pagination appropriate for UI (table page size vs default 500)
 - [ ] No N+1: loop calling `getItem` / `getFileByServerRelativeUrl` per row without batching

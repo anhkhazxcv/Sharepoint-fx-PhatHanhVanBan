@@ -24,12 +24,12 @@ export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElem
         eyebrow="Thư viện"
         title="Hướng dẫn"
         subtitle={GUIDE_VIEW_SUBTITLE}
-        className={styles.recentHeader}
+        className={styles.contentHeader}
         headerActions={guide.pdfUrl ? (
           <div className={styles.recentHeaderActions}>
             <PhvbMagExternalLink
               href={guide.pdfUrl}
-              className={styles.recentHeaderActionBtn}
+              className={[styles.btnHeaderOutline, styles.recentHeaderLinkBtn].join(' ')}
             >
               Mở tab mới
             </PhvbMagExternalLink>
@@ -37,7 +37,7 @@ export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElem
               href={guide.pdfUrl}
               mode="download"
               downloadFileName="SoTayHuongDan.pdf"
-              className={styles.recentHeaderActionBtn}
+              className={[styles.btnHeaderPrimary, styles.recentHeaderLinkBtn].join(' ')}
               aria-label="Tải xuống sổ tay hướng dẫn"
             >
               <DownloadIcon className={styles.iconSizeSm} />

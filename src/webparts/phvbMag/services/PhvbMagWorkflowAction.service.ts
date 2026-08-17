@@ -13,7 +13,7 @@ import { phvbRoleService } from './PhvbMagRole.service';
 import { phvbSendMailService } from './PhvbMagSendMail.service';
 import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from './PhvbMag.error';
-import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
+import { toSharePointDateTimeIso } from '../utils/PhvbMagDateTime.utils';
 import {
   buildXacNhanPayloadForStage,
   buildYeuCauCapSoPayload,
@@ -114,7 +114,7 @@ async function updateParticipantConfirmation(
   comment: string,
   participantStatus: string = WORKFLOW_PARTICIPANT_STATUS.DA_XAC_NHAN
 ): Promise<void> {
-  const performedAt = formatCurrentExecutionDateTime();
+  const performedAt = toSharePointDateTimeIso();
 
   await phvbRepository.updateItem({
     ...context,

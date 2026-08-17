@@ -7,6 +7,10 @@ $space-4: 16px;
 $space-5: 24px;
 $space-6: 32px;
 
+$content-pane-padding-top: 28px;
+$content-pane-padding-x: 30px;
+$content-pane-padding-bottom: 36px;
+
 $radius-sm: 8px;
 $radius-md: 12px;
 $radius-lg: 14px;
@@ -43,9 +47,59 @@ $btn-min-height: 36px;
 // Document spine signature
 $document-spine-width: 3px;
 
+// Shared dialog chrome (FolderPicker source of truth)
+$dialog-header-gradient: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+
 @mixin phvb-focus-ring {
   outline: none;
   box-shadow: 0 0 0 $focus-ring-width $focus-ring-color;
+}
+
+@mixin phvb-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 16px 22px;
+  background: $dialog-header-gradient;
+  color: #FFFFFF;
+
+  h3,
+  h4 {
+    margin: 0;
+    color: #FFFFFF;
+    text-align: left;
+    @include ty-modal-title;
+  }
+}
+
+@mixin phvb-dialog-header-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #FFFFFF;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  border-radius: 6px;
+  transition: background-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.16);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    @include phvb-focus-ring;
+  }
 }
 
 @mixin phvb-document-spine {

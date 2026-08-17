@@ -111,6 +111,11 @@
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(4px);
+
+  &:focus-within {
+    border-color: rgba(255, 255, 255, 0.45);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.22);
+  }
 }
 
 .homeHeroSearchIcon {
@@ -126,9 +131,37 @@
   color: #FFFFFF;
   font-size: 13px;
   outline: none;
+  appearance: none;
+
+  &::-webkit-search-cancel-button,
+  &::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
 
   &::placeholder {
     color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+.homeHeroSearchClear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #FFFFFF;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.14);
   }
 }
 
@@ -498,6 +531,11 @@
 // Enterprise shared UI primitives (design tokens)
 // -------------------------------------------------------------
 
+@mixin phvb-screen-header-surface {
+  background-color: transparent;
+  border-bottom: none;
+}
+
 .phvbPageHeader {
   display: flex;
   align-items: flex-start;
@@ -525,11 +563,23 @@
   }
 }
 
-.contentHeader.phvbPageHeader {
+.contentPane > .contentHeader.phvbPageHeader {
   align-items: center;
   padding: 0 0 $space-2;
-  border-bottom: none;
-  background-color: transparent;
+  @include phvb-screen-header-surface;
+}
+
+.contentPaneRecent > .recentView > .contentHeader.phvbPageHeader,
+.contentPaneLibrary > .libraryView > .libraryScreenHeader {
+  padding: $content-pane-padding-top $content-pane-padding-x $space-2;
+  @include phvb-screen-header-surface;
+}
+
+@media (max-width: 640px) {
+  .contentPaneRecent > .recentView > .contentHeader.phvbPageHeader,
+  .contentPaneLibrary > .libraryView > .libraryScreenHeader {
+    padding: $space-4;
+  }
 }
 
 .phvbSectionCard {
@@ -677,34 +727,6 @@
   }
 }
 
-.libraryBreadcrumb {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: $space-2;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 13px;
-  color: $text-muted;
-
-  li {
-    display: inline-flex;
-    align-items: center;
-    gap: $space-2;
-
-    &:not(:last-child)::after {
-      content: '/';
-      color: lighten($text-muted, 12%);
-    }
-  }
-
-  strong {
-    color: $text-main;
-    font-weight: 600;
-  }
-}
-
 .requestTable tbody tr:hover {
   background-color: $primary-light;
   box-shadow: inset 3px 0 0 $primary-color;
@@ -719,7 +741,6 @@
   box-shadow: inset 3px 0 0 $primary-color;
 }
 
-.modalHeader,
 .modalFooter {
   padding-left: $space-5;
   padding-right: $space-5;
@@ -729,12 +750,6 @@
 .modalFooter .btnPrimaryLink,
 .headerActions .btnTemplate,
 .headerActions .btnCreate {
-  &:focus-visible {
-    @include phvb-focus-ring;
-  }
-}
-
-.homeHeroSearchInput {
   &:focus-visible {
     @include phvb-focus-ring;
   }

@@ -10,6 +10,7 @@ import type {
   IRequestDetailData
 } from '../models/PhvbMag.models';
 import type { IRemindDeadlineContext } from '../utils/PhvbMagRemindDeadline.utils';
+import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 
 interface IUsePhvbRemindDeadlineOptions {
   documentContext: IPhvbDocumentContext;
@@ -29,6 +30,7 @@ interface IUsePhvbRemindDeadlineResult {
 
 export function usePhvbRemindDeadline(options: IUsePhvbRemindDeadlineOptions): IUsePhvbRemindDeadlineResult {
   const { documentContext, detail, roles, tenantUsers, onCompleted } = options;
+  const { runBusy } = usePhvbBusy();
   const [isSending, setIsSending] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 
@@ -58,21 +60,23 @@ export function usePhvbRemindDeadline(options: IUsePhvbRemindDeadlineOptions): I
     setErrorMessage(undefined);
 
     try {
-      const logContext: IPhvbLogContext = {
-        flowRunId: createFlowRunId(),
-        screenName: 'PhvbMagDetail',
-        actionName: 'RemindDeadline',
-        userEmail: documentContext.userEmail,
-        itemId: detail.release.IdYeuCau || detail.release.Id
-      };
+      await runBusy('Đang gửi nhắc hạn...', async () => {
+        const logContext: IPhvbLogContext = {
+          flowRunId: createFlowRunId(),
+          screenName: 'PhvbMagDetail',
+          actionName: 'RemindDeadline',
+          userEmail: documentContext.userEmail,
+          itemId: detail.release.IdYeuCau || detail.release.Id
+        };
 
-      await phvbRemindDeadlineService.sendReminders({
-        ...documentContext,
-        detail,
-        roles,
-        tenantUsers,
-        selectedRecipientIds,
-        logContext
+        await phvbRemindDeadlineService.sendReminders({
+          ...documentContext,
+          detail,
+          roles,
+          tenantUsers,
+          selectedRecipientIds,
+          logContext
+        });
       });
 
       onCompleted?.();
@@ -83,7 +87,7 @@ export function usePhvbRemindDeadline(options: IUsePhvbRemindDeadlineOptions): I
     } finally {
       setIsSending(false);
     }
-  }, [detail, documentContext, roles, tenantUsers, onCompleted]);
+  }, [detail, documentContext, roles, tenantUsers, onCompleted, runBusy]);
 
   return {
     canRemind,

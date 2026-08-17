@@ -50,7 +50,7 @@ const TABLE_COLUMNS: ReadonlyArray<ITableColumnDefinition> = [
   { key: 'code', label: 'MÃ HIỆU', sortKey: 'SoVanBan' },
   { key: 'type', label: 'LOẠI YÊU CẦU', sortKey: 'LoaiYeuCau' },
   { key: 'department', label: 'PHÒNG BAN', sortKey: 'KhoaPhongNguoiTao' },
-  { key: 'created', label: 'NGÀY TẠO', sortKey: 'NgayTaoYeuCau' },
+  { key: 'created', label: 'NGÀY TẠO', sortKey: 'Created' },
   { key: 'status', label: 'TRẠNG THÁI', sortKey: 'StatusApproved' }
 ];
 
@@ -419,7 +419,7 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
                 {pagedItems.map((item, index) => {
                   const requestStatus = getRequestStatusState(item);
                   const rowNumber = ((currentPage - 1) * pageSize) + index + 1;
-                  const createdLabel = formatExecutionDate(item.NgayTaoYeuCau) || '---';
+                  const createdLabel = formatExecutionDate(item.Created) || '---';
 
                   return (
                     <tr key={item.Id} className={styles.requestTableRow} onClick={() => onSelectItem(item)}>

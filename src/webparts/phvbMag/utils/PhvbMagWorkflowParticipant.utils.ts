@@ -98,12 +98,12 @@ export function getRequiredParticipantStages(
   const visibleStages = getVisibleParticipantStages(loaiYeuCau);
   const currentStage = resolveWorkflowStageFromStatus(statusApproved);
 
-  if (currentStage === 'none') {
-    return visibleStages;
-  }
+  const candidateStages = currentStage === 'none'
+    ? visibleStages
+    : visibleStages.filter(stage => WORKFLOW_STAGE_ORDER.indexOf(stage) >= WORKFLOW_STAGE_ORDER.indexOf(currentStage));
 
-  const currentIndex = WORKFLOW_STAGE_ORDER.indexOf(currentStage);
-  return visibleStages.filter(stage => WORKFLOW_STAGE_ORDER.indexOf(stage) >= currentIndex);
+  // Góp ý optional — khớp Create Modal (requireNguoiGopY: false)
+  return candidateStages.filter(stage => stage !== 'gopy');
 }
 
 export function validatePendingWorkflowParticipants(

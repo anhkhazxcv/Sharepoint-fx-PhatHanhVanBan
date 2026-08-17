@@ -44,7 +44,7 @@ export function PhvbMagLibraryListPageShell(props: IPhvbMagLibraryListPageShellP
         count={count}
         countSuffix={countSuffix}
         headerActions={headerActions}
-        className={styles.recentHeader}
+        className={styles.contentHeader}
       />
 
       <div

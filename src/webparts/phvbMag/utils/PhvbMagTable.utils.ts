@@ -7,7 +7,7 @@ export type RequestTableSortKey =
   | 'SoVanBan'
   | 'LoaiYeuCau'
   | 'KhoaPhongNguoiTao'
-  | 'NgayTaoYeuCau'
+  | 'Created'
   | 'StatusApproved'
   | 'Id';
 
@@ -153,7 +153,7 @@ export function applyRequestTableFilters(items: IVanBanItem[], filters: IRequest
     }
 
     if (filters.requestCreatedYear !== ALL_FILTER_VALUE) {
-      const year = extractRequestCreatedYear(item.NgayTaoYeuCau);
+      const year = extractRequestCreatedYear(item.Created);
 
       if (!year || year !== filters.requestCreatedYear) {
         return false;
@@ -192,8 +192,8 @@ export function sortRequestTableItems(
       case 'KhoaPhongNguoiTao':
         result = compareOptionalStrings(left.KhoaPhongNguoiTao, right.KhoaPhongNguoiTao);
         break;
-      case 'NgayTaoYeuCau':
-        result = compareDates(left.NgayTaoYeuCau, right.NgayTaoYeuCau);
+      case 'Created':
+        result = compareDates(left.Created, right.Created);
         break;
       case 'StatusApproved':
         result = compareOptionalStrings(left.StatusApproved, right.StatusApproved);

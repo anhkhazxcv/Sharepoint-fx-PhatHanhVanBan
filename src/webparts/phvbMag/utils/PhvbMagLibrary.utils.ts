@@ -137,23 +137,21 @@ export type LibraryFileTypeIconName = 'pdf' | 'word' | 'excel' | 'powerpoint' | 
 export interface ILibraryFileTypeVisual {
   extension: string;
   iconName: LibraryFileTypeIconName;
-  color: string;
 }
 
 const LIBRARY_FILE_TYPE_VISUALS: Record<string, ILibraryFileTypeVisual> = {
-  pdf: { extension: 'pdf', iconName: 'pdf', color: '#e63946' },
-  doc: { extension: 'doc', iconName: 'word', color: '#1e90ff' },
-  docx: { extension: 'docx', iconName: 'word', color: '#1e90ff' },
-  xls: { extension: 'xls', iconName: 'excel', color: '#2ecc71' },
-  xlsx: { extension: 'xlsx', iconName: 'excel', color: '#2ecc71' },
-  ppt: { extension: 'ppt', iconName: 'powerpoint', color: '#f4a261' },
-  pptx: { extension: 'pptx', iconName: 'powerpoint', color: '#f4a261' }
+  pdf: { extension: 'pdf', iconName: 'pdf' },
+  doc: { extension: 'doc', iconName: 'word' },
+  docx: { extension: 'docx', iconName: 'word' },
+  xls: { extension: 'xls', iconName: 'excel' },
+  xlsx: { extension: 'xlsx', iconName: 'excel' },
+  ppt: { extension: 'ppt', iconName: 'powerpoint' },
+  pptx: { extension: 'pptx', iconName: 'powerpoint' }
 };
 
 const DEFAULT_LIBRARY_FILE_TYPE_VISUAL: ILibraryFileTypeVisual = {
   extension: '',
-  iconName: 'file',
-  color: '#6c757d'
+  iconName: 'file'
 };
 
 export function resolveLibraryFileTypeVisual(fileName: string): ILibraryFileTypeVisual {
@@ -225,24 +223,3 @@ export function resolveLibraryDocumentEffectiveStatus(
   return 'effective';
 }
 
-export function getFileExtensionLabel(fileName: string): string {
-  const extension = fileName.split('.').pop()?.toLowerCase() || '';
-
-  if (extension === 'doc' || extension === 'docx') {
-    return 'W';
-  }
-
-  if (extension === 'xls' || extension === 'xlsx') {
-    return 'X';
-  }
-
-  if (extension === 'pdf') {
-    return 'PDF';
-  }
-
-  if (extension === 'ppt' || extension === 'pptx') {
-    return 'P';
-  }
-
-  return 'DOC';
-}

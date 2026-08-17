@@ -51,7 +51,6 @@ interface IUsePhvbLibraryResult {
   errorMessage?: string;
   setDraftQuery: (value: string) => void;
   toggleFolderExpand: (folderPath: string) => void;
-  selectAll: () => void;
   selectFolder: (folder: ILibraryFolderEntry) => void;
   submitSearch: () => void;
   exitSearch: () => void;
@@ -474,10 +473,6 @@ export function usePhvbLibrary(context: IPhvbDocumentContext): IUsePhvbLibraryRe
     });
   }, []);
 
-  const selectAll = useCallback((): void => {
-    navigate(buildLibraryAllPath(1));
-  }, [navigate]);
-
   const selectFolder = useCallback((folder: ILibraryFolderEntry): void => {
     navigate(buildLibraryFolderPath(folder.id, 1));
   }, [navigate]);
@@ -535,7 +530,6 @@ export function usePhvbLibrary(context: IPhvbDocumentContext): IUsePhvbLibraryRe
     errorMessage,
     setDraftQuery,
     toggleFolderExpand,
-    selectAll,
     selectFolder,
     submitSearch,
     exitSearch,

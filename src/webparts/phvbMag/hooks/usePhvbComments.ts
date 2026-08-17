@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { phvbCommentService } from '../services/PhvbMagComment.service';
 import { createFlowRunId } from '../services/PhvbMagLog.service';
 import { appendCommentAttachmentFiles } from '../utils/PhvbMagCommentAttachment.utils';
+import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 import type { IPhvbDocumentContext, IPhvbLogContext } from '../models/PhvbMag.models';
 
 interface IUsePhvbCommentsOptions {
@@ -22,6 +23,7 @@ interface IUsePhvbCommentsResult {
 
 export function usePhvbComments(options: IUsePhvbCommentsOptions): IUsePhvbCommentsResult {
   const { documentContext, idYeuCau, onCompleted } = options;
+  const { runBusy } = usePhvbBusy();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
@@ -64,18 +66,20 @@ export function usePhvbComments(options: IUsePhvbCommentsOptions): IUsePhvbComme
     setErrorMessage(undefined);
 
     try {
-      const logContext: IPhvbLogContext = {
-        flowRunId: createFlowRunId(),
-        screenName: 'PhvbMagActivityFeed',
-        actionName: 'Comment_Create',
-        userEmail: documentContext.userEmail,
-        itemId: normalizedIdYeuCau
-      };
+      await runBusy('Đang gửi bình luận...', async () => {
+        const logContext: IPhvbLogContext = {
+          flowRunId: createFlowRunId(),
+          screenName: 'PhvbMagActivityFeed',
+          actionName: 'Comment_Create',
+          userEmail: documentContext.userEmail,
+          itemId: normalizedIdYeuCau
+        };
 
-      await phvbCommentService.createComment(documentContext, normalizedIdYeuCau, {
-        text: normalizedText,
-        files: selectedFiles
-      }, logContext);
+        await phvbCommentService.createComment(documentContext, normalizedIdYeuCau, {
+          text: normalizedText,
+          files: selectedFiles
+        }, logContext);
+      });
 
       clearComposer();
 
@@ -90,7 +94,7 @@ export function usePhvbComments(options: IUsePhvbCommentsOptions): IUsePhvbComme
     } finally {
       setIsSaving(false);
     }
-  }, [clearComposer, documentContext, idYeuCau, onCompleted, selectedFiles]);
+  }, [clearComposer, documentContext, idYeuCau, onCompleted, runBusy, selectedFiles]);
 
   return {
     selectedFiles,

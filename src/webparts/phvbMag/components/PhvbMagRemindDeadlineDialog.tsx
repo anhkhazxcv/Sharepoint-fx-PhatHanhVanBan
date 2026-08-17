@@ -151,6 +151,8 @@ export function PhvbMagRemindDeadlineDialog(props: IPhvbMagRemindDeadlineDialogP
   return (
     <PhvbMagDialog
       isOpen={isOpen}
+      title="Nhắc hạn"
+      titleId="phvb-remind-deadline-title"
       contentClassName={styles.remindDeadlineModal}
       onDismiss={isBusy ? undefined : onCancel}
       footerClassName={styles.remindDeadlineActions}
@@ -170,15 +172,11 @@ export function PhvbMagRemindDeadlineDialog(props: IPhvbMagRemindDeadlineDialogP
             disabled={isBusy || !context || selectedCount === 0}
             onClick={handleConfirm}
           >
-            {isProcessing ? 'Đang gửi...' : 'Gửi nhắc hạn'}
+            Gửi nhắc hạn
           </button>
         </>
       )}
     >
-      <div className={styles.remindDeadlineHeader}>
-        <h4 id="phvb-remind-deadline-title">Nhắc hạn</h4>
-      </div>
-
       <div className={styles.remindDeadlineBody}>
       {context ? (
         <>

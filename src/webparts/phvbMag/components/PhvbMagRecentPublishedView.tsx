@@ -164,16 +164,23 @@ export function PhvbMagRecentPublishedView(props: IPhvbMagRecentPublishedViewPro
     });
   };
 
-  const handleExpandAll = (): void => {
+  const areAllExpanded =
+    hasSections &&
+    recent.sections.every((section: IRecentPublishedSection) =>
+      expandedKeys.has(section.documentFolderKey)
+    );
+
+  const handleToggleExpandAll = (): void => {
+    if (areAllExpanded) {
+      setExpandedKeys(new Set<string>());
+      return;
+    }
+
     const next = new Set<string>();
     recent.sections.forEach((section: IRecentPublishedSection) => {
       next.add(section.documentFolderKey);
     });
     setExpandedKeys(next);
-  };
-
-  const handleCollapseAll = (): void => {
-    setExpandedKeys(new Set<string>());
   };
 
   return (
@@ -185,17 +192,10 @@ export function PhvbMagRecentPublishedView(props: IPhvbMagRecentPublishedViewPro
         <div className={styles.recentHeaderActions}>
           <button
             type="button"
-            className={styles.recentHeaderActionBtn}
-            onClick={handleExpandAll}
+            className={styles.btnHeaderOutline}
+            onClick={handleToggleExpandAll}
           >
-            Mở tất cả
-          </button>
-          <button
-            type="button"
-            className={styles.recentHeaderActionBtn}
-            onClick={handleCollapseAll}
-          >
-            Thu gọn tất cả
+            {areAllExpanded ? 'Thu gọn tất cả' : 'Mở tất cả'}
           </button>
         </div>
       ) : undefined}
@@ -205,15 +205,17 @@ export function PhvbMagRecentPublishedView(props: IPhvbMagRecentPublishedViewPro
       isEmpty={recent.sections.length === 0}
       emptyMessage={`Không có văn bản mới trong ${recent.windowDays} ngày qua.`}
     >
-      <div className={styles.recentSectionList}>
-        {recent.sections.map(section => (
-          <RecentPublishedSection
-            key={section.documentFolderKey}
-            section={section}
-            isExpanded={expandedKeys.has(section.documentFolderKey)}
-            onToggle={() => handleToggleSection(section.documentFolderKey)}
-          />
-        ))}
+      <div className={styles.libraryListBoard}>
+        <div className={[styles.libraryListScroll, styles.recentSectionList].join(' ')}>
+          {recent.sections.map(section => (
+            <RecentPublishedSection
+              key={section.documentFolderKey}
+              section={section}
+              isExpanded={expandedKeys.has(section.documentFolderKey)}
+              onToggle={() => handleToggleSection(section.documentFolderKey)}
+            />
+          ))}
+        </div>
       </div>
     </PhvbMagLibraryListPageShell>
   );

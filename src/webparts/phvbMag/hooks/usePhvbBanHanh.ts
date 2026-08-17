@@ -5,6 +5,7 @@ import { phvbDocumentLibraryService } from '../services/PhvbMagDocumentLibrary.s
 import { createFlowRunId } from '../services/PhvbMagLog.service';
 import { canEditBanHanhNotify, canPrepareBanHanh, canPublishBanHanh } from '../utils/PhvbMagBanHanh.utils';
 import { buildBanHanhNotifyDraft, buildBanHanhNotifyDraftFromSavedRelease, validateBanHanhNotifyDraft } from '../utils/PhvbMagBanHanhNotify.utils';
+import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 import type {
   IBanHanhNotifyDraft,
   IPhvbDocumentContext,
@@ -40,6 +41,7 @@ interface IUsePhvbBanHanhResult {
 
 export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanhResult {
   const { documentContext, detail, roles, onCompleted } = options;
+  const { runBusy } = usePhvbBusy();
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isLoadingNotify, setIsLoadingNotify] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
@@ -80,20 +82,21 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
     const { release } = detail;
 
     try {
-      const [mailConfig, labelConfig] = await Promise.all([
-        phvbBanHanhConfigService.loadMailBanHanhConfig(documentContext),
-        phvbBanHanhConfigService.loadLabelCustomConfig(documentContext)
-      ]);
+      return await runBusy('Đang tải nội dung thông báo...', async () => {
+        const [mailConfig, labelConfig] = await Promise.all([
+          phvbBanHanhConfigService.loadMailBanHanhConfig(documentContext),
+          phvbBanHanhConfigService.loadLabelCustomConfig(documentContext)
+        ]);
 
-      const draft = buildBanHanhNotifyDraft(release, mailConfig, labelConfig);
-      return draft;
+        return buildBanHanhNotifyDraft(release, mailConfig, labelConfig);
+      });
     } catch (error) {
       setErrorMessage(phvbBanHanhConfigService.getRuntimeErrorMessage(error));
       return undefined;
     } finally {
       setIsLoadingNotify(false);
     }
-  }, [detail, documentContext]);
+  }, [detail, documentContext, runBusy]);
 
   const loadSavedNotifyDraft = useCallback(async (): Promise<IBanHanhNotifyDraft | undefined> => {
     if (!detail) {
@@ -105,23 +108,25 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
     setErrorMessage(undefined);
 
     try {
-      const draft = buildBanHanhNotifyDraftFromSavedRelease(detail.release);
-      const validationError = validateBanHanhNotifyDraft(draft);
+      return await runBusy('Đang tải nội dung thông báo...', async () => {
+        const draft = buildBanHanhNotifyDraftFromSavedRelease(detail.release);
+        const validationError = validateBanHanhNotifyDraft(draft);
 
-      if (validationError) {
-        setErrorMessage(
-          validationError === 'Vui lòng nhập nơi nhận email.'
-            ? 'Chưa có nội dung ban hành từ Admin. Vui lòng liên hệ Admin để chuẩn bị trước.'
-            : validationError
-        );
-        return undefined;
-      }
+        if (validationError) {
+          setErrorMessage(
+            validationError === 'Vui lòng nhập nơi nhận email.'
+              ? 'Chưa có nội dung ban hành từ Admin. Vui lòng liên hệ Admin để chuẩn bị trước.'
+              : validationError
+          );
+          return undefined;
+        }
 
-      return draft;
+        return draft;
+      });
     } finally {
       setIsLoadingNotify(false);
     }
-  }, [detail]);
+  }, [detail, runBusy]);
 
   const prepareForBanHanh = useCallback(async (
     notify: IBanHanhNotifyDraft,
@@ -136,21 +141,23 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
     setErrorMessage(undefined);
 
     try {
-      const logContext: IPhvbLogContext = {
-        flowRunId: createFlowRunId(),
-        screenName: 'PhvbMagBanHanh',
-        actionName: 'BanHanh_Prepare',
-        userEmail: documentContext.userEmail,
-        itemId: detail.release.IdYeuCau || detail.release.Id
-      };
+      await runBusy('Đang chuẩn bị ban hành...', async () => {
+        const logContext: IPhvbLogContext = {
+          flowRunId: createFlowRunId(),
+          screenName: 'PhvbMagBanHanh',
+          actionName: 'BanHanh_Prepare',
+          userEmail: documentContext.userEmail,
+          itemId: detail.release.IdYeuCau || detail.release.Id
+        };
 
-      await phvbBanHanhService.prepareForBanHanh(
-        documentContext,
-        detail,
-        notify,
-        { mainDocumentId },
-        logContext
-      );
+        await phvbBanHanhService.prepareForBanHanh(
+          documentContext,
+          detail,
+          notify,
+          { mainDocumentId },
+          logContext
+        );
+      });
 
       if (onCompleted) {
         onCompleted();
@@ -163,7 +170,7 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
     } finally {
       setIsSaving(false);
     }
-  }, [detail, documentContext, onCompleted]);
+  }, [detail, documentContext, onCompleted, runBusy]);
 
   const updateBanHanhNotify = useCallback(async (
     notify: IBanHanhNotifyDraft,
@@ -178,21 +185,23 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
     setErrorMessage(undefined);
 
     try {
-      const logContext: IPhvbLogContext = {
-        flowRunId: createFlowRunId(),
-        screenName: 'PhvbMagBanHanh',
-        actionName: 'BanHanh_EditNotify',
-        userEmail: documentContext.userEmail,
-        itemId: detail.release.IdYeuCau || detail.release.Id
-      };
+      await runBusy('Đang lưu...', async () => {
+        const logContext: IPhvbLogContext = {
+          flowRunId: createFlowRunId(),
+          screenName: 'PhvbMagBanHanh',
+          actionName: 'BanHanh_EditNotify',
+          userEmail: documentContext.userEmail,
+          itemId: detail.release.IdYeuCau || detail.release.Id
+        };
 
-      await phvbBanHanhService.updateBanHanhNotifyContent(
-        documentContext,
-        detail,
-        notify,
-        { mainDocumentId },
-        logContext
-      );
+        await phvbBanHanhService.updateBanHanhNotifyContent(
+          documentContext,
+          detail,
+          notify,
+          { mainDocumentId },
+          logContext
+        );
+      });
 
       if (onCompleted) {
         onCompleted();
@@ -205,7 +214,7 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
     } finally {
       setIsSaving(false);
     }
-  }, [detail, documentContext, onCompleted]);
+  }, [detail, documentContext, onCompleted, runBusy]);
 
   const publishBanHanh = useCallback(async (mainDocumentId?: number): Promise<boolean> => {
     if (!detail) {
@@ -217,22 +226,24 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
     setErrorMessage(undefined);
 
     try {
-      const logContext: IPhvbLogContext = {
-        flowRunId: createFlowRunId(),
-        screenName: 'PhvbMagBanHanh',
-        actionName: 'BanHanh_Publish',
-        userEmail: documentContext.userEmail,
-        itemId: detail.release.IdYeuCau || detail.release.Id
-      };
+      await runBusy('Đang ban hành...', async () => {
+        const logContext: IPhvbLogContext = {
+          flowRunId: createFlowRunId(),
+          screenName: 'PhvbMagBanHanh',
+          actionName: 'BanHanh_Publish',
+          userEmail: documentContext.userEmail,
+          itemId: detail.release.IdYeuCau || detail.release.Id
+        };
 
-      await phvbBanHanhService.publishBanHanh(
-        documentContext,
-        detail,
-        { mainDocumentId },
-        logContext
-      );
+        await phvbBanHanhService.publishBanHanh(
+          documentContext,
+          detail,
+          { mainDocumentId },
+          logContext
+        );
 
-      phvbDocumentLibraryService.clearHomeDataCache();
+        phvbDocumentLibraryService.clearHomeDataCache();
+      });
 
       if (onCompleted) {
         onCompleted();
@@ -245,7 +256,7 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
     } finally {
       setIsSaving(false);
     }
-  }, [detail, documentContext, onCompleted]);
+  }, [detail, documentContext, onCompleted, runBusy]);
 
   const returnBanHanhToAdmin = useCallback(async (comment: string): Promise<boolean> => {
     if (!detail) {
@@ -257,15 +268,17 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
     setErrorMessage(undefined);
 
     try {
-      const logContext: IPhvbLogContext = {
-        flowRunId: createFlowRunId(),
-        screenName: 'PhvbMagBanHanh',
-        actionName: 'BanHanh_ReturnToAdmin',
-        userEmail: documentContext.userEmail,
-        itemId: detail.release.IdYeuCau || detail.release.Id
-      };
+      await runBusy('Đang trả về admin...', async () => {
+        const logContext: IPhvbLogContext = {
+          flowRunId: createFlowRunId(),
+          screenName: 'PhvbMagBanHanh',
+          actionName: 'BanHanh_ReturnToAdmin',
+          userEmail: documentContext.userEmail,
+          itemId: detail.release.IdYeuCau || detail.release.Id
+        };
 
-      await phvbBanHanhService.returnBanHanhToAdmin(documentContext, detail, comment, logContext);
+        await phvbBanHanhService.returnBanHanhToAdmin(documentContext, detail, comment, logContext);
+      });
 
       if (onCompleted) {
         onCompleted();
@@ -278,7 +291,7 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
     } finally {
       setIsSaving(false);
     }
-  }, [detail, documentContext, onCompleted]);
+  }, [detail, documentContext, onCompleted, runBusy]);
 
   return {
     canPrepare,

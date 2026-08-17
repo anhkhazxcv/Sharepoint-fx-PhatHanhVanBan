@@ -1,6 +1,6 @@
 ---
 name: senior-se-review
-description: Senior software engineer review of SPFx changes for PHVB business-rule correctness and runtime performance. Use when reviewing plans, diffs, or PRs for workflow/status/role logic, Viết mới vs Điều chỉnh behavior, SharePoint API efficiency, re-renders, pagination, or when the user asks for senior SE review, business review, or performance review.
+description: Senior software engineer review of SPFx changes for PHVB business-rule correctness, runtime performance, and dead code / technical debt. Use when reviewing plans, diffs, or PRs for workflow/status/role logic, Viết mới vs Điều chỉnh behavior, SharePoint API efficiency, re-renders, pagination, or when the user asks for senior SE review, business review, or performance review.
 ---
 
 # Senior SE Review (Business + Performance)
@@ -21,10 +21,13 @@ Use this skill for a **second-layer review** after architecture/correctness. Com
 
 ## Review workflow
 
+Every review runs all four analysis steps. Do not skip dead code / tech debt.
+
 1. **Scope** — List files/flows in the diff (workflow, services, hooks, list queries).
 2. **Business** — Run [business-review-checklist.md](references/business-review-checklist.md) against code and docs.
 3. **Performance** — Run [performance-review-checklist.md](references/performance-review-checklist.md).
-4. **Verdict** — Blockers / majors / minors with file:line and suggested fix.
+4. **Dead code / tech debt** — Always. Unused symbols, leftover names after rename, dual-write, doc/manifest drift, unowned TODOs. See principles below and the Dead code section in the business checklist.
+5. **Verdict** — Blockers / majors / minors with file:line and suggested fix.
 
 ## Business review principles
 
@@ -48,14 +51,26 @@ Use this skill for a **second-layer review** after architecture/correctness. Com
 - **Client filtering:** Loading full lists then filtering in browser — acceptable only if repo already does this intentionally at current scale; otherwise flag.
 - **Evidence:** Cite the hot path (hook, service method, OData URL) and estimated impact (calls per user action, rows fetched).
 
+## Dead code / tech debt principles
+
+Always run on the diff and its callers — not only when a field or API was renamed.
+
+- Unused import, helper, CSS class, payload key, `$select` field, sort key, type union member, or constant with no remaining caller → flag for removal.
+- If the diff renames or removes a field/API: grep the **old** name in `src/` (and manifest/docs if present) must be 0. Do not leave `oldField = newField` aliases when the old source is gone.
+- Dual-read or dual-write of old and new in the same flow → flag.
+- Do not expand the review into similar symbols outside the diff.
+- Flag leftover debt: timezone/ISO vs local strings, client-side filter on large lists, docs/manifest out of sync with code, TODOs/hacks with no owner.
+
 ## Severity
 
-- **Blocker** — Wrong status transition, permission bypass, data loss, or perf pattern that will fail at production list size
-- **Major** — Business edge case missed, redundant API storm, clear re-render/fetch waste
-- **Minor** — Optimization opportunity, doc drift, naming
+- **Blocker** — Wrong status transition, permission bypass, data loss, perf pattern that will fail at production list size, or code still `$select`s / writes / calls a field or API that is gone (400 / runtime fail)
+- **Major** — Business edge case missed, redundant API storm, clear re-render/fetch waste, leftover old name or dual-write after a replace
+- **Minor** — Optimization opportunity, doc drift, naming, unused import
 - **Note** — Context or follow-up for BA/ops
 
 ## Output format
+
+Always include the Dead code / tech debt block, even when every severity is `(none)`.
 
 ```text
 Verdict: approve / approve with comments / request changes
@@ -78,6 +93,14 @@ Major
 Minor
 - ...
 
+Dead code / tech debt
+Blockers
+- file:line - issue - suggested fix
+Major
+- ...
+Minor
+- ...
+
 Good parts
 - ...
 
@@ -90,7 +113,7 @@ Validation gaps
 | Topic | Skill |
 |-------|--------|
 | Architecture fit, types, security basics | `senior-review` |
-| Business + performance deep dive | this skill |
+| Business + performance + dead code / tech debt | this skill |
 | UI design system | `spfx-enterprise-ui` |
 | Pre-implementation plan | `implementation-planner` |
 

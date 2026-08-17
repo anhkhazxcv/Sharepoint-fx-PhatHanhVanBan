@@ -7,8 +7,11 @@ import {
 import { escapeODataValue, getCandidateSiteUrls, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { ensureSharePointResponseOk } from '../infrastructure/SharePointHttp.utils';
 import type { IAttachmentLibraryItem, IPhvbSiteContext, IVanBanItem } from '../models/PhvbMag.models';
+import { formatDateOnlyVi, toSharePointDateOnlyFieldValue, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
 import { resolveLibraryDocumentEffectiveStatus } from '../utils/PhvbMagLibrary.utils';
 import { isFormAttachmentPath } from '../utils/PhvbMagRecentPublished.utils';
+import { buildIssuanceMetadataValues, buildMetadataAuditFields, type IListFormValue } from '../utils/PhvbMagIssuanceMetadata.utils';
+import { assertValidateUpdateSucceeded } from '../utils/PhvbMagSharePoint.utils';
 import { buildApiLogParams } from './PhvbMagLog.service';
 import type { BanHanhPublishAuditLogger } from '../utils/PhvbMagBanHanhPublishAudit.utils';
 
@@ -28,7 +31,6 @@ interface ISharePointFileItem {
   FileRef?: string;
   FileDirRef?: string;
   FSObjType?: number;
-  LoaiVanBan?: string;
 }
 
 interface IIssuancePublishResult {
@@ -44,35 +46,30 @@ interface IFolderChildItem {
   isFolder: boolean;
 }
 
-interface IListFormValue {
-  FieldName: string;
-  FieldValue: string;
+interface IResolveFileListItemFieldsOptions {
+  pollUntilReady?: boolean;
+  timeoutMs?: number;
+  intervalMs?: number;
 }
 
-function buildMetadataAuditFields(metadataValues: IListFormValue[]): Record<string, string> {
-  return {
-    TomTatVanban: metadataValues[0].FieldValue,
-    NgayPhatHanh: metadataValues[1].FieldValue,
-    HieuLucTu: metadataValues[2].FieldValue,
-    HieuLucDen: metadataValues[3].FieldValue,
-    LienHe: metadataValues[4].FieldValue
-  };
-}
+const DEFAULT_COPY_POLL_TIMEOUT_MS = 15000;
+const DEFAULT_COPY_POLL_INTERVAL_MS = 400;
 
-const MAIN_DOCUMENT_LOAI_VAN_BAN = 'chinh';
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'Id',
   'FileLeafRef',
   'FileRef',
   'FileDirRef',
-  'FSObjType',
-  'LoaiVanBan'
+  'FSObjType'
 ];
 
 function buildODataParameterQuery(parameters: Record<string, string>): string {
   return Object.keys(parameters)
-    .map(key => `${key}='${escapeODataValue(parameters[key])}'`)
+    .map(key => `${encodeURIComponent(key)}='${encodeURIComponent(escapeODataValue(parameters[key]))}'`)
     .join('&');
 }
 
@@ -106,15 +103,6 @@ function sanitizeSharePointFolderName(value: string): string {
 function resolveDocumentFolderName(requestReferenceId: string): string {
   const normalizedId = sanitizeSharePointFolderName(requestReferenceId.trim());
   return normalizedId || requestReferenceId.trim();
-}
-
-function formatPublishDateVi(date: Date = new Date()): string {
-  const dayValue = date.getDate();
-  const monthValue = date.getMonth() + 1;
-  const day = dayValue < 10 ? `0${dayValue}` : `${dayValue}`;
-  const month = monthValue < 10 ? `0${monthValue}` : `${monthValue}`;
-
-  return `${day}/${month}/${date.getFullYear()}`;
 }
 
 function dayBeforeLocal(date: Date = new Date()): Date {
@@ -301,9 +289,11 @@ export class PhvbIssuancePublishService {
     });
 
     await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_UPDATE', libraryTitle, formValues);
+    const payload = await response.json();
+    assertValidateUpdateSucceeded(payload);
   }
 
-  private async markMainDocument(
+  private async assertMainDocumentInRequest(
     siteUrl: string,
     context: IIssuancePublishContext,
     idYeuCau: string,
@@ -321,84 +311,38 @@ export class PhvbIssuancePublishService {
     }
 
     if (!item || !item.Id) {
-      throw new Error('Văn bản chính đã chọn không thuộc yêu cầu này.');
-    }
-
-    try {
-      for (let index = 0; index < sourceFiles.length; index += 1) {
-        const fileItem = sourceFiles[index];
-        const currentLoai = (fileItem.LoaiVanBan || '').trim().toLowerCase();
-
-        if (fileItem.Id === mainDocumentId || currentLoai !== MAIN_DOCUMENT_LOAI_VAN_BAN) {
-          continue;
-        }
-
-        await this.validateUpdateListItem(siteUrl, context, ATTACHMENT_LIBRARY_TITLE, fileItem.Id, [
-          { FieldName: 'LoaiVanBan', FieldValue: '' }
-        ]);
-      }
-
-      await this.validateUpdateListItem(siteUrl, context, ATTACHMENT_LIBRARY_TITLE, mainDocumentId, [
-        { FieldName: 'LoaiVanBan', FieldValue: MAIN_DOCUMENT_LOAI_VAN_BAN }
-      ]);
+      const errorMessage =
+        `Văn bản chính đã chọn không thuộc yêu cầu này. (mainDocumentId=${mainDocumentId}, fileCount=${sourceFiles.length})`;
 
       if (auditLogger) {
         await auditLogger.logMarkMainDocument(
           {
             library: ATTACHMENT_LIBRARY_TITLE,
             itemId: mainDocumentId,
-            fileName: item.FileLeafRef || '',
-            field: 'LoaiVanBan=chinh'
-          },
-          'success'
-        );
-      }
-    } catch (error) {
-      if (auditLogger) {
-        await auditLogger.logMarkMainDocument(
-          {
-            library: ATTACHMENT_LIBRARY_TITLE,
-            itemId: mainDocumentId,
-            fileName: item.FileLeafRef || '',
-            field: 'LoaiVanBan=chinh'
+            fileCount: sourceFiles.length,
+            field: 'IdVanBanChinh'
           },
           'failed',
-          error instanceof Error ? error.message : String(error)
+          errorMessage
         );
       }
-      throw error;
+
+      throw new Error(errorMessage);
+    }
+
+    if (auditLogger) {
+      await auditLogger.logMarkMainDocument(
+        {
+          library: ATTACHMENT_LIBRARY_TITLE,
+          itemId: mainDocumentId,
+          fileName: item.FileLeafRef || '',
+          field: 'IdVanBanChinh'
+        },
+        'success'
+      );
     }
 
     return item;
-  }
-
-  /**
-   * Mark main document on VanBanGopYThamDinh (used by Admin prepare + SuperAdmin publish).
-   */
-  public async markMainDocumentForRequest(
-    context: IIssuancePublishContext,
-    idYeuCau: string,
-    mainDocumentId: number,
-    auditLogger?: BanHanhPublishAuditLogger
-  ): Promise<void> {
-    const candidates = getCandidateSiteUrls(context);
-
-    if (candidates.length === 0) {
-      throw new Error('Missing SharePoint site context.');
-    }
-
-    let lastError: unknown = null;
-
-    for (let index = 0; index < candidates.length; index += 1) {
-      try {
-        await this.markMainDocument(candidates[index], context, idYeuCau, mainDocumentId, auditLogger);
-        return;
-      } catch (error) {
-        lastError = error;
-      }
-    }
-
-    throw lastError || new Error('Không thể đánh dấu văn bản chính.');
   }
 
   private async copyFile(
@@ -430,24 +374,75 @@ export class PhvbIssuancePublishService {
     context: IIssuancePublishContext,
     filePath: string
   ): Promise<number> {
-    const fields = await this.resolveFileListItemFields(siteUrl, context, filePath);
+    const fields = await this.resolveFileListItemFields(siteUrl, context, filePath, {
+      pollUntilReady: true
+    });
     return fields.id;
   }
 
   private async resolveFileListItemFields(
     siteUrl: string,
     context: IIssuancePublishContext,
-    filePath: string
+    filePath: string,
+    options?: IResolveFileListItemFieldsOptions
   ): Promise<{ id: number; hieuLucDen?: string }> {
+    if (!options?.pollUntilReady) {
+      const fields = await this.fetchFileListItemFields(siteUrl, context, filePath);
+      if (!fields) {
+        throw new Error(`Không xác định được list item id cho file ${filePath}.`);
+      }
+
+      return fields;
+    }
+
+    const timeoutMs = options.timeoutMs ?? DEFAULT_COPY_POLL_TIMEOUT_MS;
+    const intervalMs = options.intervalMs ?? DEFAULT_COPY_POLL_INTERVAL_MS;
+    const deadline = Date.now() + timeoutMs;
+    let lastError: unknown = new Error(`Không xác định được list item id cho file ${filePath} sau khi copy.`);
+
+    while (Date.now() < deadline) {
+      try {
+        const fields = await this.fetchFileListItemFields(siteUrl, context, filePath, true);
+        if (fields) {
+          return fields;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+
+      await sleep(intervalMs);
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
+  }
+
+  private async fetchFileListItemFields(
+    siteUrl: string,
+    context: IIssuancePublishContext,
+    filePath: string,
+    allowNotReady: boolean = false
+  ): Promise<{ id: number; hieuLucDen?: string } | undefined> {
     const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFileByServerRelativeUrl(@filePath)/ListItemAllFields?$select=Id,HieuLucDen&${buildODataParameterQuery({
       '@filePath': filePath
     })}`;
     const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-    await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_GET', ISSUANCE_LIBRARY_TITLE);
+
+    if (!response.ok) {
+      if (allowNotReady) {
+        return undefined;
+      }
+
+      await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_GET', ISSUANCE_LIBRARY_TITLE);
+    }
+
     const data = await response.json() as { Id?: number; HieuLucDen?: string };
     const listItemId = data.Id || 0;
 
     if (!listItemId) {
+      if (allowNotReady) {
+        return undefined;
+      }
+
       throw new Error(`Không xác định được list item id cho file ${filePath}.`);
     }
 
@@ -570,7 +565,7 @@ export class PhvbIssuancePublishService {
     siteUrl: string,
     context: IIssuancePublishContext,
     expiredFolderPath: string,
-    expiredEndDateVi: string
+    expiredEndDateFieldValue: string
   ): Promise<{ stampedCount: number; skippedCount: number; stampedPaths: string[]; skippedPaths: string[] }> {
     const files = await this.listFilesRecursive(siteUrl, context, expiredFolderPath);
     let stampedCount = 0;
@@ -594,7 +589,7 @@ export class PhvbIssuancePublishService {
         context,
         ISSUANCE_LIBRARY_TITLE,
         fields.id,
-        [{ FieldName: 'HieuLucDen', FieldValue: expiredEndDateVi }]
+        [{ FieldName: 'HieuLucDen', FieldValue: expiredEndDateFieldValue }]
       );
 
       stampedCount += 1;
@@ -807,12 +802,14 @@ export class PhvbIssuancePublishService {
       }
 
       // New version HieuLucTu = publish date; old version ends the day before.
-      const expiredEndDateVi = formatPublishDateVi(dayBeforeLocal());
+      const expiredEndDate = dayBeforeLocal();
+      const expiredEndDateFieldValue = toSharePointDateOnlyFieldValue(expiredEndDate);
+      const expiredEndDateVi = formatDateOnlyVi(toSharePointDateOnlyIso(expiredEndDate));
       const stampResult = await this.stampExpiredArchiveHieuLucDen(
         siteUrl,
         context,
         expiredFolderPath,
-        expiredEndDateVi
+        expiredEndDateFieldValue
       );
 
       await auditLogger.logArchiveOldFolder(
@@ -918,6 +915,12 @@ export class PhvbIssuancePublishService {
       return undefined;
     }
 
+    const formFiles = await this.listFilesInFolder(siteUrl, context, sourceFormFolderPath);
+
+    if (formFiles.length === 0) {
+      return undefined;
+    }
+
     const targetFormFolderPath = joinServerRelativePath(targetFolderPath, ATTACHMENT_FORM_SUBFOLDER);
     const roleGroupId = parseInt((context.roleGroupID || '').trim(), 10);
 
@@ -933,8 +936,6 @@ export class PhvbIssuancePublishService {
         ATTACHMENT_FORM_SUBFOLDER,
         ISSUANCE_LIBRARY_TITLE
       );
-
-      const formFiles = await this.listFilesInFolder(siteUrl, context, sourceFormFolderPath);
 
       for (let index = 0; index < formFiles.length; index += 1) {
         const formFile = formFiles[index];
@@ -1004,19 +1005,6 @@ export class PhvbIssuancePublishService {
     }
   }
 
-  private buildIssuanceMetadata(release: IVanBanItem): IListFormValue[] {
-    const publishDate = formatPublishDateVi();
-    const contact = (release.NguoiTao || release.EmailNguoiTao || '').trim();
-
-    return [
-      { FieldName: 'TomTatVanban', FieldValue: (release.TomTatNoiDung || '').trim() },
-      { FieldName: 'NgayPhatHanh', FieldValue: publishDate },
-      { FieldName: 'HieuLucTu', FieldValue: publishDate },
-      { FieldName: 'HieuLucDen', FieldValue: (release.HieuLucDen || '').trim() },
-      { FieldName: 'LienHe', FieldValue: contact }
-    ];
-  }
-
   private resolveRelativePathFromSourceRoot(sourceRootPath: string, filePath: string): string {
     const normalizedRoot = normalizeServerRelativePath(sourceRootPath).toLowerCase();
     const normalizedFilePath = normalizeServerRelativePath(filePath);
@@ -1070,6 +1058,7 @@ export class PhvbIssuancePublishService {
 
     for (let index = 0; index < candidates.length; index += 1) {
       const siteUrl = candidates[index];
+      let progressedOnSite = false;
 
       try {
         const attachmentRoot = await this.getLibraryRootFolder(siteUrl, context, ATTACHMENT_LIBRARY_TITLE);
@@ -1078,7 +1067,8 @@ export class PhvbIssuancePublishService {
         const sourceFolderPath = joinServerRelativePath(attachmentRoot, sourceFolderName);
         const targetRelativePath = `${thuMucBanHanh}/${tenVanBanFolder}`;
 
-        await this.markMainDocument(siteUrl, context, idYeuCau, mainDocumentId, auditLogger);
+        await this.assertMainDocumentInRequest(siteUrl, context, idYeuCau, mainDocumentId, auditLogger);
+        progressedOnSite = true;
 
         let expiredFolderServerRelativePath: string | undefined;
 
@@ -1126,20 +1116,7 @@ export class PhvbIssuancePublishService {
           throw new Error('Không tìm thấy file đính kèm để chuyển sang thư viện ban hành.');
         }
 
-        const sourceFormFolderPath = joinServerRelativePath(sourceFolderPath, ATTACHMENT_FORM_SUBFOLDER);
-        const sourceFormFolderExists = await this.folderExists(siteUrl, context, sourceFormFolderPath);
-
-        if (sourceFormFolderExists) {
-          await this.ensureFolderPath(
-            siteUrl,
-            context,
-            targetFolderPath,
-            ATTACHMENT_FORM_SUBFOLDER,
-            ISSUANCE_LIBRARY_TITLE
-          );
-        }
-
-        const metadataValues = this.buildIssuanceMetadata(release);
+        const metadataValues = buildIssuanceMetadataValues(release);
         let mainFileServerRelativePath = '';
         const copiedFiles: Array<{ itemId: number; fileName: string; targetPath: string; listItemId: number }> = [];
 
@@ -1247,6 +1224,9 @@ export class PhvbIssuancePublishService {
         };
       } catch (error) {
         lastError = error;
+        if (progressedOnSite) {
+          throw error;
+        }
       }
     }
 
@@ -1268,23 +1248,29 @@ export function isFullIssuancePublishRequest(release: IVanBanItem): boolean {
   return isVietMoiPublishRequest(release) || isDieuChinhPublishRequest(release);
 }
 
-export function resolveMainDocumentId(
-  attachments: ReadonlyArray<IAttachmentLibraryItem>,
-  preferredId?: number
-): number | undefined {
-  if (preferredId && preferredId > 0) {
-    const preferredError = validateMainDocumentCandidate(attachments, preferredId);
-    if (!preferredError) {
-      return preferredId;
-    }
+export function parseStoredMainDocumentId(value: number | string | undefined): number | undefined {
+  const parsed = Number(value);
+
+  if (!parsed || parsed <= 0) {
+    return undefined;
   }
 
-  for (let index = 0; index < attachments.length; index += 1) {
-    const item = attachments[index];
+  return parsed;
+}
 
-    if (!item.isFormAttachment && (item.loaiVanBan || '').trim().toLowerCase() === MAIN_DOCUMENT_LOAI_VAN_BAN) {
-      return item.id;
-    }
+export function resolveMainDocumentId(
+  attachments: ReadonlyArray<IAttachmentLibraryItem>,
+  preferredId?: number,
+  storedId?: number
+): number | undefined {
+  const preferred = parseStoredMainDocumentId(preferredId);
+  if (preferred && !validateMainDocumentCandidate(attachments, preferred)) {
+    return preferred;
+  }
+
+  const stored = parseStoredMainDocumentId(storedId);
+  if (stored && !validateMainDocumentCandidate(attachments, stored)) {
+    return stored;
   }
 
   return undefined;

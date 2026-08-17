@@ -84,24 +84,59 @@
 
 .libraryView {
   display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
   height: 100%;
-  background-color: #FCF8F4;
+  background-color: $bg-content;
 
-  .folderPane {
+  .libraryMain .folderPane {
+    display: flex;
+    flex-direction: column;
     flex: 0 0 calc((var(--sidebar-width-units, 5) / var(--total-units, 10)) * 100%);
     width: auto;
     min-width: 200px;
     max-width: 70%;
+    min-height: 0;
     overflow: hidden;
     transition: flex-basis 0.15s ease;
 
     .folderList {
+      flex: 1 1 auto;
       overflow-y: auto;
       min-height: 0;
     }
+  }
+}
+
+.libraryScreenHeader {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto minmax(280px, 1fr);
+  align-items: center;
+  gap: $space-4;
+}
+
+.libraryScreenTitle {
+  margin: 0;
+  @include ty-section-title;
+  color: $text-main;
+  white-space: nowrap;
+}
+
+.libraryMain {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+
+  > .folderPane,
+  > .libraryContentPane {
+    min-height: 0;
+    align-self: stretch;
   }
 }
 
@@ -116,10 +151,11 @@
 
 .libraryResizeDivider {
   position: relative;
+  align-self: stretch;
   width: 6px;
   flex-shrink: 0;
   cursor: col-resize;
-  background-color: #E5D6C7;
+  background-color: $border-color;
   touch-action: none;
   outline: none;
 
@@ -153,12 +189,47 @@
   overflow: hidden;
 }
 
-.libraryPageHeader {
+.libraryColumnHeader {
   flex: 0 0 auto;
-  padding: $space-4 $space-5 $space-2;
-  background-color: $surface-card;
-  border-bottom: 1px solid $border-subtle;
-  border-radius: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  min-width: 0;
+  height: 44px;
+  padding: 0 $space-4;
+  border-bottom: 2px solid $border-color;
+  background-color: $bg-folders;
+  color: $text-main;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.libraryColumnHeaderIconFolder,
+.libraryColumnHeaderIconDocument {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+
+.libraryColumnHeaderIconFolder {
+  color: $folder-accent;
+}
+
+.libraryColumnHeaderIconDocument {
+  color: $primary-color;
+}
+
+.libraryColumnContext {
+  margin-left: auto;
+  min-width: 0;
+  max-width: 55%;
+  overflow: hidden;
+  color: $text-muted;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .libraryContentPaneBody {
@@ -169,6 +240,14 @@
   padding: $space-4 $space-5;
   gap: $space-4;
   overflow: hidden;
+  background-color: $bg-content;
+
+  > .libraryListBoard {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    margin: 0;
+  }
 }
 
 .librarySearchBar {
@@ -180,6 +259,11 @@
   border-radius: 12px;
   padding: 8px 10px;
   box-shadow: 0 2px 8px rgba(123, 76, 44, 0.05);
+
+  &:focus-within {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 1px rgba(123, 76, 44, 0.12);
+  }
 }
 
 .librarySearchBarActive {
@@ -214,8 +298,6 @@
 }
 
 .librarySearchClearButton {
-  color: $text-muted;
-
   &:hover {
     color: $primary-color;
     background-color: $primary-light;
@@ -243,10 +325,6 @@
   background: transparent;
   font-size: 14px;
   color: $text-main;
-
-  &:focus-visible {
-    @include phvb-focus-ring;
-  }
 }
 
 .libraryResultsSummary {
@@ -257,7 +335,6 @@
 .libraryDocumentList {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -295,24 +372,8 @@
   height: 32px;
 }
 
-.libraryFileTypePdf {
-  color: #e63946;
-}
-
-.libraryFileTypeWord {
-  color: #1e90ff;
-}
-
-.libraryFileTypeExcel {
-  color: #2ecc71;
-}
-
-.libraryFileTypePowerpoint {
-  color: #f4a261;
-}
-
 .libraryFileTypeFile {
-  color: #6c757d;
+  color: $text-muted;
 }
 
 .libraryDocumentContent {
@@ -424,8 +485,8 @@ button.libraryDocumentTitle {
 }
 
 .libraryDocumentStatusEffective {
-  background-color: #28a745;
-  color: #FFFFFF;
+  background-color: $color-success-bg;
+  color: $color-success;
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 10px;
@@ -434,7 +495,8 @@ button.libraryDocumentTitle {
   white-space: nowrap;
 
   &[data-status='expired'] {
-    background-color: #6c757d;
+    background-color: $surface-muted;
+    color: $text-muted;
   }
 }
 
@@ -593,19 +655,34 @@ button.libraryDocumentTitle {
   justify-content: flex-end;
   gap: 12px;
   flex-shrink: 0;
-  padding-top: 8px;
+  padding: $space-3 $space-4;
+  border-top: 1px solid $border-subtle;
+  background-color: $surface-card;
 }
 
 @media (max-width: 1180px) {
-  .libraryView {
+  .libraryScreenHeader {
+    grid-template-columns: 1fr;
+    gap: $space-3;
+  }
+
+  .libraryMain {
     flex-direction: column;
 
     .folderPane {
-      flex: none;
+      flex: 0 0 38%;
       width: 100%;
       max-width: none;
       min-width: 0;
+      min-height: 140px;
+      border-right: none;
+      border-bottom: 1px solid $border-color;
       transition: none;
+    }
+
+    > .libraryContentPane {
+      flex: 1 1 auto;
+      min-height: 0;
     }
   }
 
@@ -614,7 +691,7 @@ button.libraryDocumentTitle {
   }
 
   .libraryContentPane {
-    padding: 16px;
+    padding: 0;
     min-width: 0;
   }
 
@@ -672,41 +749,14 @@ button.libraryDocumentTitle {
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
-  background-color: #FCF8F4;
-}
-
-.recentHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex: 0 0 auto;
-  padding: 20px 24px 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  background-color: #FFFFFF;
-
-  .pageHeading {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
-    .pageEyebrow {
-      @include ty-page-eyebrow;
-    }
-
-    h2 {
-      margin: 0;
-      @include ty-section-title;
-      color: $text-ink;
-    }
-  }
+  background-color: $bg-content;
 }
 
 .recentSubtitle {
   margin: 2px 0 0;
   font-size: 13px;
   line-height: 1.4;
-  color: #6b6560;
+  color: $text-muted;
 }
 
 .recentHeaderActions {
@@ -717,23 +767,11 @@ button.libraryDocumentTitle {
   flex: 0 0 auto;
 }
 
-.recentHeaderActionBtn {
+.recentHeaderLinkBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid $border-color;
-  background-color: $surface-card;
-  color: $text-main;
-  font-size: 13px;
-  font-weight: 600;
   text-decoration: none;
-  cursor: pointer;
-
-  &:hover {
-    background-color: $primary-light;
-  }
 }
 
 .recentBody {
@@ -754,9 +792,9 @@ button.libraryDocumentTitle {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  margin: 0 24px 24px;
-  background-color: #FFFFFF;
-  border: 1px solid #E7DACB;
+  margin: 0 $content-pane-padding-x $space-5;
+  background-color: $surface-card;
+  border: 1px solid $border-color;
   border-radius: 18px;
   box-shadow: 0 8px 24px rgba(123, 76, 44, 0.05);
   overflow: hidden;
@@ -906,6 +944,17 @@ button.libraryDocumentTitle {
     max-width: 420px;
     line-height: 1.5;
     font-size: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .libraryListBoard {
+    margin-right: $space-4;
+    margin-left: $space-4;
+  }
+
+  .libraryContentPaneBody > .libraryListBoard {
+    margin: 0;
   }
 }
 

@@ -29,6 +29,12 @@
   animation: fadeIn 0.2s ease;
 }
 
+.loadingOverlayGlobal {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal + 1;
+}
+
 .loadingPanel {
   display: flex;
   flex-direction: column;
@@ -42,12 +48,9 @@
 }
 
 .loadingSpinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid $border-subtle;
-  border-top-color: $primary-color;
-  border-radius: 50%;
-  animation: loadingSpin 0.8s linear infinite;
+  width: 72px;
+  height: auto;
+  display: block;
 }
 
 .loadingMessage {
@@ -55,12 +58,6 @@
   font-size: 14px;
   font-weight: 600;
   color: $primary-color;
-}
-
-@keyframes loadingSpin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .modalContent {
@@ -77,38 +74,24 @@
   animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   .modalHeader {
-    padding: $space-5 $space-6;
-    border-bottom: 1px solid $border-color;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: $bg-folders;
+    @include phvb-dialog-header;
 
     .modalHeaderTitleArea {
       display: flex;
       align-items: center;
       gap: 10px;
+      min-width: 0;
+      color: #FFFFFF;
 
       h3 {
         margin: 0;
         @include ty-modal-title;
-        color: $text-ink;
+        color: #FFFFFF;
       }
     }
 
     .btnClose {
-      background: transparent;
-      border: none;
-      font-size: $font-size-lg;
-      color: $text-muted;
-      cursor: pointer;
-      line-height: 1;
-      padding: 0 4px;
-      transition: color 0.15s ease;
-
-      &:hover {
-        color: $text-main;
-      }
+      @include phvb-dialog-header-close;
     }
   }
 

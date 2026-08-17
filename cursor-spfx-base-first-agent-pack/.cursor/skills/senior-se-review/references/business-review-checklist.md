@@ -43,3 +43,15 @@ Verify against **existing code and docs** — do not invent rules.
 - [ ] Plan identifies Viết mới vs Điều chỉnh impact
 - [ ] Plan lists manual test scenarios per role/stage touched
 - [ ] Assumptions and missing BA decisions are explicit
+
+## Dead code / tech debt (always)
+
+Run on every review, not only when a field or API was renamed.
+
+- [ ] Unused imports, helpers, CSS classes, payload keys, sort keys, or types in the diff have no remaining callers — flag removal
+- [ ] If the diff renames/removes a symbol: grep the old name (`oldField`, old endpoint) in `src/` (and manifest/docs if present) is 0; no `oldField = newField` alias when the old source is gone
+- [ ] Create/update payloads and `$select` lists do not send or request removed fields
+- [ ] Model/interfaces do not keep dead properties
+- [ ] Manifest/docs match code when those files exist in the repo
+- [ ] Similar symbols outside the diff are not pulled into scope; out-of-scope neighbors are stated if relevant
+- [ ] Unowned TODOs, timezone/format mismatches, and client-filter debt in the touched flow are flagged

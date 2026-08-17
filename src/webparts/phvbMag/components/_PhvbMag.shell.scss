@@ -204,6 +204,37 @@
       &.navItemCollapsed .navSoonBadge {
         display: none;
       }
+
+      &.navItemHelp {
+        background-color: $sidebar-help-bg;
+        color: #FFFFFF;
+        font-weight: $font-weight-bold;
+
+        .iconWrapper {
+          color: #FFFFFF;
+        }
+
+        &:hover {
+          background-color: darken($sidebar-help-bg, 6%);
+
+          .iconWrapper {
+            color: #FFFFFF;
+          }
+        }
+
+        &.active {
+          background-color: darken($sidebar-help-bg, 8%);
+          color: #FFFFFF;
+
+          .iconWrapper {
+            color: #FFFFFF;
+          }
+
+          &::before {
+            background-color: #FFFFFF;
+          }
+        }
+      }
     }
   }
 
@@ -314,30 +345,22 @@
   width: 250px;
   background-color: $bg-folders;
   border-right: 1px solid $border-color;
-  padding: 24px 12px;
+  padding: 0 12px 12px;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
 
-  .folderPaneHeader {
-    padding-left: 12px;
-    margin-bottom: 16px;
-    h4 {
-      margin: 0;
-      font-size: 13px;
-      font-weight: 700;
-      color: $text-main;
-      letter-spacing: 0.02em;
-      text-transform: none;
-    }
+  .libraryColumnHeader {
+    margin: 0 -12px 0;
   }
 
     .folderList {
       display: flex;
       flex-direction: column;
       gap: 2px;
+      flex: 1 1 auto;
+      min-height: 0;
       overflow-y: auto;
-      flex-grow: 1;
       padding-right: 4px;
 
       /* Custom Scrollbar */

@@ -1,7 +1,7 @@
 import { DEFAULT_LIST_TITLE, EXECUTION_HISTORY_STATUS } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
-import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
+import { toSharePointDateTimeIso } from '../utils/PhvbMagDateTime.utils';
 import {
   buildFinalStageEmails,
   buildParticipantChangesSummary,
@@ -49,7 +49,7 @@ export class PhvbWorkflowParticipantService {
     }
 
     const visibleStages = getVisibleParticipantStages(options.detail.release.LoaiYeuCau);
-    const performedAt = formatCurrentExecutionDateTime();
+    const performedAt = toSharePointDateTimeIso();
     const directoryMap = buildDirectoryUserMap(options.directoryUsers);
     const participantById = new Map<number, (typeof options.detail.workflowParticipants)[number]>();
 

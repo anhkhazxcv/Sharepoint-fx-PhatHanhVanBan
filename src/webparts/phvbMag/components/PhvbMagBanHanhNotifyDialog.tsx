@@ -1,7 +1,9 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { IBanHanhNotifyDraft, IAttachmentLibraryItem } from '../models/PhvbMag.models';
+import { parseStoredMainDocumentId } from '../services/PhvbMagIssuancePublish.service';
 import { validateBanHanhNotifyDraft } from '../utils/PhvbMagBanHanhNotify.utils';
+import { CloseIcon } from './PhvbMagIcons';
 import styles from './PhvbMag.module.scss';
 
 export type BanHanhNotifyMode = 'prepare' | 'publish' | 'edit';
@@ -16,6 +18,7 @@ interface IPhvbMagBanHanhNotifyDialogProps {
   requireMainDocument?: boolean;
   mainDocumentReadOnly?: boolean;
   mainDocumentCandidates?: ReadonlyArray<IAttachmentLibraryItem>;
+  storedMainDocumentId?: number;
   isLoading?: boolean;
   isProcessing?: boolean;
   errorMessage?: string;
@@ -38,29 +41,36 @@ function getDialogTitle(mode: BanHanhNotifyMode): string {
   return 'Nội dung thông báo ban hành';
 }
 
-function getConfirmLabel(mode: BanHanhNotifyMode, isProcessing: boolean, confirmLabel?: string): string {
+function getConfirmLabel(mode: BanHanhNotifyMode, confirmLabel?: string): string {
   if (confirmLabel) {
-    return isProcessing ? 'Đang xử lý...' : confirmLabel;
+    return confirmLabel;
   }
 
   if (mode === 'publish') {
-    return isProcessing ? 'Đang xử lý...' : 'Ban hành';
+    return 'Ban hành';
   }
 
   if (mode === 'edit') {
-    return isProcessing ? 'Đang lưu...' : 'Lưu';
+    return 'Lưu';
   }
 
-  return isProcessing ? 'Đang gửi...' : 'Gửi';
+  return 'Gửi';
 }
 
 function resolveInitialMainDocumentId(
-  candidates: ReadonlyArray<IAttachmentLibraryItem>
+  candidates: ReadonlyArray<IAttachmentLibraryItem>,
+  storedMainDocumentId?: number
 ): number | undefined {
+  const stored = parseStoredMainDocumentId(storedMainDocumentId);
+
+  if (!stored) {
+    return undefined;
+  }
+
   for (let index = 0; index < candidates.length; index += 1) {
     const candidate = candidates[index];
-    if ((candidate.loaiVanBan || '').trim().toLowerCase() === 'chinh') {
-      return candidate.id;
+    if (candidate.id === stored && !candidate.isFormAttachment) {
+      return stored;
     }
   }
 
@@ -74,6 +84,7 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
     requireMainDocument = false,
     mainDocumentReadOnly = false,
     mainDocumentCandidates = [],
+    storedMainDocumentId,
     isLoading = false,
     isProcessing = false,
     errorMessage,
@@ -103,12 +114,12 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
     setSubject(draft.subject || '');
     setBody(nextBody);
     setValidationError(undefined);
-    setSelectedMainDocumentId(resolveInitialMainDocumentId(mainDocumentCandidates));
+    setSelectedMainDocumentId(resolveInitialMainDocumentId(mainDocumentCandidates, storedMainDocumentId));
 
     if (bodyEditorRef.current) {
       bodyEditorRef.current.innerHTML = nextBody;
     }
-  }, [isOpen, isLoading, draft, mainDocumentCandidates]);
+  }, [isOpen, isLoading, draft, mainDocumentCandidates, storedMainDocumentId]);
 
   if (!isOpen) {
     return <></>;
@@ -164,14 +175,21 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.banHanhNotifyModal} role="dialog" aria-modal="true" aria-labelledby="phvb-ban-hanh-notify-title">
-        <div className={styles.banHanhNotifyHeader}>
+        <div className={styles.dialogHeader}>
           <h4 id="phvb-ban-hanh-notify-title">{getDialogTitle(mode)}</h4>
+          <button
+            type="button"
+            className={styles.dialogHeaderClose}
+            onClick={onCancel}
+            aria-label="Đóng"
+            disabled={isBusy}
+          >
+            <CloseIcon />
+          </button>
         </div>
 
         <div className={styles.banHanhNotifyBody}>
-          {isAwaitingDraft ? (
-            <p className={styles.banHanhNotifyLoading}>Đang tải nội dung thông báo...</p>
-          ) : (
+          {!isAwaitingDraft ? (
             <>
               <div className={styles.workflowActionDialogComment}>
                 <label htmlFor="phvb-ban-hanh-recipient">Nơi nhận:</label>
@@ -225,7 +243,7 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
                 <div className={styles.banHanhNotifyField}>
                   <span className={styles.banHanhNotifyMainDocLabel}>Văn bản chính:</span>
                   {mainDocumentCandidates.length === 0 ? (
-                    <p className={styles.banHanhNotifyLoading}>Không có tài liệu dự thảo để chọn.</p>
+                    <p className={styles.banHanhNotifyEmpty}>Không có tài liệu dự thảo để chọn.</p>
                   ) : (
                     <div className={styles.banHanhNotifyMainDocList} role="radiogroup" aria-label="Chọn văn bản chính">
                       {mainDocumentCandidates.map(candidate => (
@@ -251,7 +269,7 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
                 </div>
               ) : null}
             </>
-          )}
+          ) : null}
 
           {displayedError ? (
             <p className={styles.workflowActionDialogError} role="alert">{displayedError}</p>
@@ -274,7 +292,7 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
               disabled={isBusy || isAwaitingDraft}
               onClick={onReturnToAdmin}
             >
-              {isProcessing ? 'Đang xử lý...' : 'Trả về admin'}
+              Trả về admin
             </button>
           ) : null}
           <button
@@ -283,7 +301,7 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
             disabled={isBusy || isAwaitingDraft}
             onClick={handleConfirm}
           >
-            {getConfirmLabel(mode, isProcessing, confirmLabel)}
+            {getConfirmLabel(mode, confirmLabel)}
           </button>
         </div>
       </div>

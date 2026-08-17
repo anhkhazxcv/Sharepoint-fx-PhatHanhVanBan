@@ -17,10 +17,6 @@ import {
   FaFile,
   FaFileAlt,
   FaFileContract,
-  FaFileExcel,
-  FaFilePdf,
-  FaFilePowerpoint,
-  FaFileWord,
   FaFire,
   FaFolder,
   FaFolderOpen,
@@ -292,21 +288,40 @@ export function EyeIcon(props: IIconProps): React.ReactElement {
 
 export type LibraryFileTypeIconName = 'pdf' | 'word' | 'excel' | 'powerpoint' | 'file';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const pdfFileTypeIconUrl: string = require('../assets/pdf-document-svgrepo-com.svg');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const wordFileTypeIconUrl: string = require('../assets/word-svgrepo-com.svg');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const excelFileTypeIconUrl: string = require('../assets/excel-svgrepo-com.svg');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const powerpointFileTypeIconUrl: string = require('../assets/powerpoint-svgrepo-com.svg');
+
+const LIBRARY_FILE_TYPE_ASSET_URL: Partial<Record<LibraryFileTypeIconName, string>> = {
+  pdf: pdfFileTypeIconUrl,
+  word: wordFileTypeIconUrl,
+  excel: excelFileTypeIconUrl,
+  powerpoint: powerpointFileTypeIconUrl
+};
+
 export function LibraryFileTypeIcon(
   props: IIconProps & { iconName: LibraryFileTypeIconName }
 ): React.ReactElement {
   const { iconName, className, style } = props;
+  const assetUrl = LIBRARY_FILE_TYPE_ASSET_URL[iconName];
 
-  switch (iconName) {
-    case 'pdf':
-      return <FaFilePdf className={className} style={style} aria-hidden />;
-    case 'word':
-      return <FaFileWord className={className} style={style} aria-hidden />;
-    case 'excel':
-      return <FaFileExcel className={className} style={style} aria-hidden />;
-    case 'powerpoint':
-      return <FaFilePowerpoint className={className} style={style} aria-hidden />;
-    default:
-      return <FaFile className={className} style={style} aria-hidden />;
+  if (assetUrl) {
+    return (
+      <img
+        src={assetUrl}
+        className={className}
+        style={style}
+        alt=""
+        aria-hidden
+        draggable={false}
+      />
+    );
   }
+
+  return <FaFile className={className} style={style} aria-hidden />;
 }

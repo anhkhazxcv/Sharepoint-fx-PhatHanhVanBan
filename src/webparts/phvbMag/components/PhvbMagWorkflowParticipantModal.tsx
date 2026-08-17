@@ -320,9 +320,9 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
   return (
     <div className={styles.confirmDialogOverlay}>
       <div className={styles.workflowParticipantModalContent}>
-        <div className={styles.workflowParticipantModalHeader}>
+        <div className={styles.dialogHeader}>
           <h4>Thêm người tham gia quy trình</h4>
-          <button type="button" className={styles.workflowParticipantModalClose} onClick={onClose} aria-label="Đóng">
+          <button type="button" className={styles.dialogHeaderClose} onClick={onClose} aria-label="Đóng">
             <CloseIcon />
           </button>
         </div>
@@ -352,7 +352,7 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
             Hủy
           </button>
           <button type="button" className={styles.btnSubmit} onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Đang lưu...' : 'Lưu/Xác nhận'}
+            Lưu/Xác nhận
           </button>
         </div>
       </div>

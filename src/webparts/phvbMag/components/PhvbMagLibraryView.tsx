@@ -10,11 +10,11 @@ import { formatBanHanhDate } from '../utils/PhvbMagBanHanh.tree';
 import { resolveLibraryContactPerson } from '../utils/PhvbMagLibrary.utils';
 import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
-import { PhvbMagPageHeader } from './PhvbMagPageHeader';
 import { PhvbMagSkeleton } from './PhvbMagSkeleton';
 import { PhvbMagFolderTreeNode } from './PhvbMagFolderTree';
 import {
   CloseIcon,
+  DocumentFileIcon,
   FolderAccentIcon,
   PaginationNextIcon,
   PaginationPreviousIcon,
@@ -216,8 +216,9 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
     && !library.isResolvingFolder
     && (itemCountOnPage > 0 || canGoPrevious || canGoNext || library.page > 1);
   const isFolderPaneVisible = library.isFolderPaneVisible;
-  const breadcrumbLabel = library.isSearchMode
-    ? `Tìm kiếm: ${library.submittedQuery || library.draftQuery}`
+  const documentCount = library.totalCount ?? itemCountOnPage;
+  const contextLabel = library.isSearchMode
+    ? 'Kết quả tìm kiếm'
     : (library.selectedFolder?.name || 'Tất cả thư mục');
 
   const applySidebarUnits = React.useCallback((units: number): void => {
@@ -317,78 +318,8 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
       className={libraryViewClassName}
       style={libraryViewStyle}
     >
-      {isFolderPaneVisible ? (
-        <>
-          <aside className={styles.folderPane}>
-            <div className={styles.folderPaneHeader}>
-              <h4>Thư viện tài liệu</h4>
-            </div>
-
-            <div className={styles.folderList}>
-              {library.isLoadingFolders ? (
-                <PhvbMagSkeleton variant="line" count={6} />
-              ) : null}
-
-              {!library.isLoadingFolders && library.errorMessage && library.rootFolders.length === 0 ? (
-                <div className={styles.libraryErrorBanner} role="alert">
-                  {library.errorMessage}
-                </div>
-              ) : null}
-
-              {!library.isLoadingFolders && !library.errorMessage && library.rootFolders.length === 0 ? (
-                <p className={styles.libraryStatusMessage}>Không có thư mục để hiển thị.</p>
-              ) : null}
-
-              {!library.isLoadingFolders && library.rootFolders.map(folder => (
-                <FolderTreeNode
-                  key={folder.serverRelativePath}
-                  folder={folder}
-                  depth={0}
-                  childFoldersByPath={library.childFoldersByPath}
-                  expandedPaths={library.expandedPaths}
-                  selectedFolderId={library.selectedFolder?.id}
-                  onToggleExpand={library.toggleFolderExpand}
-                  onSelectFolder={library.selectFolder}
-                />
-              ))}
-            </div>
-          </aside>
-
-          <div
-            className={styles.libraryResizeDivider}
-            onPointerDown={handleDividerPointerDown}
-            onPointerMove={handleDividerPointerMove}
-            onPointerUp={handleDividerPointerUp}
-            onPointerCancel={handleDividerPointerUp}
-            onKeyDown={handleDividerKeyDown}
-            onDoubleClick={handleDividerDoubleClick}
-            title="Kéo để thay đổi kích thước"
-            role="separator"
-            aria-orientation="vertical"
-            aria-valuemin={MIN_UNITS}
-            aria-valuemax={MAX_UNITS}
-            aria-valuenow={sidebarWidthUnits}
-            aria-label="Thay đổi kích thước khung thư viện"
-            tabIndex={0}
-          />
-        </>
-      ) : null}
-
-      <section className={styles.libraryContentPane}>
-        <PhvbMagPageHeader
-          eyebrow="Thư viện"
-          title="Thư viện tài liệu"
-          subtitle="Duyệt thư mục và tìm kiếm văn bản nội bộ"
-          className={styles.libraryPageHeader}
-          headerActions={(
-            <ol className={styles.libraryBreadcrumb} aria-label="Vị trí hiện tại">
-              <li>Thư viện</li>
-              <li><strong>{breadcrumbLabel}</strong></li>
-            </ol>
-          )}
-        />
-
-        <div className={styles.libraryContentPaneBody}>
+      <header className={styles.libraryScreenHeader}>
+        <h2 className={styles.libraryScreenTitle}>Thư viện tài liệu</h2>
         <div className={`${styles.librarySearchBar} ${library.isSearchMode ? styles.librarySearchBarActive : ''}`}>
           {library.isSearchMode ? (
             <TooltipHost content="Thoát tìm kiếm">
@@ -406,7 +337,7 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
           <input
             type="text"
             className={styles.librarySearchInput}
-            placeholder="Tìm kiếm thư mục và tài liệu..."
+            placeholder="Tìm kiếm thư mục, tài liệu..."
             value={library.draftQuery}
             onChange={event => library.setDraftQuery(event.target.value)}
             onKeyDown={handleSearchKeyDown}
@@ -437,79 +368,156 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
             </button>
           </TooltipHost>
         </div>
+      </header>
 
-        {library.errorMessage ? (
-          <div className={styles.libraryErrorBanner}>{library.errorMessage}</div>
+      <div className={styles.libraryMain}>
+        {isFolderPaneVisible ? (
+          <>
+            <aside className={styles.folderPane}>
+              <div className={styles.libraryColumnHeader}>
+                <FolderAccentIcon className={styles.libraryColumnHeaderIconFolder} />
+                <span>Danh sách thư mục</span>
+              </div>
+
+              <div className={styles.folderList}>
+                {library.isLoadingFolders ? (
+                  <PhvbMagSkeleton variant="line" count={6} />
+                ) : null}
+
+                {!library.isLoadingFolders && library.errorMessage && library.rootFolders.length === 0 ? (
+                  <div className={styles.libraryErrorBanner} role="alert">
+                    {library.errorMessage}
+                  </div>
+                ) : null}
+
+                {!library.isLoadingFolders && !library.errorMessage && library.rootFolders.length === 0 ? (
+                  <p className={styles.libraryStatusMessage}>Chưa có thư mục để hiển thị.</p>
+                ) : null}
+
+                {!library.isLoadingFolders && library.rootFolders.map(folder => (
+                  <FolderTreeNode
+                    key={folder.serverRelativePath}
+                    folder={folder}
+                    depth={0}
+                    childFoldersByPath={library.childFoldersByPath}
+                    expandedPaths={library.expandedPaths}
+                    selectedFolderId={library.selectedFolder?.id}
+                    onToggleExpand={library.toggleFolderExpand}
+                    onSelectFolder={library.selectFolder}
+                  />
+                ))}
+              </div>
+            </aside>
+
+            <div
+              className={styles.libraryResizeDivider}
+              onPointerDown={handleDividerPointerDown}
+              onPointerMove={handleDividerPointerMove}
+              onPointerUp={handleDividerPointerUp}
+              onPointerCancel={handleDividerPointerUp}
+              onKeyDown={handleDividerKeyDown}
+              onDoubleClick={handleDividerDoubleClick}
+              title="Kéo để thay đổi kích thước"
+              role="separator"
+              aria-orientation="vertical"
+              aria-valuemin={MIN_UNITS}
+              aria-valuemax={MAX_UNITS}
+              aria-valuenow={sidebarWidthUnits}
+              aria-label="Thay đổi kích thước khung thư viện"
+              tabIndex={0}
+            />
+          </>
         ) : null}
 
-        {library.isSearchMode && library.submittedQuery ? (
-          <div className={styles.libraryResultsSummary}>
-            <span>
-              Kết quả cho <strong>{library.submittedQuery}</strong>
-              {library.totalCount !== undefined ? ` (${library.totalCount})` : ''}
+        <section className={styles.libraryContentPane}>
+          <div className={styles.libraryColumnHeader}>
+            <DocumentFileIcon className={styles.libraryColumnHeaderIconDocument} />
+            <span>Tài liệu ({documentCount})</span>
+            <span className={styles.libraryColumnContext} title={contextLabel}>
+              {contextLabel}
             </span>
           </div>
-        ) : null}
 
-        <div className={styles.libraryDocumentList} aria-live="polite">
-          {(library.isLoadingDocuments || library.isResolvingFolder) && (
-            <PhvbMagSkeleton variant="card" count={5} />
-          )}
+          <div className={styles.libraryContentPaneBody}>
 
-          {!library.isLoadingDocuments && !library.isResolvingFolder && library.documents.length === 0 && (
-            <PhvbMagEmptyState
-              message={library.isSearchMode
-                ? 'Không tìm thấy kết quả phù hợp.'
-                : (library.selectedFolder
-                  ? 'Không có tài liệu trong mục này.'
-                  : 'Chọn thư mục bên trái hoặc tìm kiếm tài liệu.')}
-            />
-          )}
+            {library.errorMessage ? (
+              <div className={styles.libraryErrorBanner} role="alert">{library.errorMessage}</div>
+            ) : null}
 
-          {!library.isLoadingDocuments && !library.isResolvingFolder && library.documents.map(document => (
-            document.fsObjType === 1 ? (
-              <SearchFolderListItem
-                key={`folder-${document.id}-${document.fileRef}`}
-                folder={document}
-                onSelectFolder={library.selectFolder}
-              />
-            ) : (
-              <DocumentListItem
-                key={`${document.id}-${document.fileRef}`}
-                document={document}
-                showDownload={!library.isSearchMode}
-              />
-            )
-          ))}
-        </div>
+            {library.isSearchMode && library.submittedQuery ? (
+              <div className={styles.libraryResultsSummary}>
+                <span>
+                  Kết quả cho <strong>{library.submittedQuery}</strong>
+                  {library.totalCount !== undefined ? ` (${library.totalCount})` : ''}
+                </span>
+              </div>
+            ) : null}
 
-        {showPager ? (
-          <div className={styles.libraryPagination}>
-            <div className={styles.requestPager}>
-              <span className={styles.requestRangeText}>{rangeLabel}</span>
-              <button
-                type="button"
-                className={styles.requestPageButton}
-                disabled={!canGoPrevious || library.isLoadingDocuments}
-                onClick={() => library.goToPage(library.page - 1)}
-                aria-label="Trang trước"
+            <div className={styles.libraryListBoard}>
+              <div
+                className={[styles.libraryListScroll, styles.libraryDocumentList].join(' ')}
+                aria-live="polite"
               >
-                <PaginationPreviousIcon />
-              </button>
-              <button
-                type="button"
-                className={styles.requestPageButton}
-                disabled={!canGoNext || library.isLoadingDocuments}
-                onClick={() => library.goToPage(library.page + 1)}
-                aria-label="Trang sau"
-              >
-                <PaginationNextIcon />
-              </button>
+                {(library.isLoadingDocuments || library.isResolvingFolder) && (
+                  <PhvbMagSkeleton variant="card" count={5} />
+                )}
+
+                {!library.isLoadingDocuments && !library.isResolvingFolder && library.documents.length === 0 && (
+                  <PhvbMagEmptyState
+                    message={library.isSearchMode
+                      ? 'Không tìm thấy kết quả. Hãy thử từ khóa khác hoặc thoát tìm kiếm.'
+                      : (library.selectedFolder
+                        ? 'Không có tài liệu trong thư mục này.'
+                        : 'Chọn thư mục bên trái, hoặc tìm kiếm phía trên.')}
+                  />
+                )}
+
+                {!library.isLoadingDocuments && !library.isResolvingFolder && library.documents.map(document => (
+                  document.fsObjType === 1 ? (
+                    <SearchFolderListItem
+                      key={`folder-${document.id}-${document.fileRef}`}
+                      folder={document}
+                      onSelectFolder={library.selectFolder}
+                    />
+                  ) : (
+                    <DocumentListItem
+                      key={`${document.id}-${document.fileRef}`}
+                      document={document}
+                      showDownload={!library.isSearchMode}
+                    />
+                  )
+                ))}
+              </div>
+
+              {showPager ? (
+                <div className={styles.libraryPagination}>
+                  <div className={styles.requestPager}>
+                    <span className={styles.requestRangeText}>{rangeLabel}</span>
+                    <button
+                      type="button"
+                      className={styles.requestPageButton}
+                      disabled={!canGoPrevious || library.isLoadingDocuments}
+                      onClick={() => library.goToPage(library.page - 1)}
+                      aria-label="Trang trước"
+                    >
+                      <PaginationPreviousIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.requestPageButton}
+                      disabled={!canGoNext || library.isLoadingDocuments}
+                      onClick={() => library.goToPage(library.page + 1)}
+                      aria-label="Trang sau"
+                    >
+                      <PaginationNextIcon />
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
-        ) : null}
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

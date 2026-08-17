@@ -187,8 +187,8 @@ export function buildWorkflowTimelineSteps(
       id: 'draft-creator',
       stageLabel: 'Soạn thảo',
       name: release.NguoiTao || '---',
-      meta: release.NgayTaoYeuCau,
-      subtitle: release.NgayTaoYeuCau ? formatExecutionDateTime(release.NgayTaoYeuCau) : undefined,
+      meta: release.Created,
+      subtitle: release.Created ? formatExecutionDateTime(release.Created) : undefined,
       status: 'Hoàn thành',
       statusTone: 'done',
       stepNumber: 1

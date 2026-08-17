@@ -44,6 +44,7 @@ interface INavItemProps {
   badgeCount?: number;
   disabled?: boolean;
   soonBadge?: boolean;
+  variant?: 'help';
 }
 
 function NavItem(props: INavItemProps): React.ReactElement {
@@ -56,14 +57,16 @@ function NavItem(props: INavItemProps): React.ReactElement {
     onSelectTab,
     badgeCount,
     disabled = false,
-    soonBadge = false
+    soonBadge = false,
+    variant
   } = props;
   const isActive = !disabled && tab !== undefined && activeTab === tab;
   const classNames = [
     styles.navItem,
     isActive ? styles.active : '',
     isCollapsed ? styles.navItemCollapsed : '',
-    disabled ? styles.navItemDisabled : ''
+    disabled ? styles.navItemDisabled : '',
+    variant === 'help' ? styles.navItemHelp : ''
   ]
     .filter(Boolean)
     .join(' ');
@@ -246,6 +249,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             isCollapsed={isCollapsed}
             onSelectTab={onSelectTab}
             icon={<SidebarHelpIcon />}
+            variant="help"
           />
         </nav>
       </div>

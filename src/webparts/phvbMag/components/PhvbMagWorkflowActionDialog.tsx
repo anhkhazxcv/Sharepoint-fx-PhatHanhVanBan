@@ -90,7 +90,7 @@ export function PhvbMagWorkflowActionDialog(props: IPhvbMagWorkflowActionDialogP
             disabled={isProcessing}
             onClick={handleConfirm}
           >
-            {isProcessing ? 'Đang xử lý...' : confirmLabel}
+            {confirmLabel}
           </button>
         </>
       )}

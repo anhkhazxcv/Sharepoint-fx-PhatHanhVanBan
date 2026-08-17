@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { phvbCapSoService } from '../services/PhvbMagCapSo.service';
 import { createFlowRunId } from '../services/PhvbMagLog.service';
 import { canAssignDocumentNumber } from '../utils/PhvbMagCapSo.utils';
+import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 import type { IPhvbDocumentContext, IPhvbLogContext, IRequestDetailData } from '../models/PhvbMag.models';
 
 interface IUsePhvbCapSoOptions {
@@ -20,6 +21,7 @@ interface IUsePhvbCapSoResult {
 
 export function usePhvbCapSo(options: IUsePhvbCapSoOptions): IUsePhvbCapSoResult {
   const { documentContext, detail, hasDcRole = false, onCompleted } = options;
+  const { runBusy } = usePhvbBusy();
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 
@@ -41,15 +43,17 @@ export function usePhvbCapSo(options: IUsePhvbCapSoOptions): IUsePhvbCapSoResult
     setErrorMessage(undefined);
 
     try {
-      const logContext: IPhvbLogContext = {
-        flowRunId: createFlowRunId(),
-        screenName: 'PhvbMagCapSo',
-        actionName: 'CapSo_AssignNumber',
-        userEmail: documentContext.userEmail,
-        itemId: detail.release.IdYeuCau || detail.release.Id
-      };
+      await runBusy('Đang cấp số...', async () => {
+        const logContext: IPhvbLogContext = {
+          flowRunId: createFlowRunId(),
+          screenName: 'PhvbMagCapSo',
+          actionName: 'CapSo_AssignNumber',
+          userEmail: documentContext.userEmail,
+          itemId: detail.release.IdYeuCau || detail.release.Id
+        };
 
-      await phvbCapSoService.assignDocumentNumber(documentContext, detail, soVanBan, logContext);
+        await phvbCapSoService.assignDocumentNumber(documentContext, detail, soVanBan, logContext);
+      });
 
       if (onCompleted) {
         onCompleted();
@@ -62,7 +66,7 @@ export function usePhvbCapSo(options: IUsePhvbCapSoOptions): IUsePhvbCapSoResult
     } finally {
       setIsSaving(false);
     }
-  }, [detail, documentContext, onCompleted]);
+  }, [detail, documentContext, onCompleted, runBusy]);
 
   return {
     canAssign,

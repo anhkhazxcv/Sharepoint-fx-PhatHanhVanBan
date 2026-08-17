@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { IVanBanItem } from '../models/PhvbMag.models';
+import { formatDateOnlyVi } from '../utils/PhvbMagDateTime.utils';
 import { NotePinIcon } from './PhvbMagIcons';
 import styles from './PhvbMag.module.scss';
 
@@ -38,8 +39,8 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
         {renderField('LOẠI YÊU CẦU', release.LoaiYeuCau)}
         {renderField('MÃ YÊU CẦU', release.IdYeuCau ? <strong>{release.IdYeuCau}</strong> : '---')}
         {renderField('THƯ MỤC', release.ThuMucBanHanh)}
-        {renderField('NGÀY HIỆU LỰC', release.HieuLucTu)}
-        {renderField('NGÀY HẾT HIỆU LỰC', release.HieuLucDen)}
+        {renderField('NGÀY HIỆU LỰC', formatDateOnlyVi(release.HieuLucTu))}
+        {renderField('NGÀY HẾT HIỆU LỰC', formatDateOnlyVi(release.HieuLucDen))}
         {renderField('LOẠI SLA', release.Loai_SLA)}
         {renderField('SỐ VĂN BẢN', release.SoVanBan || <span className={styles.detailPlaceholder}>Chưa cấp số</span>)}
         {renderField('NGƯỜI LIÊN HỆ', release.LienHe || <span className={styles.detailPlaceholder}>Chưa có</span>)}

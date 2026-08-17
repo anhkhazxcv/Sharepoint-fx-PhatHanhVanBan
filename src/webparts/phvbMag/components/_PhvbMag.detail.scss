@@ -28,30 +28,12 @@
   transform-origin: center center;
 }
 
-.folderPickerHeader {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 22px;
-  background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
-  color: #FFFFFF;
+.dialogHeader {
+  @include phvb-dialog-header;
+}
 
-  h3 {
-    margin: 0;
-    @include ty-modal-title;
-  }
-
-  .btnClose {
-    border: none;
-    background: transparent;
-    color: #FFFFFF;
-    font-size: $font-size-lg;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0 4px;
-  }
+.dialogHeaderClose {
+  @include phvb-dialog-header-close;
 }
 
 .folderPickerBody {
@@ -364,15 +346,10 @@
   width: min(460px, calc(100vw - 40px));
   background-color: #FFFFFF;
   border-radius: 12px;
-  padding: 22px 24px;
+  padding: 0;
+  overflow: hidden;
   box-shadow: $shadow-lg;
   animation: scaleUp 0.2s ease;
-
-  h4 {
-    margin: 0 0 10px;
-    font-size: 16px;
-    color: $primary-color;
-  }
 
   p {
     margin: 0 0 18px;
@@ -457,10 +434,15 @@
   color: #DC2626;
 }
 
+.confirmDialogBody {
+  padding: 16px 24px 0;
+}
+
 .confirmDialogActions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  padding: 16px 24px 22px;
 
   .btnSecondary,
   .btnSubmit {
@@ -521,19 +503,6 @@
       color: $text-muted;
       cursor: not-allowed;
     }
-  }
-}
-
-.banHanhNotifyHeader {
-  background-color: $primary-color;
-  padding: 14px 20px;
-
-  h4 {
-    margin: 0;
-    color: #FFFFFF;
-    font-size: 16px;
-    font-weight: 700;
-    text-align: center;
   }
 }
 
@@ -617,7 +586,7 @@
   }
 }
 
-.banHanhNotifyLoading {
+.banHanhNotifyEmpty {
   margin: 24px 0;
   text-align: center;
   color: $text-muted;
@@ -731,19 +700,6 @@
   overflow: hidden;
   box-shadow: $shadow-lg;
   animation: scaleUp 0.2s ease;
-}
-
-.remindDeadlineHeader {
-  background-color: $primary-color;
-  padding: 14px 20px;
-
-  h4 {
-    margin: 0;
-    color: #FFFFFF;
-    font-size: 16px;
-    font-weight: 700;
-    text-align: center;
-  }
 }
 
 .remindDeadlineBody {
@@ -1008,15 +964,10 @@
   flex-direction: column;
   background-color: #FFFFFF;
   border-radius: 12px;
-  padding: 22px 24px;
+  padding: 0;
+  overflow: hidden;
   box-shadow: $shadow-lg;
   animation: scaleUp 0.2s ease;
-
-  h4 {
-    margin: 0;
-    font-size: 16px;
-    color: $primary-color;
-  }
 }
 
 .templateModalContent {
@@ -1029,22 +980,6 @@
   box-shadow: $shadow-lg;
   overflow: hidden;
   animation: scaleUp 0.2s ease;
-}
-
-.templateModalHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid #EFE5DA;
-
-  h4 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: $font-weight-extrabold;
-    color: $text-ink;
-  }
 }
 
 .templateModalTitleRow {
@@ -1061,27 +996,9 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background-color: #F3EEFC;
-  color: #6B4AA8;
+  background-color: rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
   flex-shrink: 0;
-}
-
-.templateModalClose {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid #E7DACB;
-  border-radius: 8px;
-  background: #FFFFFF;
-  color: $text-ink3;
-  cursor: pointer;
-
-  &:hover {
-    background-color: #FBF8F4;
-    color: $primary-color;
-  }
 }
 
 .templateModalIntro {
@@ -1208,32 +1125,6 @@
   }
 }
 
-.workflowParticipantModalHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.workflowParticipantModalClose {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: $text-muted;
-  cursor: pointer;
-
-  &:hover {
-    background-color: rgba(139, 90, 57, 0.08);
-    color: $primary-color;
-  }
-}
-
 .workflowParticipantModalBody {
   flex: 1;
   min-height: 0;
@@ -1241,7 +1132,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  margin-bottom: 16px;
+  padding: 16px 24px 0;
 }
 
 .workflowParticipantSection {
@@ -1255,6 +1146,11 @@
   font-size: 14px;
   font-weight: 700;
   color: $text-main;
+
+  .required {
+    color: $color-error;
+    margin-left: 2px;
+  }
 }
 
 .workflowParticipantSearchRow {
@@ -1382,7 +1278,7 @@
 }
 
 .workflowParticipantError {
-  margin: 0 0 14px;
+  margin: 0 24px 14px;
   font-size: $font-size-sm;
   color: #C14D56;
 }

@@ -1,6 +1,6 @@
 import { HISTORY_LIST_TITLE } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
-import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
+import { toSharePointDateTimeIso } from '../utils/PhvbMagDateTime.utils';
 import type { IPhvbLogContext, IPhvbSiteContext } from '../models/PhvbMag.models';
 
 export interface ICreateExecutionHistoryInput {
@@ -38,7 +38,7 @@ export async function createExecutionHistoryRecord(
   context: IExecutionHistoryContext,
   input: ICreateExecutionHistoryInput
 ): Promise<void> {
-  const performedAt = formatCurrentExecutionDateTime();
+  const performedAt = toSharePointDateTimeIso();
   const historyStatus = input.historyStatus.trim();
   const idYeuCau = input.idYeuCau.trim();
 

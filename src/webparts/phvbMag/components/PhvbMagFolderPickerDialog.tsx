@@ -174,9 +174,9 @@ export function PhvbMagFolderPickerDialog(props: IPhvbMagFolderPickerDialogProps
     <>
       <div className={styles.folderPickerOverlay}>
         <div className={styles.folderPickerDialog}>
-          <div className={styles.folderPickerHeader}>
+          <div className={styles.dialogHeader}>
             <h3>Danh mục thư mục ban hành</h3>
-            <button type="button" className={styles.btnClose} onClick={onClose} aria-label="Đóng">
+            <button type="button" className={styles.dialogHeaderClose} onClick={onClose} aria-label="Đóng">
               <CloseIcon />
             </button>
           </div>

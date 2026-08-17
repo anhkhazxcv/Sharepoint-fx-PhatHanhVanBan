@@ -1,3 +1,5 @@
+import { parseDateOnlyToLocalMidnight } from './PhvbMagLibrary.utils';
+
 function pad2(value: number): string {
   return value < 10 ? `0${value}` : `${value}`;
 }
@@ -77,6 +79,51 @@ export function formatExecutionDate(value?: string): string {
   return formatDateParts(parsed);
 }
 
-export function formatCurrentExecutionDateTime(): string {
-  return formatDateTimeParts(new Date());
+function toLocalDateOnly(value?: string | Date): Date | undefined {
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) {
+      return undefined;
+    }
+
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+
+  return parseDateOnlyToLocalMidnight(value);
+}
+
+function formatSharePointDateOnly(date: Date): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+/** REST Date-only: yyyy-MM-ddT00:00:00 (no Z). Empty / vô thời hạn → undefined (omit on create). */
+export function toSharePointDateOnlyIso(value?: string | Date): string | undefined {
+  const parsed = toLocalDateOnly(value);
+  return parsed ? `${formatSharePointDateOnly(parsed)}T00:00:00` : undefined;
+}
+
+/** JSON null so SharePoint REST blanks a DateTime field on update. */
+export function sharePointRestNull(): string {
+  // eslint-disable-next-line @rushstack/no-new-null -- SharePoint REST DateTime clear
+  return null as unknown as string;
+}
+
+/** validateUpdateListItem FieldValue for Date-only: M/d/yyyy (site en-US, e.g. 2/23/2012). Do not use dd/MM/yyyy or REST ISO. Empty → ''. */
+export function toSharePointDateOnlyFieldValue(value?: string | Date): string {
+  const parsed = toLocalDateOnly(value);
+  return parsed ? `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}` : '';
+}
+
+/** REST DateTime with time (Ngay_ThucHien). */
+export function toSharePointDateTimeIso(date: Date = new Date()): string {
+  return date.toISOString();
+}
+
+export function formatDateOnlyVi(value?: string): string {
+  const parsed = parseDateOnlyToLocalMidnight(value);
+
+  if (!parsed) {
+    return (value || '').trim();
+  }
+
+  return formatDateParts(parsed);
 }

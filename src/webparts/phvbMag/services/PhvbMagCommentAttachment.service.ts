@@ -43,7 +43,7 @@ interface ISharePointFolderFile {
 
 function buildODataParameterQuery(parameters: Record<string, string>): string {
   return Object.keys(parameters)
-    .map(key => `${key}='${escapeODataValue(parameters[key])}'`)
+    .map(key => `${encodeURIComponent(key)}='${encodeURIComponent(escapeODataValue(parameters[key]))}'`)
     .join('&');
 }
 

@@ -1,5 +1,6 @@
 import {
   DMVL_FOLDER_NAME,
+  PHVB_ROLES,
   REQUEST_STATUS,
   resolveIssuanceLibraryTitle
 } from '../config/PhvbMag.configuration';
@@ -11,8 +12,7 @@ import {
   resolveRecipientEmail
 } from './PhvbMagBanHanhNotify.utils';
 import { getStoragePathAfterLibrary } from './PhvbMagBanHanh.tree';
-import { canAccessDmvl } from './PhvbMagRole.utils';
-import { normalizeRoleEmail } from './PhvbMagRole.utils';
+import { normalizeRoleEmail, userHasAnyRole } from './PhvbMagRole.utils';
 import type {
   IBanHanhNotifyDraft,
   ILabelCustomConfigItem,
@@ -111,9 +111,24 @@ export function isDmvlSubmissionRelease(release: IVanBanItem): boolean {
   return thuMucBanHanhHasDmvlFolder(release.ThuMucBanHanh);
 }
 
+export function isDmvlBanHanhActor(
+  release: IVanBanItem,
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  userEmail?: string
+): boolean {
+  const creatorEmail = normalizeRoleEmail(release.EmailNguoiTao);
+  const currentEmail = normalizeRoleEmail(userEmail);
+  const isCreator = Boolean(creatorEmail) && creatorEmail === currentEmail;
+
+  if (isCreator) {
+    return true;
+  }
+
+  return userHasAnyRole(roles, userEmail, [PHVB_ROLES.ADMIN, PHVB_ROLES.SUPER_ADMIN]);
+}
+
 export function canResumeDmvlBanHanh(
   release: IVanBanItem,
-  userDisplayName: string | undefined,
   roles: ReadonlyArray<IPhvbRoleEntry>,
   userEmail?: string
 ): boolean {
@@ -123,14 +138,7 @@ export function canResumeDmvlBanHanh(
     return false;
   }
 
-  const creatorEmail = normalizeRoleEmail(release.EmailNguoiTao);
-  const currentEmail = normalizeRoleEmail(userEmail);
-
-  if (!creatorEmail || creatorEmail !== currentEmail) {
-    return false;
-  }
-
-  return canAccessDmvl(userDisplayName, roles, userEmail);
+  return isDmvlBanHanhActor(release, roles, userEmail);
 }
 
 export function resolveDmvlNotifyDraft(

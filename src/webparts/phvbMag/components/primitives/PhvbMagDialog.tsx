@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { CloseIcon } from '../PhvbMagIcons';
 import styles from '../PhvbMag.module.scss';
 
 export type PhvbMagDialogSize = 'sm' | 'md' | 'lg';
@@ -63,6 +64,22 @@ export function PhvbMagDialog(props: IPhvbMagDialogProps): React.ReactElement {
   const resolvedTitleId = titleId || 'phvb-dialog-title';
   const contentClass = resolveContentClassName(variant, size, contentClassName);
 
+  const body = bodyClassName ? (
+    <div className={bodyClassName}>
+      {children}
+    </div>
+  ) : variant === 'confirm' ? (
+    <div className={styles.confirmDialogBody}>
+      {children}
+    </div>
+  ) : contentClassName ? (
+    children
+  ) : (
+    <div className={styles.modalBody}>
+      {children}
+    </div>
+  );
+
   return (
     <div
       className={resolveOverlayClassName(variant)}
@@ -77,25 +94,21 @@ export function PhvbMagDialog(props: IPhvbMagDialogProps): React.ReactElement {
         onClick={event => event.stopPropagation()}
       >
         {title ? (
-          variant === 'confirm' ? (
+          <div className={styles.dialogHeader}>
             <h4 id={resolvedTitleId}>{title}</h4>
-          ) : (
-            <div className={styles.modalHeader}>
-              <h4 id={resolvedTitleId}>{title}</h4>
-            </div>
-          )
+            {onDismiss ? (
+              <button
+                type="button"
+                className={styles.dialogHeaderClose}
+                onClick={onDismiss}
+                aria-label="Đóng"
+              >
+                <CloseIcon />
+              </button>
+            ) : null}
+          </div>
         ) : null}
-        {variant === 'confirm' && !bodyClassName ? children : bodyClassName ? (
-          <div className={bodyClassName}>
-            {children}
-          </div>
-        ) : contentClassName ? (
-          children
-        ) : (
-          <div className={styles.modalBody}>
-            {children}
-          </div>
-        )}
+        {body}
         {footer ? (
           <div className={footerClassName || (variant === 'confirm' ? styles.confirmDialogActions : styles.modalFooter)}>
             {footer}

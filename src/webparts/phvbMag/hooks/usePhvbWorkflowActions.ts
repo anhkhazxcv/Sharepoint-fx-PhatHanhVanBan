@@ -6,6 +6,7 @@ import {
   resolveWorkflowActionContext,
   type WorkflowActionKey
 } from '../utils/PhvbMagWorkflowPermission.utils';
+import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 
 interface IUsePhvbWorkflowActionsOptions {
   documentContext: IPhvbDocumentContext;
@@ -47,6 +48,7 @@ function buildWorkflowLogContext(
 
 export function usePhvbWorkflowActions(options: IUsePhvbWorkflowActionsOptions): IUsePhvbWorkflowActionsResult {
   const { documentContext, detail, onCompleted } = options;
+  const { runBusy } = usePhvbBusy();
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 
@@ -73,11 +75,13 @@ export function usePhvbWorkflowActions(options: IUsePhvbWorkflowActionsOptions):
     };
 
     try {
-      await phvbWorkflowActionService.executeAction({
-        ...documentContext,
-        detail,
-        input,
-        logContext: buildWorkflowLogContext(documentContext, detail, action)
+      await runBusy('Đang xử lý...', async () => {
+        await phvbWorkflowActionService.executeAction({
+          ...documentContext,
+          detail,
+          input,
+          logContext: buildWorkflowLogContext(documentContext, detail, action)
+        });
       });
 
       if (onCompleted) {
@@ -91,7 +95,7 @@ export function usePhvbWorkflowActions(options: IUsePhvbWorkflowActionsOptions):
     } finally {
       setIsProcessing(false);
     }
-  }, [detail, documentContext, onCompleted]);
+  }, [detail, documentContext, onCompleted, runBusy]);
 
   return {
     actionContext,

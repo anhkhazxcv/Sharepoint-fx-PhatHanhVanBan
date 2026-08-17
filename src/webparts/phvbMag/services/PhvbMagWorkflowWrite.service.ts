@@ -8,7 +8,7 @@ import {
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { phvbSendMailService } from './PhvbMagSendMail.service';
 import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
-import { formatCurrentExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
+import { toSharePointDateTimeIso } from '../utils/PhvbMagDateTime.utils';
 import { getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
 import {
   buildYeuCauPayloadForStage,
@@ -35,10 +35,6 @@ export interface IResolvedDirectoryUser {
   displayName: string;
   email: string;
   department: string;
-}
-
-function formatCurrentDate(): string {
-  return formatCurrentExecutionDateTime();
 }
 
 export function buildDirectoryUserMap(directoryUsers: ReadonlyArray<IPhvbDirectoryUser>): Record<string, IResolvedDirectoryUser> {
@@ -163,7 +159,7 @@ export class PhvbWorkflowWriteService {
       return;
     }
 
-    const performedAt = formatCurrentDate();
+    const performedAt = toSharePointDateTimeIso();
     const directoryMap = buildDirectoryUserMap(options.directoryUsers);
     const formRules = getRequestTypeFormRules(options.input.requestType);
     const workflowTasks: Array<Promise<void>> = [];
