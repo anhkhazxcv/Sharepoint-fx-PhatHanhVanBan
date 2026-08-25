@@ -7,13 +7,14 @@ import {
   IWorkflowParticipantChanges,
   IWorkflowParticipantsByStage
 } from '../utils/PhvbMagWorkflowParticipant.utils';
-import type { IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbLogContext, IRequestDetailData } from '../models/PhvbMag.models';
+import type { IPhvbDirectoryUser, IPhvbDocumentContext, IPhvbLogContext, IPhvbRoleEntry, IRequestDetailData } from '../models/PhvbMag.models';
 import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 
 interface IUsePhvbWorkflowParticipantsOptions {
   documentContext: IPhvbDocumentContext;
   detail?: IRequestDetailData;
   directoryUsers: ReadonlyArray<IPhvbDirectoryUser>;
+  roles: ReadonlyArray<IPhvbRoleEntry>;
   onCompleted?: () => void;
 }
 
@@ -30,7 +31,7 @@ interface IUsePhvbWorkflowParticipantsResult {
 export function usePhvbWorkflowParticipants(
   options: IUsePhvbWorkflowParticipantsOptions
 ): IUsePhvbWorkflowParticipantsResult {
-  const { documentContext, detail, directoryUsers, onCompleted } = options;
+  const { documentContext, detail, directoryUsers, roles, onCompleted } = options;
   const { runBusy } = usePhvbBusy();
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
@@ -40,8 +41,8 @@ export function usePhvbWorkflowParticipants(
       return false;
     }
 
-    return canOpenWorkflowParticipantModal(detail.release);
-  }, [detail]);
+    return canOpenWorkflowParticipantModal(detail.release, roles, documentContext.userEmail);
+  }, [detail, roles, documentContext.userEmail]);
 
   const saveChanges = useCallback(async (
     initialDraft: IWorkflowParticipantsByStage,

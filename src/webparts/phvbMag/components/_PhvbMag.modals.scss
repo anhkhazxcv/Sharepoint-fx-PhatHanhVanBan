@@ -7,7 +7,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(44, 37, 32, 0.45);
+  background-color: $color-overlay;
   backdrop-filter: blur(5px);
   z-index: 600;
   display: flex;
@@ -65,7 +65,7 @@
   width: 760px;
   max-width: 100%;
   max-height: 94vh;
-  background-color: #FFFFFF;
+  background-color: $surface-white;
   border-radius: 16px;
   box-shadow: $shadow-lg;
   display: flex;
@@ -81,12 +81,12 @@
       align-items: center;
       gap: 10px;
       min-width: 0;
-      color: #FFFFFF;
+      color: $surface-white;
 
       h3 {
         margin: 0;
         @include ty-modal-title;
-        color: #FFFFFF;
+        color: $surface-white;
       }
     }
 
@@ -114,7 +114,7 @@
       width: 6px;
     }
     &::-webkit-scrollbar-thumb {
-      background-color: rgba(123, 76, 44, 0.15);
+      background-color: $color-primary-alpha-15;
       border-radius: 4px;
     }
 
@@ -149,7 +149,7 @@
       }
 
       .required {
-        color: #D32F2F;
+        color: $color-error;
         margin-left: 2px;
       }
     }
@@ -160,7 +160,7 @@
       gap: 10px;
 
       .requestTypeBtn {
-        background-color: #FFFFFF;
+        background-color: $surface-white;
         border: 1.5px solid #E8E2D9;
         border-radius: 6px;
         padding: 5px 12px;
@@ -177,14 +177,14 @@
       }
 
       .requestTypeBtnActive {
-        background-color: #7B4C2C;
-        color: #FFFFFF;
-        border-color: #7B4C2C;
+        background-color: $primary-color;
+        color: $surface-white;
+        border-color: $primary-color;
 
         &:hover {
-          background-color: #7B4C2C;
-          color: #FFFFFF;
-          border-color: #7B4C2C;
+          background-color: $primary-color;
+          color: $surface-white;
+          border-color: $primary-color;
         }
       }
     }
@@ -196,14 +196,14 @@
       border-radius: 7px;
       @include ty-input;
       outline: none;
-      background-color: #FFFFFF;
+      background-color: $surface-white;
       color: $text-ink;
       transition: all 0.2s ease;
       width: 100%;
 
       &:focus {
         border-color: $primary-color;
-        box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+        box-shadow: 0 0 0 3px $color-primary-alpha-08;
       }
 
       &::placeholder {
@@ -260,7 +260,7 @@
 
     .createEmailNotifyBoxIssue {
       background-color: #E8F5E9;
-      border-color: #2E7D32;
+      border-color: $color-success;
 
       .createEmailNotifyLabel {
         color: #1B5E20;
@@ -271,7 +271,7 @@
       }
 
       input[type='checkbox'] {
-        accent-color: #2E7D32;
+        accent-color: $color-success;
 
         &:disabled {
           opacity: 1;
@@ -281,7 +281,7 @@
     }
 
     .createEmailNotifyBoxRevoke {
-      background-color: #FFFFFF;
+      background-color: $surface-white;
       border-color: #E8E2D9;
 
       .createEmailNotifyLabel {
@@ -319,7 +319,6 @@
         display: flex;
         align-items: center;
         border: 1px solid #E5D6C7;
-        background-color: #FAF6H0;
         background-color: #F8F5EF;
         border-radius: 8px;
         padding: 0 12px;
@@ -339,7 +338,7 @@
       }
 
       .folderInputInvalid {
-        border-color: #D32F2F;
+        border-color: $color-error;
         background-color: #FFF8F7;
       }
 
@@ -348,7 +347,7 @@
         align-items: center;
         justify-content: center;
         gap: 6px;
-        background-color: #FFFFFF;
+        background-color: $surface-white;
         border: 1px solid #E5D6C7;
         border-radius: 8px;
         padding: 0 16px;
@@ -368,7 +367,7 @@
         top: 100%;
         left: 0;
         width: 100%;
-        background-color: #FFFFFF;
+        background-color: $surface-white;
         border: 1px solid #E5D6C7;
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(123, 76, 44, 0.12);
@@ -411,7 +410,7 @@
       }
 
       .folderItemActive {
-        background-color: #F5EBE0;
+        background-color: $primary-light;
         font-weight: 600;
         color: $primary-color;
       }
@@ -479,7 +478,7 @@
       align-items: center;
       width: 100%;
       padding: 12px 16px;
-      background-color: #FFFFFF;
+      background-color: $surface-white;
       border: 1px solid #E5D6C7;
       border-radius: 10px;
       gap: 12px;
@@ -521,7 +520,7 @@
       background: transparent;
       border: none;
       font-size: 20px;
-      color: #8C827A;
+      color: $text-muted;
       cursor: pointer;
       transition: color 0.15s ease;
       display: flex;
@@ -549,12 +548,12 @@
       position: relative;
       border: 1px solid #E5D6C7;
       border-radius: 8px;
-      background-color: #FFFFFF;
+      background-color: $surface-white;
       transition: all 0.2s ease;
 
       &:focus-within {
         border-color: $primary-color;
-        box-shadow: 0 0 0 3px rgba(123, 76, 44, 0.08);
+        box-shadow: 0 0 0 3px $color-primary-alpha-08;
       }
     }
 
@@ -576,7 +575,7 @@
       font-weight: 600;
       padding: 4px 10px;
       border-radius: 6px;
-      border: 1px solid rgba(123, 76, 44, 0.1);
+      border: 1px solid $color-primary-alpha-10;
     }
 
     .btnRemoveTag {
@@ -614,10 +613,10 @@
       top: 100%;
       left: 0;
       width: 100%;
-      background-color: #FFFFFF;
+      background-color: $surface-white;
       border: 1px solid #E5D6C7;
       border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(123, 76, 44, 0.1);
+      box-shadow: 0 8px 24px $color-primary-alpha-10;
       z-index: 1000;
       margin-top: 4px;
       max-height: 200px;
@@ -679,7 +678,7 @@
       font-size: 12px;
       color: $text-main;
       outline: none;
-      background-color: #FFFFFF;
+      background-color: $surface-white;
 
       &:focus {
         border-color: $primary-color;
@@ -687,7 +686,7 @@
     }
 
     .deadlineInputInvalid {
-      border-color: #D32F2F;
+      border-color: $color-error;
       background-color: #FFF8F7;
     }
 
@@ -695,7 +694,7 @@
       margin: 4px 0 0;
       font-size: 11.5px;
       line-height: 1.4;
-      color: #D32F2F;
+      color: $color-error;
     }
 
     .workflowDeadlineNotice {
@@ -704,7 +703,7 @@
       border-radius: 8px;
       background-color: #FFF5E8;
       border: 1px solid #F1DFC2;
-      color: #7B4C2C;
+      color: $primary-color;
       font-size: 12.5px;
       line-height: 1.45;
     }
@@ -713,7 +712,7 @@
     .workflowSection {
       margin-top: 14px;
       padding-top: 18px;
-      border-top: 1px solid #EFECE6;
+      border-top: 1px solid $border-color;
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -749,7 +748,7 @@
     background-color: $bg-folders;
 
     .btnSecondary {
-      background-color: #FFFFFF;
+      background-color: $surface-white;
       border: 1px solid $border-color;
       border-radius: 7px;
       padding: 6px 14px;
@@ -770,7 +769,7 @@
     }
 
     .btnDraft {
-      background-color: #FFFFFF;
+      background-color: $surface-white;
       border: 1px solid #C0B2A3;
       border-radius: 7px;
       padding: 6px 14px;
@@ -791,18 +790,18 @@
     }
 
     .btnSubmit {
-      background: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
+      background: $gradient-submit;
       border: none;
       border-radius: 7px;
       padding: 6px 14px;
       @include ty-button;
-      color: #FFFFFF;
+      color: $surface-white;
       cursor: pointer;
       transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(123, 76, 44, 0.15);
+      box-shadow: 0 4px 12px $color-primary-alpha-15;
 
       &:hover {
-        background: linear-gradient(135deg, #8B5A39 0%, #764A2C 100%);
+        background: $gradient-submit-hover;
         box-shadow: 0 6px 16px rgba(123, 76, 44, 0.22);
       }
 
@@ -818,6 +817,91 @@
       justify-content: center;
       gap: 2px;
     }
+  }
+}
+
+.createTemplatePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 2px 0 4px;
+  padding: 10px 12px;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  background-color: $bg-folders;
+}
+
+.createTemplatePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.createTemplatePanelHint {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+  font-size: $font-size-base;
+  line-height: $line-height-relaxed;
+  color: $text-ink2;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+}
+
+.createTemplatePanelToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  background-color: $surface-white;
+  color: $primary-color;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+  box-shadow: $shadow-sm;
+
+  &:hover {
+    background-color: $bg-content;
+    border-color: $primary-color;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $primary-color;
+    outline-offset: 2px;
+  }
+}
+
+.createTemplatePanelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid $border-color;
+
+  .templateModalStatus,
+  .templateModalError {
+    padding: 6px 0;
+  }
+
+  .templateModalItem {
+    padding: 10px 12px;
+    border-radius: 8px;
+  }
+
+  .templateModalItemIcon {
+    width: 32px;
+    height: 32px;
   }
 }
 

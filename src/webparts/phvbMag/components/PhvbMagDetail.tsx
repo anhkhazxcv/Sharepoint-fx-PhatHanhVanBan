@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
-import type { IBanHanhNotifyDraft, IAttachmentLibraryItem, IRequestDetailData, TabType } from '../models/PhvbMag.models';
+import type { IAllUserWorkflowItem, IBanHanhNotifyDraft, IAttachmentLibraryItem, IPhvbSiteContext, IRequestDetailData, TabType } from '../models/PhvbMag.models';
 import type { DetailDocumentUploadKind } from '../hooks/usePhvbDetailDocuments';
 import type { IRemindDeadlineContext } from '../utils/PhvbMagRemindDeadline.utils';
+import type { IRequestInfoFieldsInput } from '../utils/PhvbMagDetailInfoEdit.utils';
 import type { IWorkflowActionAvailability } from '../utils/PhvbMagWorkflowPermission.utils';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
 import { canDuplicateRelease } from '../utils/PhvbMagDraftEdit.utils';
@@ -24,9 +25,22 @@ interface IPhvbMagDetailProps {
   data: IRequestDetailData;
   approveLabel?: string;
   availableActions?: IWorkflowActionAvailability;
+  pendingParticipants?: IAllUserWorkflowItem[];
+  canRejectAtActiveStage?: boolean;
+  canActOnBehalfOfParticipant?: boolean;
   isWorkflowProcessing?: boolean;
   workflowErrorMessage?: string;
-  onRunWorkflowAction?: (action: WorkflowActionKey, comment?: string) => Promise<boolean>;
+  onRunWorkflowAction?: (
+    action: WorkflowActionKey,
+    comment?: string,
+    targetParticipantId?: number,
+    files?: File[]
+  ) => Promise<boolean>;
+  transitionLabel?: string;
+  canRunTransition?: boolean;
+  isTransitionProcessing?: boolean;
+  transitionErrorMessage?: string;
+  onRunTransition?: () => Promise<boolean>;
   commentSelectedFiles?: File[];
   isCommentSaving?: boolean;
   commentErrorMessage?: string;
@@ -68,6 +82,11 @@ interface IPhvbMagDetailProps {
   onUploadDocuments?: (kind: DetailDocumentUploadKind, files: FileList | File[]) => Promise<boolean>;
   onDeleteDocument?: (file: IAttachmentLibraryItem) => Promise<boolean>;
   onDeleteDocuments?: (files: IAttachmentLibraryItem[]) => Promise<boolean>;
+  siteContext?: IPhvbSiteContext;
+  canEditInfo?: boolean;
+  isInfoSaving?: boolean;
+  infoErrorMessage?: string;
+  onSaveInfoFields?: (input: IRequestInfoFieldsInput) => Promise<boolean>;
   canResumeDmvlBanHanh?: boolean;
   isDmvlResumeBusy?: boolean;
   dmvlResumeErrorMessage?: string;
@@ -87,9 +106,17 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     data,
     approveLabel,
     availableActions,
+    pendingParticipants,
+    canRejectAtActiveStage,
+    canActOnBehalfOfParticipant,
     isWorkflowProcessing,
     workflowErrorMessage,
     onRunWorkflowAction,
+    transitionLabel,
+    canRunTransition,
+    isTransitionProcessing,
+    transitionErrorMessage,
+    onRunTransition,
     commentSelectedFiles,
     isCommentSaving,
     commentErrorMessage,
@@ -128,6 +155,11 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     onUploadDocuments,
     onDeleteDocument,
     onDeleteDocuments,
+    siteContext,
+    canEditInfo,
+    isInfoSaving,
+    infoErrorMessage,
+    onSaveInfoFields,
     canResumeDmvlBanHanh,
     isDmvlResumeBusy,
     dmvlResumeErrorMessage,
@@ -188,10 +220,26 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
             remindErrorMessage={remindErrorMessage}
             isRemindDialogOpen={isRemindDialogOpen}
             onOpenRemindDeadline={() => setIsRemindDialogOpen(true)}
+            approveLabel={approveLabel}
+            pendingParticipants={pendingParticipants}
+            canRejectAtActiveStage={canRejectAtActiveStage}
+            canActOnBehalfOfParticipant={canActOnBehalfOfParticipant}
+            isWorkflowActionProcessing={isWorkflowProcessing}
+            workflowActionErrorMessage={workflowErrorMessage}
+            onRunWorkflowAction={onRunWorkflowAction}
           />
         );
       default:
-        return <PhvbMagDetailInfoTab release={data.release} />;
+        return (
+          <PhvbMagDetailInfoTab
+            release={data.release}
+            siteContext={siteContext}
+            canEdit={canEditInfo}
+            isSaving={isInfoSaving}
+            errorMessage={infoErrorMessage}
+            onSave={onSaveInfoFields}
+          />
+        );
     }
   };
 
@@ -206,6 +254,11 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
         isProcessing={isWorkflowProcessing}
         errorMessage={workflowErrorMessage}
         onRunAction={onRunWorkflowAction}
+        transitionLabel={transitionLabel}
+        canRunTransition={canRunTransition}
+        isTransitionProcessing={isTransitionProcessing}
+        transitionErrorMessage={transitionErrorMessage}
+        onRunTransition={onRunTransition}
         canAssignDocumentNumber={canAssignDocumentNumber}
         isCapSoSaving={isCapSoSaving}
         capSoErrorMessage={capSoErrorMessage}

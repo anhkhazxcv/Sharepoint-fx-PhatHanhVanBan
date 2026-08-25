@@ -2,8 +2,18 @@ import * as React from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ICommentAttachmentItem, ILichSuThucHienItem } from '../models/PhvbMag.models';
 import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
+import { getExecutionHistoryTone } from '../utils/PhvbMagStatusTone.utils';
 import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import styles from './PhvbMag.module.scss';
+
+const HISTORY_STATUS_TONE_CLASS: Record<string, string> = {
+  draft: styles.detailHistoryStatusDraft,
+  info: styles.detailHistoryStatusInfo,
+  warning: styles.detailHistoryStatusWarning,
+  success: styles.detailHistoryStatusSuccess,
+  error: styles.detailHistoryStatusError,
+  archived: styles.detailHistoryStatusArchived
+};
 
 interface IPhvbMagDetailHistoryItemProps {
   item: ILichSuThucHienItem;
@@ -80,7 +90,12 @@ export function PhvbMagDetailHistoryItem(props: IPhvbMagDetailHistoryItemProps):
           {formatExecutionDateTime(item.Ngay_ThucHien || item.Created)}
         </span>
       </div>
-      <span className={styles.detailHistoryStatus}>
+      <span
+        className={[
+          styles.detailHistoryStatus,
+          HISTORY_STATUS_TONE_CLASS[getExecutionHistoryTone(item.TrangThai_ThucHien || '')]
+        ].filter(Boolean).join(' ')}
+      >
         {item.TrangThai_ThucHien || '---'}
       </span>
       {item.NoiDung ? (

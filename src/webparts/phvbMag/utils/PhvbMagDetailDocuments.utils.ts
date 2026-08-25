@@ -8,7 +8,7 @@ const CREATOR_MANAGE_STATUSES: ReadonlySet<string> = new Set([
   REQUEST_STATUS.DANG_PHE_DUYET
 ]);
 
-const ADMIN_LOCKED_STATUSES: ReadonlySet<string> = new Set([
+export const ADMIN_LOCKED_STATUSES: ReadonlySet<string> = new Set([
   REQUEST_STATUS.CHO_BAN_HANH,
   REQUEST_STATUS.BAN_HANH
 ]);

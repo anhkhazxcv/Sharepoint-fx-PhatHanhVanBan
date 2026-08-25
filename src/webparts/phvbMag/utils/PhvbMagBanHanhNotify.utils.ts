@@ -1,10 +1,10 @@
 import {
-  BAN_HANH_MAIL_LABELS,
   BAN_HANH_NOTIFY_DEFAULTS,
   RECENT_PUBLISHED_WINDOW_DAYS_DEFAULT,
   RECENT_PUBLISHED_WINDOW_DAYS_LABEL,
   RECENT_PUBLISHED_WINDOW_DAYS_MAX,
   RECENT_PUBLISHED_WINDOW_DAYS_MIN,
+  SEND_MAIL_TYPE,
   WORKFLOW_FILTER_LOAI_YEU_CAU_LABEL,
   WORKFLOW_FILTER_NAM_TAO_YEU_CAU_LABEL,
   WORKFLOW_FILTER_PHONG_BAN_LABEL,
@@ -17,6 +17,7 @@ import type {
   ILabelCustomConfigItem,
   ILabelCustomSnapshot,
   IMailBanHanhConfigItem,
+  IMailContentConfigItem,
   IVanBanItem,
   IWorkflowFilterOptions
 } from '../models/PhvbMag.models';
@@ -52,6 +53,11 @@ export function resolveHanhDong(loaiYeuCau?: string): string {
     default:
       return 'ban hành';
   }
+}
+
+export function resolveXacNhanBanHanhMailType(release: IVanBanItem): string {
+  const titleEn = (release.TenVanBan_ENG || '').trim();
+  return titleEn ? SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH_EN : SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH_VN;
 }
 
 export function resolveBanHanhSubjectPrefix(loaiYeuCau?: string): string {
@@ -249,9 +255,24 @@ function replaceTokens(template: string, tokens: Record<string, string>): string
   return result;
 }
 
+function getMailContentBody(
+  mailContentConfig: ReadonlyArray<IMailContentConfigItem>,
+  mailType: string
+): string {
+  for (let index = 0; index < mailContentConfig.length; index += 1) {
+    const item = mailContentConfig[index];
+
+    if (item.mailType === mailType) {
+      return (item.body || '').trim();
+    }
+  }
+
+  return '';
+}
+
 export function buildBanHanhNotifyBody(
   release: IVanBanItem,
-  labelConfig: ReadonlyArray<ILabelCustomConfigItem>
+  mailContentConfig: ReadonlyArray<IMailContentConfigItem>
 ): string {
   const titleVi = (release.Tenvanban || '').trim();
   const ngayHieuLucVi = formatDateVi(release.HieuLucTu);
@@ -266,7 +287,7 @@ export function buildBanHanhNotifyBody(
     '{{BoPhanGui_TV}}': BAN_HANH_NOTIFY_DEFAULTS.BO_PHAN_GUI_TV
   };
 
-  const templateVn = getLabelValue(labelConfig, BAN_HANH_MAIL_LABELS.CONTENT_VN);
+  const templateVn = getMailContentBody(mailContentConfig, SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH_VN);
   const contentVn = replaceTokens(templateVn, vnTokens);
 
   const titleEn = (release.TenVanBan_ENG || '').trim();
@@ -288,7 +309,7 @@ export function buildBanHanhNotifyBody(
     '{{BoPhanGui_TA}}': BAN_HANH_NOTIFY_DEFAULTS.BO_PHAN_GUI_TA
   };
 
-  const templateEn = getLabelValue(labelConfig, BAN_HANH_MAIL_LABELS.CONTENT_ENG);
+  const templateEn = getMailContentBody(mailContentConfig, SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH_EN);
   const contentEn = replaceTokens(templateEn, enTokens);
 
   return contentEn || contentVn;
@@ -297,12 +318,12 @@ export function buildBanHanhNotifyBody(
 export function buildBanHanhNotifyDraft(
   release: IVanBanItem,
   mailConfig: ReadonlyArray<IMailBanHanhConfigItem>,
-  labelConfig: ReadonlyArray<ILabelCustomConfigItem>
+  mailContentConfig: ReadonlyArray<IMailContentConfigItem>
 ): IBanHanhNotifyDraft {
   const draft: IBanHanhNotifyDraft = {
     recipient: resolveRecipientEmail(release.ThuMucBanHanh, mailConfig),
     subject: buildBanHanhSubject(release),
-    body: buildBanHanhNotifyBody(release, labelConfig)
+    body: buildBanHanhNotifyBody(release, mailContentConfig)
   };
 
   return draft;
@@ -316,7 +337,7 @@ export function buildBanHanhNotifyDraftFromSavedRelease(release: IVanBanItem): I
   };
 }
 
-function replaceAllTokens(template: string, token: string, value: string): string {
+export function replaceAllTokens(template: string, token: string, value: string): string {
   let result = template;
   let searchFrom = 0;
   let nextIndex = result.indexOf(token, searchFrom);

@@ -191,32 +191,9 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
-.homeGuideBanner {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-  margin-bottom: $space-5;
-  padding: $space-3 $space-4;
-  border: 1px solid $border-subtle;
-  border-radius: $radius-md;
-  background: $surface-muted;
-}
-
 .homeGuideIcon {
   font-size: 20px;
-  color: #7B4C2C;
-}
-
-.homeGuideContent {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.homeGuideTitle {
-  margin-bottom: 1px;
-  font-size: 12.5px;
-  font-weight: 800;
-  color: #7B4C2C;
+  color: $primary-color;
 }
 
 .homeGuideSub {
@@ -273,13 +250,8 @@
 }
 
 .homeSectionIcon {
-  color: #7B4C2C;
+  color: $primary-color;
   font-size: 14px;
-}
-
-.homeSectionEmoji {
-  font-size: 14px;
-  line-height: 1;
 }
 
 .homeSectionTitle {
@@ -292,7 +264,7 @@
 .homeSectionCount {
   font-size: 11px;
   font-weight: 700;
-  color: #7B4C2C;
+  color: $primary-color;
   background: #F2E8DC;
   padding: 2px 8px;
   border-radius: 20px;
@@ -302,7 +274,7 @@
   margin-left: auto;
   border: none;
   background: transparent;
-  color: #7B4C2C;
+  color: $primary-color;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -317,7 +289,7 @@
   border: 1px dashed #E8E2D8;
   border-radius: 10px;
   text-align: center;
-  color: #8C827A;
+  color: $text-muted;
 
   p {
     margin: 0;
@@ -327,17 +299,30 @@
 
 .homeLibraryPreviewGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .homeLibraryPreviewColumn {
   min-width: 0;
 }
 
+.homeLibraryPreviewDivider {
+  justify-self: center;
+  width: 1px;
+  height: 100%;
+  min-height: 8px;
+  background: $border-subtle;
+}
+
 @media (max-width: 960px) {
   .homeLibraryPreviewGrid {
     grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .homeLibraryPreviewDivider {
+    display: none;
   }
 }
 
@@ -355,18 +340,18 @@
   padding: 12px 14px;
   border: 1px solid #EDE2D7;
   border-radius: 10px;
-  background: #FFFFFF;
+  background: $surface-card;
 }
 
 .homeSavedUnavailableTitle {
   font-size: 12.5px;
   font-weight: 700;
-  color: #2C2520;
+  color: $text-main;
 }
 
 .homeSavedUnavailableMeta {
   font-size: 11px;
-  color: #8C827A;
+  color: $text-muted;
 }
 
 .homeRecentFolderList {
@@ -383,7 +368,7 @@
   padding: 12px 14px;
   border: 1px solid #E8E2D8;
   border-radius: 10px;
-  background: #FFFFFF;
+  background: $surface-card;
   cursor: pointer;
   text-align: left;
   transition: border-color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
@@ -397,7 +382,7 @@
 
 .homeRecentFolderIcon {
   flex-shrink: 0;
-  color: #7B4C2C;
+  color: $primary-color;
 }
 
 .homeRecentFolderBody {
@@ -423,7 +408,7 @@
 
 .homeDocRowMeta {
   font-size: 11px;
-  color: #8C827A;
+  color: $text-muted;
 }
 
 .homeCategoryGrid {
@@ -441,7 +426,7 @@
   padding: 14px 10px;
   border: 1px solid #E8E2D8;
   border-radius: 10px;
-  background: #FFFFFF;
+  background: $surface-card;
   cursor: pointer;
   text-align: center;
   transition: border-color 0.13s ease, box-shadow 0.13s ease, transform 0.13s ease;
@@ -453,7 +438,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid #7B4C2C;
+    outline: 2px solid $primary-color;
     outline-offset: 2px;
   }
 }

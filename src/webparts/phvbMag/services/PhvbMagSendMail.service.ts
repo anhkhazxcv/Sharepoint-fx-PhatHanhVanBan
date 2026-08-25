@@ -1,7 +1,10 @@
 import { HttpClient } from '@microsoft/sp-http';
 import { SEND_MAIL_TYPE } from '../config/PhvbMag.configuration';
-import type { IPhvbLogContext, IPhvbSiteContext, ISendMailPayload } from '../models/PhvbMag.models';
+import type { IPhvbLogContext, IPhvbSiteContext, ISendMailPayload, ISendMailRequest } from '../models/PhvbMag.models';
+import { isXacNhanBanHanhType } from '../utils/PhvbMagSendMail.utils';
+import { resolveMailContent } from '../utils/PhvbMagMailContent.utils';
 import { buildApiLogParams, phvbLogService, serializeLogPayload } from './PhvbMagLog.service';
+import { phvbMailContentConfigService } from './PhvbMagMailContentConfig.service';
 
 const LOG_PREFIX = '[PhvbSendMail]';
 
@@ -13,39 +16,39 @@ function requiresSoVanBan(typeSendMail: string): boolean {
   return (
     typeSendMail === SEND_MAIL_TYPE.XAC_NHAN_CAP_SO ||
     typeSendMail === SEND_MAIL_TYPE.YEU_CAU_BAN_HANH ||
-    typeSendMail === SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH ||
+    isXacNhanBanHanhType(typeSendMail) ||
     typeSendMail === SEND_MAIL_TYPE.TRA_LAI_ADMIN_BAN_HANH
   );
 }
 
 function requiresBanHanhEmailContent(typeSendMail: string): boolean {
-  return typeSendMail === SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH;
+  return isXacNhanBanHanhType(typeSendMail);
 }
 
-function getMissingPayloadFields(payload: ISendMailPayload): string[] {
+function getMissingPayloadFields(request: ISendMailRequest): string[] {
   const missing: string[] = [];
 
-  if (!(payload.NguoiThucHien || '').trim()) {
+  if (!(request.NguoiThucHien || '').trim()) {
     missing.push('NguoiThucHien');
   }
 
-  if (!(payload.TypeSendMail || '').trim()) {
+  if (!(request.TypeSendMail || '').trim()) {
     missing.push('TypeSendMail');
   }
 
-  if (!(payload.EmailTo || '').trim()) {
+  if (!(request.EmailTo || '').trim()) {
     missing.push('EmailTo');
   }
 
-  if (!(payload.IDYeuCau || '').trim()) {
+  if (!(request.IDYeuCau || '').trim()) {
     missing.push('IDYeuCau');
   }
 
-  if (!(payload.TenVanBan || '').trim()) {
+  if (!(request.TenVanBan || '').trim()) {
     missing.push('TenVanBan');
   }
 
-  if (!(payload.TomTatNoiDung || '').trim()) {
+  if (!(request.TomTatNoiDung || '').trim()) {
     missing.push('TomTatNoiDung');
   }
 
@@ -55,13 +58,13 @@ function getMissingPayloadFields(payload: ISendMailPayload): string[] {
 export class PhvbSendMailService {
   public async sendMail(
     context: IPhvbSiteContext,
-    payload: ISendMailPayload,
+    request: ISendMailRequest,
     logContext?: IPhvbLogContext
   ): Promise<void> {
     console.log(`${LOG_PREFIX} sendMail called`, {
-      TypeSendMail: payload.TypeSendMail,
-      EmailTo: payload.EmailTo,
-      IDYeuCau: payload.IDYeuCau,
+      TypeSendMail: request.TypeSendMail,
+      EmailTo: request.EmailTo,
+      IDYeuCau: request.IDYeuCau,
       hasEndpoint: Boolean((context.endPointSendMail || '').trim())
     });
 
@@ -74,41 +77,61 @@ export class PhvbSendMailService {
       return;
     }
 
-    const missingFields = getMissingPayloadFields(payload);
+    const missingFields = getMissingPayloadFields(request);
 
     if (missingFields.length > 0) {
       console.warn(`${LOG_PREFIX} skip: invalid_payload`, {
         missingFields,
-        payload
+        request
       });
       return;
     }
 
-    if (requiresSoVanBan(payload.TypeSendMail) && !(payload.SoVanBan || '').trim()) {
+    if (requiresSoVanBan(request.TypeSendMail) && !(request.SoVanBan || '').trim()) {
       console.warn(`${LOG_PREFIX} skip: missing_so_van_ban`, {
-        TypeSendMail: payload.TypeSendMail,
-        SoVanBan: payload.SoVanBan
+        TypeSendMail: request.TypeSendMail,
+        SoVanBan: request.SoVanBan
       });
       return;
+    }
+
+    if (!(request.Subject || '').trim() || !(request.Body || '').trim()) {
+      const contentConfig = await phvbMailContentConfigService.getMailContentByType(context, request.TypeSendMail);
+
+      if (contentConfig) {
+        const resolved = resolveMailContent(
+          { subject: contentConfig.subject, body: contentConfig.body },
+          request
+        );
+        request = { ...request, Subject: resolved.subject, Body: resolved.body };
+      } else {
+        console.warn(`${LOG_PREFIX} no_mail_content_config_found`, { TypeSendMail: request.TypeSendMail });
+      }
     }
 
     if (
-      requiresBanHanhEmailContent(payload.TypeSendMail) &&
-      (!(payload.SubjectBanHanh || '').trim() || !(payload.BodyEmail || '').trim())
+      requiresBanHanhEmailContent(request.TypeSendMail) &&
+      (!(request.Subject || '').trim() || !(request.Body || '').trim())
     ) {
       console.warn(`${LOG_PREFIX} skip: missing_ban_hanh_email_content`, {
-        TypeSendMail: payload.TypeSendMail,
-        SubjectBanHanh: payload.SubjectBanHanh,
-        hasBodyEmail: Boolean((payload.BodyEmail || '').trim())
+        TypeSendMail: request.TypeSendMail,
+        Subject: request.Subject,
+        hasBody: Boolean((request.Body || '').trim())
       });
       return;
     }
 
+    const wirePayload: ISendMailPayload = {
+      EmailTo: request.EmailTo,
+      Subject: request.Subject || '',
+      Body: request.Body || ''
+    };
+
     console.log(`${LOG_PREFIX} posting`, {
       endpoint,
-      TypeSendMail: payload.TypeSendMail,
-      EmailTo: payload.EmailTo,
-      IDYeuCau: payload.IDYeuCau
+      TypeSendMail: request.TypeSendMail,
+      EmailTo: request.EmailTo,
+      IDYeuCau: request.IDYeuCau
     });
 
     try {
@@ -117,7 +140,7 @@ export class PhvbSendMailService {
           Accept: 'application/json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload, (_key, value) => (value === undefined ? null : value))
+        body: JSON.stringify(wirePayload, (_key, value) => (value === undefined ? null : value))
       });
 
       if (!response.ok) {
@@ -126,12 +149,12 @@ export class PhvbSendMailService {
       }
 
       console.log(`${LOG_PREFIX} success`, {
-        TypeSendMail: payload.TypeSendMail,
+        TypeSendMail: request.TypeSendMail,
         status: response.status
       });
     } catch (error) {
       console.error(`${LOG_PREFIX} failed`, {
-        TypeSendMail: payload.TypeSendMail,
+        TypeSendMail: request.TypeSendMail,
         endpoint,
         error
       });
@@ -140,7 +163,7 @@ export class PhvbSendMailService {
         buildApiLogParams(context, logContext, {
           httpMethod: 'POST',
           requestUrl: endpoint,
-          requestPayload: serializeLogPayload(payload)
+          requestPayload: serializeLogPayload(request)
         }),
         error
       );

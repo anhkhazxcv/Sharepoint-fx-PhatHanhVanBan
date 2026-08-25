@@ -229,22 +229,7 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
             logContext
           }, duplicateFromIdYeuCau);
 
-        const targetTab: TabType = mode === 'draft' ? 'BanNhap' : activeTab;
-
         phvbDocumentsService.invalidateTabCountsCache();
-
-        const [nextCounts, nextItems] = await Promise.all([
-          phvbDocumentsService.loadTabCounts(documentContext, true),
-          phvbDocumentsService.loadTabItems({
-            ...siteContext,
-            userEmail,
-            tab: targetTab
-          })
-        ]);
-
-        setActiveTab(targetTab);
-        setCounts(nextCounts);
-        setItems(nextItems);
         setErrorMessage(undefined);
 
         return {

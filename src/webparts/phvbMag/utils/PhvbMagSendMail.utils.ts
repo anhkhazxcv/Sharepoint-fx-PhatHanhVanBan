@@ -9,11 +9,14 @@ import type {
   ICreateRequestInput,
   IPhvbRoleEntry,
   ISendMailDocumentInfo,
-  ISendMailPayload,
+  ISendMailRequest,
   IVanBanItem,
+  TabType,
   WorkflowStage
 } from '../models/PhvbMag.models';
+import { resolveXacNhanBanHanhMailType } from './PhvbMagBanHanhNotify.utils';
 import { getRequestTypeFormRules } from './PhvbMagRequestForm.utils';
+import { buildYeuCauDetailUrl } from './PhvbMagRoute.utils';
 import { getRoleEmails } from './PhvbMagRole.utils';
 import {
   getParticipantsForStage,
@@ -22,6 +25,15 @@ import {
   resolveStatusForWorkflowStage,
   resolveWorkflowStageFromStatus
 } from './PhvbMagWorkflowState.utils';
+
+export const XAC_NHAN_BAN_HANH_TYPES: ReadonlyArray<string> = [
+  SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH_VN,
+  SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH_EN
+];
+
+export function isXacNhanBanHanhType(typeSendMail: string): boolean {
+  return XAC_NHAN_BAN_HANH_TYPES.indexOf(typeSendMail) > -1;
+}
 
 export function joinEmails(emails: ReadonlyArray<string>): string {
   const unique: string[] = [];
@@ -159,13 +171,41 @@ export function resolveActiveWorkflowStageFromStatus(statusApproved?: string): W
   return stage === 'none' ? undefined : stage;
 }
 
+export function resolveTabForSendMailType(
+  typeSendMail: string,
+  approvalStatus: string | undefined
+): TabType | undefined {
+  switch (typeSendMail) {
+    case SEND_MAIL_TYPE.YEU_CAU_GOP_Y:
+    case SEND_MAIL_TYPE.YEU_CAU_THAM_DINH:
+    case SEND_MAIL_TYPE.YEU_CAU_PHE_DUYET:
+      return 'ViecCanLam';
+
+    case SEND_MAIL_TYPE.XAC_NHAN_GOP_Y:
+    case SEND_MAIL_TYPE.XAC_NHAN_THAM_DINH:
+    case SEND_MAIL_TYPE.XAC_NHAN_PHE_DUYET:
+      return approvalStatus === SEND_MAIL_APPROVAL_STATUS.DA_TU_CHOI ? 'BanNhap' : 'YeuCauCuaToi';
+
+    case SEND_MAIL_TYPE.YEU_CAU_CAP_SO:
+      return 'CapSo';
+
+    case SEND_MAIL_TYPE.XAC_NHAN_CAP_SO:
+    case SEND_MAIL_TYPE.YEU_CAU_BAN_HANH:
+    case SEND_MAIL_TYPE.TRA_LAI_ADMIN_BAN_HANH:
+      return 'QLVanBan';
+
+    default:
+      return undefined;
+  }
+}
+
 export function buildSendMailPayload(
   nguoiThucHien: string,
   typeSendMail: string,
   emailTo: string,
   approvalStatus: string | undefined,
   documentInfo: ISendMailDocumentInfo
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   const normalizedActor = nguoiThucHien.trim();
   const normalizedEmailTo = emailTo.trim();
   const normalizedIdYeuCau = documentInfo.idYeuCau.trim();
@@ -183,6 +223,9 @@ export function buildSendMailPayload(
     return undefined;
   }
 
+  const tabForLink = resolveTabForSendMailType(typeSendMail, approvalStatus);
+  const linkYeuCau = tabForLink ? buildYeuCauDetailUrl(tabForLink, normalizedIdYeuCau) : undefined;
+
   return {
     NguoiThucHien: normalizedActor,
     TypeSendMail: typeSendMail,
@@ -190,7 +233,8 @@ export function buildSendMailPayload(
     ApprovalStatus: approvalStatus,
     IDYeuCau: normalizedIdYeuCau,
     TenVanBan: normalizedTenVanBan,
-    TomTatNoiDung: normalizedTomTat
+    TomTatNoiDung: normalizedTomTat,
+    LinkYeuCau: linkYeuCau
   };
 }
 
@@ -199,7 +243,7 @@ export function buildYeuCauPayloadForStage(
   stage: WorkflowStage,
   emails: ReadonlyArray<string>,
   documentInfo: ISendMailDocumentInfo
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   const emailTo = joinEmails(emails);
 
   if (!emailTo) {
@@ -221,7 +265,7 @@ export function buildXacNhanPayloadForStage(
   emailTo: string,
   approvalStatus: string,
   documentInfo: ISendMailDocumentInfo
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   const normalizedEmailTo = emailTo.trim();
 
   if (!normalizedEmailTo) {
@@ -243,7 +287,7 @@ export function buildRoleBasedPayload(
   roles: ReadonlyArray<IPhvbRoleEntry>,
   role: string,
   documentInfo: ISendMailDocumentInfo
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   const emailTo = joinEmails(getRoleEmails(roles, role));
 
   if (!emailTo) {
@@ -259,7 +303,7 @@ function buildAdminSuperAdminPayload(
   roles: ReadonlyArray<IPhvbRoleEntry>,
   role: string,
   documentInfo: ISendMailDocumentInfo
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   const basePayload = buildRoleBasedPayload(nguoiThucHien, typeSendMail, roles, role, documentInfo);
   const normalizedSoVanBan = (documentInfo.soVanBan || '').trim();
 
@@ -277,7 +321,7 @@ export function buildYeuCauCapSoPayload(
   nguoiThucHien: string,
   roles: ReadonlyArray<IPhvbRoleEntry>,
   documentInfo: ISendMailDocumentInfo
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   return buildRoleBasedPayload(
     nguoiThucHien,
     SEND_MAIL_TYPE.YEU_CAU_CAP_SO,
@@ -291,7 +335,7 @@ export function buildXacNhanCapSoPayload(
   nguoiThucHien: string,
   roles: ReadonlyArray<IPhvbRoleEntry>,
   documentInfo: ISendMailDocumentInfo
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   return buildAdminSuperAdminPayload(
     nguoiThucHien,
     SEND_MAIL_TYPE.XAC_NHAN_CAP_SO,
@@ -305,7 +349,7 @@ export function buildYeuCauBanHanhPayload(
   nguoiThucHien: string,
   roles: ReadonlyArray<IPhvbRoleEntry>,
   documentInfo: ISendMailDocumentInfo
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   return buildAdminSuperAdminPayload(
     nguoiThucHien,
     SEND_MAIL_TYPE.YEU_CAU_BAN_HANH,
@@ -320,7 +364,7 @@ export function buildTraLaiAdminBanHanhPayload(
   roles: ReadonlyArray<IPhvbRoleEntry>,
   documentInfo: ISendMailDocumentInfo,
   comment?: string
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   const basePayload = buildAdminSuperAdminPayload(
     nguoiThucHien,
     SEND_MAIL_TYPE.TRA_LAI_ADMIN_BAN_HANH,
@@ -348,7 +392,7 @@ export function buildXacNhanBanHanhPayload(
   nguoiThucHien: string,
   release: IVanBanItem,
   resolvedBody: string
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   const documentInfo = resolveSendMailDocumentInfoFromRelease(release);
   const emailTo = (release.EmailNhanBanHanh || '').trim();
   const subject = (release.SubjectBanHanh || '').trim();
@@ -357,7 +401,7 @@ export function buildXacNhanBanHanhPayload(
 
   const basePayload = buildSendMailPayload(
     nguoiThucHien,
-    SEND_MAIL_TYPE.XAC_NHAN_BAN_HANH,
+    resolveXacNhanBanHanhMailType(release),
     emailTo,
     undefined,
     documentInfo
@@ -370,8 +414,34 @@ export function buildXacNhanBanHanhPayload(
   return {
     ...basePayload,
     SoVanBan: normalizedSoVanBan,
-    SubjectBanHanh: subject,
-    BodyEmail: body
+    Subject: subject,
+    Body: body
+  };
+}
+
+export function buildThongBaoLuuTruPayload(
+  nguoiThucHien: string,
+  release: IVanBanItem
+): ISendMailRequest | undefined {
+  const documentInfo = resolveSendMailDocumentInfoFromRelease(release);
+  const emailTo = (release.EmailNguoiTao || '').trim();
+  const nguoiTao = (release.NguoiTao || '').trim();
+
+  const basePayload = buildSendMailPayload(
+    nguoiThucHien,
+    SEND_MAIL_TYPE.THONG_BAO_LUU_TRU,
+    emailTo,
+    undefined,
+    documentInfo
+  );
+
+  if (!basePayload || !nguoiTao) {
+    return undefined;
+  }
+
+  return {
+    ...basePayload,
+    NguoiTao: nguoiTao
   };
 }
 

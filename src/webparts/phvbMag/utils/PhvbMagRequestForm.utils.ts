@@ -11,6 +11,7 @@ export interface IRequestTypeFormRules {
   requireTaiLieuSoanThao: boolean;
   requireNguoiGopY: boolean;
   requireNguoiThamDinh: boolean;
+  requireGhiChuThamDinh: boolean;
   includeGopYThamDinhWorkflow: boolean;
   includeAttachmentsOnSave: boolean;
 }
@@ -24,6 +25,7 @@ const STANDARD_FORM_RULES: IRequestTypeFormRules = {
   requireTaiLieuSoanThao: true,
   requireNguoiGopY: false,
   requireNguoiThamDinh: true,
+  requireGhiChuThamDinh: true,
   includeGopYThamDinhWorkflow: true,
   includeAttachmentsOnSave: true
 };
@@ -42,6 +44,7 @@ const DMVL_FORM_RULES: IRequestTypeFormRules = {
   requireTaiLieuSoanThao: true,
   requireNguoiGopY: false,
   requireNguoiThamDinh: false,
+  requireGhiChuThamDinh: false,
   includeGopYThamDinhWorkflow: false,
   includeAttachmentsOnSave: true
 };
@@ -55,6 +58,7 @@ const REVOKE_FORM_RULES: IRequestTypeFormRules = {
   requireTaiLieuSoanThao: false,
   requireNguoiGopY: false,
   requireNguoiThamDinh: false,
+  requireGhiChuThamDinh: false,
   includeGopYThamDinhWorkflow: false,
   includeAttachmentsOnSave: false
 };

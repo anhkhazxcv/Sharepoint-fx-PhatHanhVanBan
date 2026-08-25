@@ -15,7 +15,8 @@ import {
   WORKFLOW_PARTICIPANT_STAGE_CONFIG
 } from '../utils/PhvbMagWorkflowParticipant.utils';
 import styles from './PhvbMag.module.scss';
-import { CloseIcon, DeleteFileIcon } from './PhvbMagIcons';
+import { CreateActionIcon, DeleteFileIcon } from './PhvbMagIcons';
+import { PhvbMagDialog } from './primitives/PhvbMagDialog';
 
 interface IPhvbMagWorkflowParticipantModalProps {
   isOpen: boolean;
@@ -123,45 +124,51 @@ function WorkflowParticipantStageSection(props: IStageSectionProps): React.React
       </h5>
 
       {allowAdd ? (
-        <div className={styles.workflowParticipantSearchRow}>
-          <input
-            type="text"
-            className={styles.workflowParticipantSearchInput}
-            placeholder={isLoadingTenantUsers ? 'Đang tải danh sách người dùng...' : `Tìm kiếm ${stageConfig.sectionLabel}...`}
-            value={query}
-            list={`phvb-participant-suggestions-${stage}`}
-            disabled={isLoadingTenantUsers}
-            onChange={event => {
-              setQuery(event.target.value);
-              setSelectedUserEmail('');
-            }}
-            onInput={event => {
-              const value = (event.target as HTMLInputElement).value;
-              const matchedUser = findDirectoryUser(directoryUsers, user =>
-                user.displayName.toLowerCase() === value.trim().toLowerCase() ||
-                user.email.toLowerCase() === value.trim().toLowerCase()
-              );
+        <div className={styles.workflowParticipantSearchGroup}>
+          <label className={styles.workflowParticipantSearchLabel} htmlFor={`phvb-participant-search-${stage}`}>
+            {`Tìm kiếm ${stageConfig.sectionLabel}`}
+          </label>
+          <div className={styles.workflowParticipantSearchRow}>
+            <input
+              id={`phvb-participant-search-${stage}`}
+              type="text"
+              className={styles.workflowParticipantSearchInput}
+              placeholder={isLoadingTenantUsers ? 'Đang tải danh sách người dùng...' : `Tìm kiếm ${stageConfig.sectionLabel}...`}
+              value={query}
+              list={`phvb-participant-suggestions-${stage}`}
+              disabled={isLoadingTenantUsers}
+              onChange={event => {
+                setQuery(event.target.value);
+                setSelectedUserEmail('');
+              }}
+              onInput={event => {
+                const value = (event.target as HTMLInputElement).value;
+                const matchedUser = findDirectoryUser(directoryUsers, user =>
+                  user.displayName.toLowerCase() === value.trim().toLowerCase() ||
+                  user.email.toLowerCase() === value.trim().toLowerCase()
+                );
 
-              if (matchedUser) {
-                setSelectedUserEmail(matchedUser.email);
-              }
-            }}
-          />
-          <datalist id={`phvb-participant-suggestions-${stage}`}>
-            {suggestions.slice(0, 20).map(user => (
-              <option key={user.email} value={user.displayName}>
-                {user.email}
-              </option>
-            ))}
-          </datalist>
-          <button
-            type="button"
-            className={styles.workflowParticipantAddBtn}
-            onClick={handleAdd}
-            disabled={isLoadingTenantUsers || (suggestions.length === 0 && !selectedUserEmail)}
-          >
-            + Thêm
-          </button>
+                if (matchedUser) {
+                  setSelectedUserEmail(matchedUser.email);
+                }
+              }}
+            />
+            <datalist id={`phvb-participant-suggestions-${stage}`}>
+              {suggestions.slice(0, 20).map(user => (
+                <option key={user.email} value={user.displayName}>
+                  {user.email}
+                </option>
+              ))}
+            </datalist>
+            <button
+              type="button"
+              className={styles.workflowParticipantAddBtn}
+              onClick={handleAdd}
+              disabled={isLoadingTenantUsers || (suggestions.length === 0 && !selectedUserEmail)}
+            >
+              <CreateActionIcon /> Thêm
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -318,44 +325,42 @@ export function PhvbMagWorkflowParticipantModal(props: IPhvbMagWorkflowParticipa
   };
 
   return (
-    <div className={styles.confirmDialogOverlay}>
-      <div className={styles.workflowParticipantModalContent}>
-        <div className={styles.dialogHeader}>
-          <h4>Thêm người tham gia quy trình</h4>
-          <button type="button" className={styles.dialogHeaderClose} onClick={onClose} aria-label="Đóng">
-            <CloseIcon />
-          </button>
-        </div>
-
-        <div className={styles.workflowParticipantModalBody}>
-          {visibleStages.map(stage => (
-            <WorkflowParticipantStageSection
-              key={stage}
-              stage={stage}
-              rows={currentDraft[stage]}
-              directoryUsers={directoryUsers}
-              isLoadingTenantUsers={isLoadingTenantUsers}
-              allowAdd={isParticipantStageAddable(stage, detail.release.StatusApproved)}
-              required={requiredStages.indexOf(stage) > -1}
-              onAddUser={handleAddUser}
-              onRemoveRow={handleRemoveRow}
-            />
-          ))}
-        </div>
-
-        {displayedError ? (
-          <p className={styles.workflowParticipantError}>{displayedError}</p>
-        ) : null}
-
-        <div className={styles.confirmDialogActions}>
+    <PhvbMagDialog
+      isOpen={isOpen}
+      variant="confirm"
+      title="Thêm người tham gia quy trình"
+      titleId="phvb-workflow-participant-title"
+      onDismiss={isSaving ? undefined : onClose}
+      contentClassName={styles.workflowParticipantModalContent}
+      bodyClassName={styles.workflowParticipantModalBody}
+      footerClassName={styles.confirmDialogActions}
+      footer={(
+        <>
           <button type="button" className={styles.btnSecondary} onClick={onClose} disabled={isSaving}>
             Hủy
           </button>
           <button type="button" className={styles.btnSubmit} onClick={handleSave} disabled={isSaving}>
             Lưu/Xác nhận
           </button>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    >
+      {visibleStages.map(stage => (
+        <WorkflowParticipantStageSection
+          key={stage}
+          stage={stage}
+          rows={currentDraft[stage]}
+          directoryUsers={directoryUsers}
+          isLoadingTenantUsers={isLoadingTenantUsers}
+          allowAdd={isParticipantStageAddable(stage, detail.release.StatusApproved)}
+          required={requiredStages.indexOf(stage) > -1}
+          onAddUser={handleAddUser}
+          onRemoveRow={handleRemoveRow}
+        />
+      ))}
+      {displayedError ? (
+        <p className={styles.workflowParticipantError} role="alert">{displayedError}</p>
+      ) : null}
+    </PhvbMagDialog>
   );
 }

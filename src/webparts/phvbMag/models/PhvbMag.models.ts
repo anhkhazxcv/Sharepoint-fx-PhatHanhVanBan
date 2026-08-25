@@ -97,7 +97,7 @@ export interface ICommentWithAttachments extends ILichSuThucHienItem {
 export interface IRequestDetailData {
   release: IVanBanItem;
   attachments: IAttachmentLibraryItem[];
-  history: ILichSuThucHienItem[];
+  history: ICommentWithAttachments[];
   comments: ICommentWithAttachments[];
   workflowParticipants: IWorkflowParticipantItem[];
 }
@@ -249,6 +249,7 @@ export interface IBanHanhLibraryItem {
   /** Folder browse: OpenItems from EffectiveBasePermissions. Search: always false. */
   canDownload?: boolean;
   downloadUrl?: string;
+  isFormAttachment?: boolean;
 }
 
 export interface ISavedDocumentItem {
@@ -354,7 +355,7 @@ export interface ISendMailDocumentInfo {
   soVanBan?: string;
 }
 
-export interface ISendMailPayload {
+export interface ISendMailRequest {
   NguoiThucHien: string;
   TypeSendMail: string;
   EmailTo: string;
@@ -363,8 +364,23 @@ export interface ISendMailPayload {
   TenVanBan: string;
   TomTatNoiDung: string;
   SoVanBan?: string;
-  SubjectBanHanh?: string;
-  BodyEmail?: string;
+  NguoiTao?: string;
+  Subject?: string;
+  Body?: string;
+  LinkYeuCau?: string;
+}
+
+/** Payload JSON thực sự gửi lên endpoint Power Automate — chỉ 3 field, nội dung đã build sẵn. */
+export interface ISendMailPayload {
+  EmailTo: string;
+  Subject: string;
+  Body: string;
+}
+
+export interface IMailContentConfigItem {
+  mailType: string;
+  subject: string;
+  body: string;
 }
 
 export interface IBanHanhPublishOptions {

@@ -22,11 +22,11 @@ interface IExecutionHistoryContext extends IPhvbSiteContext {
 async function createHistoryItemWithoutIsComment(
   context: IExecutionHistoryContext,
   payload: Record<string, string | boolean | number>
-): Promise<void> {
+): Promise<number> {
   const payloadWithoutIsComment: Record<string, string | boolean | number> = { ...payload };
   delete payloadWithoutIsComment.IsComment;
 
-  await phvbRepository.createItem({
+  return phvbRepository.createItem({
     ...context,
     logContext: context.logContext,
     listTitle: HISTORY_LIST_TITLE,
@@ -37,13 +37,13 @@ async function createHistoryItemWithoutIsComment(
 export async function createExecutionHistoryRecord(
   context: IExecutionHistoryContext,
   input: ICreateExecutionHistoryInput
-): Promise<void> {
+): Promise<number | undefined> {
   const performedAt = toSharePointDateTimeIso();
   const historyStatus = input.historyStatus.trim();
   const idYeuCau = input.idYeuCau.trim();
 
   if (!idYeuCau || !historyStatus) {
-    return;
+    return undefined;
   }
 
   const payload: Record<string, string | boolean | number> = {
@@ -59,7 +59,7 @@ export async function createExecutionHistoryRecord(
   };
 
   try {
-    await phvbRepository.createItem({
+    return await phvbRepository.createItem({
       ...context,
       logContext: context.logContext,
       listTitle: HISTORY_LIST_TITLE,
@@ -68,8 +68,7 @@ export async function createExecutionHistoryRecord(
   } catch (error) {
     const details = error instanceof Error ? error.message : '';
     if (/IsComment/i.test(details)) {
-      await createHistoryItemWithoutIsComment(context, payload);
-      return;
+      return createHistoryItemWithoutIsComment(context, payload);
     }
 
     throw error;

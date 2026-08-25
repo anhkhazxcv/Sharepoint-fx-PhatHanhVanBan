@@ -150,7 +150,7 @@ export function groupRecentPublishedByDocumentFolder(
       sectionMap.set(documentFolderKey, section);
     }
 
-    if (isFormAttachmentPath(item.fileDirRef)) {
+    if (item.isFormAttachment || isFormAttachmentPath(item.fileDirRef)) {
       section.formDocuments.push(item);
     } else {
       section.documents.push(item);

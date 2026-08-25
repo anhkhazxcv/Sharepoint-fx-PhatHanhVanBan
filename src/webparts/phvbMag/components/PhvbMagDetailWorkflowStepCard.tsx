@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { IAllUserWorkflowItem } from '../models/PhvbMag.models';
 import type { IWorkflowTimelineStep } from '../utils/PhvbMagWorkflowTimeline.utils';
 import {
   getWorkflowStepDisplayInitials,
@@ -10,10 +11,23 @@ import styles from './PhvbMag.module.scss';
 interface IPhvbMagDetailWorkflowStepCardProps {
   step: IWorkflowTimelineStep;
   isCurrent: boolean;
+  onBehalfParticipant?: IAllUserWorkflowItem;
+  canRejectOnBehalf?: boolean;
+  isOnBehalfBusy?: boolean;
+  onConfirmOnBehalf?: (participantId: number) => void;
+  onRejectOnBehalf?: (participantId: number) => void;
 }
 
 export function PhvbMagDetailWorkflowStepCard(props: IPhvbMagDetailWorkflowStepCardProps): React.ReactElement {
-  const { step, isCurrent } = props;
+  const {
+    step,
+    isCurrent,
+    onBehalfParticipant,
+    canRejectOnBehalf = false,
+    isOnBehalfBusy = false,
+    onConfirmOnBehalf,
+    onRejectOnBehalf
+  } = props;
   const toneClass =
     step.statusTone === 'rejected'
       ? styles.detailWorkflowStepCardRejected
@@ -76,6 +90,34 @@ export function PhvbMagDetailWorkflowStepCard(props: IPhvbMagDetailWorkflowStepC
           {statusChip}
         </span>
       </div>
+
+      {onBehalfParticipant ? (
+        <div className={styles.detailWorkflowStepCardOnBehalf}>
+          <span className={styles.detailWorkflowStepCardOnBehalfLabel}>
+            Xử lý thay {onBehalfParticipant.User_ThucHien || onBehalfParticipant.Email_ThucHien || 'người tham gia'}
+          </span>
+          <div className={styles.detailWorkflowStepCardOnBehalfActions}>
+            <button
+              type="button"
+              className={styles.detailActionApprove}
+              disabled={isOnBehalfBusy}
+              onClick={() => onConfirmOnBehalf?.(onBehalfParticipant.Id)}
+            >
+              Xác nhận thay
+            </button>
+            {canRejectOnBehalf ? (
+              <button
+                type="button"
+                className={styles.detailActionReject}
+                disabled={isOnBehalfBusy}
+                onClick={() => onRejectOnBehalf?.(onBehalfParticipant.Id)}
+              >
+                Từ chối thay
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -172,6 +172,9 @@ function DocumentListItem(props: IDocumentListItemProps): React.ReactElement {
     <PhvbMagLibraryDocumentCard
       document={document}
       showDownload={showDownload}
+      badgeContent={document.isFormAttachment ? (
+        <span className={styles.recentFormBadge}>Biểu mẫu</span>
+      ) : null}
       metaContent={(
         <>
           <span className={styles.libraryDocumentContact}>

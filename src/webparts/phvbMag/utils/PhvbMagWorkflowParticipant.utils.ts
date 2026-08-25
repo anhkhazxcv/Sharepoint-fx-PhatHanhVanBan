@@ -1,9 +1,11 @@
 import {
   ALL_USER_GOPY_LIST_TITLE,
   ALL_USER_PHEDUYET_LIST_TITLE,
-  ALL_USER_THAMDINH_LIST_TITLE
+  ALL_USER_THAMDINH_LIST_TITLE,
+  PHVB_ROLES
 } from '../config/PhvbMag.configuration';
-import type { IVanBanItem, IWorkflowParticipantItem, WorkflowStage } from '../models/PhvbMag.models';
+import type { IPhvbRoleEntry, IVanBanItem, IWorkflowParticipantItem, WorkflowStage } from '../models/PhvbMag.models';
+import { normalizeRoleEmail, userHasAnyRole } from './PhvbMagRole.utils';
 import { getRequestTypeFormRules, type RequestTypeValue } from './PhvbMagRequestForm.utils';
 import { isTerminalWorkflowStatus, resolveWorkflowStageFromStatus } from './PhvbMagWorkflowState.utils';
 import { isWorkflowParticipantUnconfirmed } from './PhvbMagWorkflowTimeline.utils';
@@ -59,8 +61,24 @@ export const WORKFLOW_PARTICIPANT_STAGE_CONFIG: Record<WorkflowStage, IWorkflowP
 
 const WORKFLOW_STAGE_ORDER: ReadonlyArray<WorkflowStage> = ['gopy', 'thamdinh', 'pheduyet'];
 
-export function canOpenWorkflowParticipantModal(release: IVanBanItem): boolean {
-  return !isTerminalWorkflowStatus(release.StatusApproved);
+export function canOpenWorkflowParticipantModal(
+  release: IVanBanItem,
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  userEmail?: string
+): boolean {
+  if (isTerminalWorkflowStatus(release.StatusApproved)) {
+    return false;
+  }
+
+  const creatorEmail = normalizeRoleEmail(release.EmailNguoiTao);
+  const normalizedUserEmail = normalizeRoleEmail(userEmail);
+  const isCreator = Boolean(creatorEmail) && creatorEmail === normalizedUserEmail;
+
+  if (isCreator) {
+    return true;
+  }
+
+  return userHasAnyRole(roles, userEmail, [PHVB_ROLES.ADMIN, PHVB_ROLES.SUPER_ADMIN]);
 }
 
 export function canRemoveWorkflowParticipant(status?: string): boolean {
@@ -275,14 +293,14 @@ export function buildParticipantChangesSummary(
     stageChanges.addedEmails.forEach(email => {
       const trimmed = email.trim();
       if (trimmed) {
-        parts.push(`+${trimmed}`);
+        parts.push(`Thêm ${trimmed}`);
       }
     });
 
     stageChanges.removedParticipantIds.forEach(participantId => {
       const email = (resolveRemovedEmail(participantId) || '').trim();
       if (email) {
-        parts.push(`-${email}`);
+        parts.push(`Xóa ${email}`);
       }
     });
 

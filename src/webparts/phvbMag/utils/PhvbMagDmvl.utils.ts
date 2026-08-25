@@ -5,6 +5,7 @@ import {
   resolveIssuanceLibraryTitle
 } from '../config/PhvbMag.configuration';
 import { phvbBanHanhConfigService } from '../services/PhvbMagBanHanhConfig.service';
+import { phvbMailContentConfigService } from '../services/PhvbMagMailContentConfig.service';
 import { phvbDocumentLibraryService } from '../services/PhvbMagDocumentLibrary.service';
 import {
   buildBanHanhNotifyDraft,
@@ -15,8 +16,8 @@ import { getStoragePathAfterLibrary } from './PhvbMagBanHanh.tree';
 import { normalizeRoleEmail, userHasAnyRole } from './PhvbMagRole.utils';
 import type {
   IBanHanhNotifyDraft,
-  ILabelCustomConfigItem,
   IMailBanHanhConfigItem,
+  IMailContentConfigItem,
   IPhvbRoleEntry,
   IPhvbSiteContext,
   IVanBanItem
@@ -144,7 +145,7 @@ export function canResumeDmvlBanHanh(
 export function resolveDmvlNotifyDraft(
   release: IVanBanItem,
   mailConfig: ReadonlyArray<IMailBanHanhConfigItem>,
-  labelConfig: ReadonlyArray<ILabelCustomConfigItem>
+  mailContentConfig: ReadonlyArray<IMailContentConfigItem>
 ): IBanHanhNotifyDraft {
   const savedSubject = (release.SubjectBanHanh || '').trim();
   const savedBody = (release.BodyEmail || '').trim();
@@ -159,17 +160,17 @@ export function resolveDmvlNotifyDraft(
     return draft;
   }
 
-  return buildBanHanhNotifyDraft(release, mailConfig, labelConfig);
+  return buildBanHanhNotifyDraft(release, mailConfig, mailContentConfig);
 }
 
 export async function prepareDmvlNotifyDraft(
   context: IPhvbSiteContext,
   release: IVanBanItem
 ): Promise<IBanHanhNotifyDraft> {
-  const [mailConfig, labelConfig] = await Promise.all([
+  const [mailConfig, mailContentConfig] = await Promise.all([
     phvbBanHanhConfigService.loadMailBanHanhConfig(context),
-    phvbBanHanhConfigService.loadLabelCustomConfig(context)
+    phvbMailContentConfigService.loadMailContentConfig(context)
   ]);
 
-  return resolveDmvlNotifyDraft(release, mailConfig, labelConfig);
+  return resolveDmvlNotifyDraft(release, mailConfig, mailContentConfig);
 }

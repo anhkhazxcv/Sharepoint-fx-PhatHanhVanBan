@@ -233,3 +233,30 @@ export function resolveEffectiveWorkflowStage(
 export function canCreatorEditRelease(release: IVanBanItem): boolean {
   return (release.StatusApproved || '').trim() === REQUEST_STATUS.BAN_NHAP;
 }
+
+export function resolveReadyNextStatus(
+  statusApproved: string | undefined,
+  workflowParticipants: ReadonlyArray<{ workflowStage: WorkflowStage } & IAllUserWorkflowItem>,
+  loaiYeuCau?: string
+): string | undefined {
+  const participants = splitWorkflowParticipants(workflowParticipants);
+  const effectiveStage = resolveEffectiveWorkflowStage(statusApproved, participants, loaiYeuCau);
+
+  if (effectiveStage === 'none') {
+    return undefined;
+  }
+
+  // Góp ý: cho chuyển sớm, không cần chờ đủ người xác nhận.
+  if (effectiveStage === 'gopy') {
+    return resolveNextDocumentStatusAfterStageComplete('gopy', participants, loaiYeuCau);
+  }
+
+  // Thẩm định / phê duyệt: vẫn phải chờ đủ người xác nhận mới cho chuyển.
+  const stageParticipants = getParticipantsForStage(effectiveStage, participants);
+
+  if (!areAllParticipantsConfirmed(stageParticipants)) {
+    return undefined;
+  }
+
+  return resolveNextDocumentStatusAfterStageComplete(effectiveStage, participants, loaiYeuCau);
+}

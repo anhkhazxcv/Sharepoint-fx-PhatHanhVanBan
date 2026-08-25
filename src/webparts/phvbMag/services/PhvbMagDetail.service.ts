@@ -213,6 +213,30 @@ async function enrichCommentsWithAttachments(
   }));
 }
 
+async function enrichHistoryWithAttachments(
+  context: IPhvbSiteContext,
+  history: ILichSuThucHienItem[]
+): Promise<ICommentWithAttachments[]> {
+  if (history.length === 0) {
+    return [];
+  }
+
+  const hasIsHasAttachField = history.some(item => item.IsHasAttach !== undefined);
+  const historyIdsWithAttachments = hasIsHasAttachField
+    ? history.filter(item => item.IsHasAttach === true).map(item => item.Id)
+    : history.map(item => item.Id);
+
+  const attachments = historyIdsWithAttachments.length > 0
+    ? await phvbCommentAttachmentService.listFilesForComments(context, historyIdsWithAttachments).catch(() => [])
+    : [];
+  const grouped = groupCommentAttachmentsByCommentId(attachments);
+
+  return history.map(item => ({
+    ...item,
+    attachments: grouped[item.Id] || []
+  }));
+}
+
 export class PhvbDetailService {
   public async loadRequestDetail(context: IPhvbSiteContext, idYeuCau: string): Promise<IRequestDetailData | undefined> {
     const partial = await this.loadRequestDetailPartial(context, idYeuCau, ['full']);
@@ -270,8 +294,11 @@ export class PhvbDetailService {
     if (uniqueScopes.indexOf('activity') > -1) {
       loaders.push(
         fetchHistoryItemsByIdYeuCau(context, normalizedId).catch(() => []).then(async historyItems => {
-          const { history, comments: rawComments } = splitHistoryAndComments(historyItems);
-          const comments = await enrichCommentsWithAttachments(context, rawComments);
+          const { history: rawHistory, comments: rawComments } = splitHistoryAndComments(historyItems);
+          const [history, comments] = await Promise.all([
+            enrichHistoryWithAttachments(context, rawHistory),
+            enrichCommentsWithAttachments(context, rawComments)
+          ]);
           result.history = history;
           result.comments = comments;
         })
@@ -315,8 +342,11 @@ export class PhvbDetailService {
       return {};
     }
 
-    const { history, comments: rawComments } = splitHistoryAndComments(historyItems);
-    const comments = await enrichCommentsWithAttachments(context, rawComments);
+    const { history: rawHistory, comments: rawComments } = splitHistoryAndComments(historyItems);
+    const [history, comments] = await Promise.all([
+      enrichHistoryWithAttachments(context, rawHistory),
+      enrichCommentsWithAttachments(context, rawComments)
+    ]);
     const workflowParticipants = mergeWorkflowParticipants(gopYUsers, thamDinhUsers, pheDuyetUsers);
 
     return {

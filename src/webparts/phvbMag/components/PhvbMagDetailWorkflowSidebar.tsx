@@ -1,13 +1,14 @@
 import * as React from 'react';
-import { useMemo } from 'react';
-import type { IVanBanItem, IWorkflowParticipantItem } from '../models/PhvbMag.models';
+import { useMemo, useState } from 'react';
+import type { IAllUserWorkflowItem, IVanBanItem, IWorkflowParticipantItem } from '../models/PhvbMag.models';
+import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
 import {
   buildWorkflowTimelineSteps,
   findCurrentWorkflowStepIndex
 } from '../utils/PhvbMagWorkflowTimeline.utils';
-import { canOpenWorkflowParticipantModal } from '../utils/PhvbMagWorkflowParticipant.utils';
 import { RemindDeadlineIcon, WorkflowParticipantIcon } from './PhvbMagIcons';
 import { PhvbMagDetailWorkflowStepCard } from './PhvbMagDetailWorkflowStepCard';
+import { PhvbMagWorkflowActionDialog } from './PhvbMagWorkflowActionDialog';
 import { PhvbMagSidebarAccordion } from './PhvbMagSidebarAccordion';
 import styles from './PhvbMag.module.scss';
 
@@ -22,14 +23,40 @@ interface IPhvbMagDetailWorkflowSidebarProps {
   isRemindDialogOpen?: boolean;
   onOpenRemindDeadline?: () => void;
   layout?: 'sidebar' | 'tab';
+  approveLabel?: string;
+  pendingParticipants?: IAllUserWorkflowItem[];
+  canRejectAtActiveStage?: boolean;
+  canActOnBehalfOfParticipant?: boolean;
+  isWorkflowActionProcessing?: boolean;
+  workflowActionErrorMessage?: string;
+  onRunWorkflowAction?: (
+    action: WorkflowActionKey,
+    comment?: string,
+    targetParticipantId?: number,
+    files?: File[]
+  ) => Promise<boolean>;
 }
 
 function WorkflowPanelContent(props: {
   allSteps: ReturnType<typeof buildWorkflowTimelineSteps>;
   currentStepIndex: number;
   workflowParticipants: IWorkflowParticipantItem[];
+  onBehalfParticipantsById: Map<number, IAllUserWorkflowItem>;
+  canRejectOnBehalf: boolean;
+  isOnBehalfBusy: boolean;
+  onConfirmOnBehalf: (participantId: number) => void;
+  onRejectOnBehalf: (participantId: number) => void;
 }): React.ReactElement {
-  const { allSteps, currentStepIndex, workflowParticipants } = props;
+  const {
+    allSteps,
+    currentStepIndex,
+    workflowParticipants,
+    onBehalfParticipantsById,
+    canRejectOnBehalf,
+    isOnBehalfBusy,
+    onConfirmOnBehalf,
+    onRejectOnBehalf
+  } = props;
 
   return (
     <div className={styles.detailWorkflowPanel}>
@@ -41,7 +68,14 @@ function WorkflowPanelContent(props: {
             <PhvbMagDetailWorkflowStepCard
               key={step.id}
               step={step}
-              isCurrent={stepIndex === currentStepIndex}
+              isCurrent={step.statusTone === 'active' || stepIndex === currentStepIndex}
+              onBehalfParticipant={
+                step.participantId !== undefined ? onBehalfParticipantsById.get(step.participantId) : undefined
+              }
+              canRejectOnBehalf={canRejectOnBehalf}
+              isOnBehalfBusy={isOnBehalfBusy}
+              onConfirmOnBehalf={onConfirmOnBehalf}
+              onRejectOnBehalf={onRejectOnBehalf}
             />
           ))}
         </div>
@@ -67,8 +101,18 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
     remindErrorMessage,
     isRemindDialogOpen = false,
     onOpenRemindDeadline,
-    layout = 'sidebar'
+    layout = 'sidebar',
+    approveLabel,
+    pendingParticipants = [],
+    canRejectAtActiveStage = false,
+    canActOnBehalfOfParticipant = false,
+    isWorkflowActionProcessing = false,
+    workflowActionErrorMessage,
+    onRunWorkflowAction
   } = props;
+
+  const [onBehalfAction, setOnBehalfAction] = useState<WorkflowActionKey | undefined>(undefined);
+  const [onBehalfParticipantId, setOnBehalfParticipantId] = useState<number | undefined>(undefined);
 
   const allSteps = useMemo(
     () => buildWorkflowTimelineSteps(release, workflowParticipants),
@@ -76,9 +120,51 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
   );
 
   const currentStepIndex = findCurrentWorkflowStepIndex(allSteps);
-  const showParticipantButton = (canOpenParticipantModal ?? canOpenWorkflowParticipantModal(release)) && Boolean(onOpenParticipantModal);
+  const showParticipantButton = Boolean(canOpenParticipantModal) && Boolean(onOpenParticipantModal);
   const showRemindButton = canRemindDeadline && Boolean(onOpenRemindDeadline);
   const showWorkflowActions = showRemindButton || showParticipantButton;
+
+  const showOnBehalf = canActOnBehalfOfParticipant && pendingParticipants.length > 0;
+  const onBehalfParticipantsById = useMemo(() => {
+    const map = new Map<number, IAllUserWorkflowItem>();
+    if (showOnBehalf) {
+      pendingParticipants.forEach(participant => map.set(participant.Id, participant));
+    }
+    return map;
+  }, [showOnBehalf, pendingParticipants]);
+
+  const isOnBehalfDialogOpen = Boolean(onBehalfAction);
+
+  const openOnBehalfDialog = (action: WorkflowActionKey, participantId: number): void => {
+    if (isWorkflowActionProcessing) {
+      return;
+    }
+
+    setOnBehalfAction(action);
+    setOnBehalfParticipantId(participantId);
+  };
+
+  const closeOnBehalfDialog = (): void => {
+    if (isWorkflowActionProcessing) {
+      return;
+    }
+
+    setOnBehalfAction(undefined);
+    setOnBehalfParticipantId(undefined);
+  };
+
+  const handleOnBehalfConfirm = async (comment: string, files: File[]): Promise<void> => {
+    if (!onBehalfAction || !onRunWorkflowAction || isWorkflowActionProcessing) {
+      return;
+    }
+
+    const succeeded = await onRunWorkflowAction(onBehalfAction, comment || undefined, onBehalfParticipantId, files);
+
+    if (succeeded) {
+      setOnBehalfAction(undefined);
+      setOnBehalfParticipantId(undefined);
+    }
+  };
 
   const participantButton = showParticipantButton ? (
     <button
@@ -114,11 +200,34 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
     <p className={styles.detailWorkflowActionError} role="alert">{remindErrorMessage}</p>
   ) : null;
 
+  const onBehalfError = !isOnBehalfDialogOpen && workflowActionErrorMessage ? (
+    <p className={styles.detailWorkflowActionError} role="alert">{workflowActionErrorMessage}</p>
+  ) : null;
+
   const panelContent = (
     <WorkflowPanelContent
       allSteps={allSteps}
       currentStepIndex={currentStepIndex}
       workflowParticipants={workflowParticipants}
+      onBehalfParticipantsById={onBehalfParticipantsById}
+      canRejectOnBehalf={canRejectAtActiveStage}
+      isOnBehalfBusy={isWorkflowActionProcessing}
+      onConfirmOnBehalf={participantId => openOnBehalfDialog('approve', participantId)}
+      onRejectOnBehalf={participantId => openOnBehalfDialog('reject', participantId)}
+    />
+  );
+
+  const onBehalfDialog = (
+    <PhvbMagWorkflowActionDialog
+      isOpen={isOnBehalfDialogOpen}
+      action={onBehalfAction}
+      approveLabel={approveLabel}
+      isProcessing={isWorkflowActionProcessing}
+      errorMessage={isOnBehalfDialogOpen ? workflowActionErrorMessage : undefined}
+      onCancel={closeOnBehalfDialog}
+      onConfirm={(comment, files) => {
+        handleOnBehalfConfirm(comment, files).catch(() => undefined);
+      }}
     />
   );
 
@@ -135,7 +244,9 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
           {workflowActions}
         </div>
         {remindError}
+        {onBehalfError}
         {panelContent}
+        {onBehalfDialog}
       </div>
     );
   }
@@ -149,7 +260,9 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
       headerActions={workflowActions}
     >
       {remindError}
+      {onBehalfError}
       {panelContent}
+      {onBehalfDialog}
     </PhvbMagSidebarAccordion>
   );
 }

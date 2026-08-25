@@ -1,5 +1,7 @@
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { DRAFT_DOCUMENT_ACCEPT } from '../config/PhvbMag.configuration';
+import { appendCommentAttachmentFiles } from '../utils/PhvbMagCommentAttachment.utils';
 import type { CommentConfirmActionKey } from '../utils/PhvbMagWorkflowActionDialog.utils';
 import {
   getWorkflowActionCommentPlaceholder,
@@ -10,6 +12,7 @@ import {
   isWorkflowActionCommentRequired,
   validateWorkflowActionComment
 } from '../utils/PhvbMagWorkflowActionDialog.utils';
+import { DeleteFileIcon, UploadDocumentIcon } from './PhvbMagIcons';
 import styles from './PhvbMag.module.scss';
 import { PhvbMagButton } from './primitives/PhvbMagButton';
 import { PhvbMagDialog } from './primitives/PhvbMagDialog';
@@ -21,8 +24,10 @@ interface IPhvbMagWorkflowActionDialogProps {
   isProcessing?: boolean;
   errorMessage?: string;
   onCancel: () => void;
-  onConfirm: (comment: string) => void;
+  onConfirm: (comment: string, files: File[]) => void;
 }
+
+const FILE_ATTACHMENT_ACTIONS: ReadonlyArray<CommentConfirmActionKey> = ['approve', 'reject'];
 
 export function PhvbMagWorkflowActionDialog(props: IPhvbMagWorkflowActionDialogProps): React.ReactElement {
   const {
@@ -35,11 +40,14 @@ export function PhvbMagWorkflowActionDialog(props: IPhvbMagWorkflowActionDialogP
     onConfirm
   } = props;
   const [commentDraft, setCommentDraft] = useState<string>('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [validationError, setValidationError] = useState<string | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setCommentDraft('');
+      setSelectedFiles([]);
       setValidationError(undefined);
     }
   }, [isOpen, action]);
@@ -58,6 +66,27 @@ export function PhvbMagWorkflowActionDialog(props: IPhvbMagWorkflowActionDialogP
       ? styles.detailActionEdit
       : styles.detailActionApprove;
   const displayedError = validationError || errorMessage;
+  const canAttachFiles = FILE_ATTACHMENT_ACTIONS.indexOf(action) > -1;
+
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    if (event.target.files && event.target.files.length > 0) {
+      const result = appendCommentAttachmentFiles(selectedFiles, event.target.files);
+
+      if (result.error) {
+        setValidationError(result.error);
+      } else {
+        setValidationError(undefined);
+      }
+
+      setSelectedFiles(result.files);
+    }
+
+    event.target.value = '';
+  };
+
+  const handleRemoveFile = (fileIndex: number): void => {
+    setSelectedFiles(previous => previous.filter((_file, index) => index !== fileIndex));
+  };
 
   const handleConfirm = (): void => {
     const normalizedComment = commentDraft.trim();
@@ -69,7 +98,7 @@ export function PhvbMagWorkflowActionDialog(props: IPhvbMagWorkflowActionDialogP
     }
 
     setValidationError(undefined);
-    onConfirm(normalizedComment);
+    onConfirm(normalizedComment, canAttachFiles ? selectedFiles : []);
   };
 
   return (
@@ -117,6 +146,50 @@ export function PhvbMagWorkflowActionDialog(props: IPhvbMagWorkflowActionDialogP
           }}
         />
       </div>
+
+      {canAttachFiles ? (
+        <div className={styles.workflowActionDialogAttachments}>
+          <div className={styles.detailCommentFilePicker}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={DRAFT_DOCUMENT_ACCEPT}
+              className={styles.detailCommentFileInput}
+              disabled={isProcessing}
+              onChange={handleFileInputChange}
+            />
+            <button
+              type="button"
+              className={styles.detailCommentAttachBtn}
+              disabled={isProcessing}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <UploadDocumentIcon style={{ width: 18, height: 18 }} />
+              Đính kèm file
+            </button>
+          </div>
+
+          {selectedFiles.length > 0 ? (
+            <ul className={styles.detailCommentFileList}>
+              {selectedFiles.map((file, fileIndex) => (
+                <li key={`${file.name}-${fileIndex}`} className={styles.detailCommentFileChip}>
+                  <span className={styles.detailCommentFileName}>{file.name}</span>
+                  <button
+                    type="button"
+                    className={styles.detailCommentFileRemoveBtn}
+                    disabled={isProcessing}
+                    aria-label={`Xóa file ${file.name}`}
+                    onClick={() => handleRemoveFile(fileIndex)}
+                  >
+                    <DeleteFileIcon />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       {displayedError ? (
         <p className={styles.workflowActionDialogError} role="alert">{displayedError}</p>

@@ -10,6 +10,7 @@ export const LOG_LIST_TITLE = 'Log';
 export const PHVB_ROLE_LIST_TITLE = 'PHVB_Role';
 export const CONFIG_MAIL_BAN_HANH_LIST_TITLE = 'lstConfigMailBanHanh';
 export const CONFIG_LABEL_CUSTOM_LIST_TITLE = 'lstConfigLabelCustom';
+export const CONFIG_MAIL_CONTENT_LIST_TITLE = 'lstConfigNoiDungMail';
 /** Label trong lstConfigLabelCustom — Value = số ngày cửa sổ Mới ban hành (vd. 7). */
 export const RECENT_PUBLISHED_WINDOW_DAYS_LABEL = 'soNgayMoiBanHanh';
 export const RECENT_PUBLISHED_WINDOW_DAYS_DEFAULT = 7;
@@ -78,8 +79,10 @@ export const SEND_MAIL_TYPE = {
   YEU_CAU_CAP_SO: 'YEU_CAU_CAP_SO',
   XAC_NHAN_CAP_SO: 'XAC_NHAN_CAP_SO',
   YEU_CAU_BAN_HANH: 'YEU_CAU_BAN_HANH',
-  XAC_NHAN_BAN_HANH: 'XAC_NHAN_BAN_HANH',
-  TRA_LAI_ADMIN_BAN_HANH: 'TRA_LAI_ADMIN_BAN_HANH'
+  XAC_NHAN_BAN_HANH_VN: 'XAC_NHAN_BAN_HANH_VN',
+  XAC_NHAN_BAN_HANH_EN: 'XAC_NHAN_BAN_HANH_EN',
+  TRA_LAI_ADMIN_BAN_HANH: 'TRA_LAI_ADMIN_BAN_HANH',
+  THONG_BAO_LUU_TRU: 'THONG_BAO_LUU_TRU'
 } as const;
 
 export const SHORT_URL_TAGS = ['mas_phvb'] as const;
@@ -92,11 +95,6 @@ export type SendMailType = typeof SEND_MAIL_TYPE[keyof typeof SEND_MAIL_TYPE];
 export const SEND_MAIL_APPROVAL_STATUS = {
   DA_XAC_NHAN: 'Đã xác nhận',
   DA_TU_CHOI: 'Đã từ chối'
-} as const;
-
-export const BAN_HANH_MAIL_LABELS = {
-  CONTENT_VN: 'contentMailVN',
-  CONTENT_ENG: 'contentMailEng'
 } as const;
 
 export const BAN_HANH_NOTIFY_DEFAULTS = {
@@ -118,7 +116,10 @@ export const EXECUTION_HISTORY_STATUS = {
   CAP_NHAT_YEU_CAU: 'Cập nhật yêu cầu',
   CAP_NHAT_NGUOI_THAM_GIA: 'Cập nhật người tham gia',
   THEM_TAI_LIEU: 'Thêm tài liệu',
-  XOA_TAI_LIEU: 'Xóa tài liệu'
+  XOA_TAI_LIEU: 'Xóa tài liệu',
+  CHUYEN_THAM_DINH: 'Chuyển thẩm định',
+  CHUYEN_PHE_DUYET: 'Chuyển phê duyệt',
+  CHUYEN_CAP_SO: 'Chuyển cấp số'
 } as const;
 
 export type ExecutionHistoryStatus = typeof EXECUTION_HISTORY_STATUS[keyof typeof EXECUTION_HISTORY_STATUS];
@@ -136,7 +137,10 @@ export const EXECUTION_HISTORY_STATUS_LIST: ReadonlyArray<ExecutionHistoryStatus
   EXECUTION_HISTORY_STATUS.CAP_NHAT_YEU_CAU,
   EXECUTION_HISTORY_STATUS.CAP_NHAT_NGUOI_THAM_GIA,
   EXECUTION_HISTORY_STATUS.THEM_TAI_LIEU,
-  EXECUTION_HISTORY_STATUS.XOA_TAI_LIEU
+  EXECUTION_HISTORY_STATUS.XOA_TAI_LIEU,
+  EXECUTION_HISTORY_STATUS.CHUYEN_THAM_DINH,
+  EXECUTION_HISTORY_STATUS.CHUYEN_PHE_DUYET,
+  EXECUTION_HISTORY_STATUS.CHUYEN_CAP_SO
 ];
 
 export const WORKFLOW_PARTICIPANT_STATUS = {

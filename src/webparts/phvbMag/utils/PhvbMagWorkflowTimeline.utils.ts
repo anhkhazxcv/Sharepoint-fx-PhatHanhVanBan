@@ -13,6 +13,10 @@ export interface IWorkflowTimelineStep {
   status?: string;
   statusTone: WorkflowStepTone;
   stepNumber: number;
+  /** Id của IAllUserWorkflowItem gốc — dùng để đối chiếu với pendingParticipants (xử lý thay). Không có ở step 'draft-creator'. */
+  participantId?: number;
+  /** Raw stage key — dùng để nhóm participant cùng stage khi xác định step nào nên là 'active'. */
+  stage?: WorkflowStage;
 }
 
 const STAGE_LABELS: Record<WorkflowStage, string> = {
@@ -162,20 +166,26 @@ function markCurrentPendingStep(steps: IWorkflowTimelineStep[]): void {
     return;
   }
 
-  let assignedCurrent = false;
+  let currentStage: WorkflowStage | undefined;
 
   for (let index = 0; index < steps.length; index += 1) {
     const step = steps[index];
 
-    if (step.id === 'draft-creator') {
-      continue;
-    }
-
-    if (step.statusTone === 'pending' && !assignedCurrent) {
-      step.statusTone = 'active';
-      assignedCurrent = true;
+    if (step.stage !== undefined && (step.statusTone === 'pending' || step.statusTone === 'active')) {
+      currentStage = step.stage;
+      break;
     }
   }
+
+  if (currentStage === undefined) {
+    return;
+  }
+
+  steps.forEach(step => {
+    if (step.stage === currentStage && step.statusTone === 'pending') {
+      step.statusTone = 'active';
+    }
+  });
 }
 
 export function buildWorkflowTimelineSteps(
@@ -209,7 +219,9 @@ export function buildWorkflowTimelineSteps(
           subtitle: buildParticipantSubtitle(participant),
           status: resolveWorkflowParticipantStatusLabel(participant.TrangThai_ThucHien),
           statusTone: resolveWorkflowStepTone(participant.TrangThai_ThucHien),
-          stepNumber: steps.length + 1
+          stepNumber: steps.length + 1,
+          participantId: participant.Id,
+          stage
         });
       });
   });

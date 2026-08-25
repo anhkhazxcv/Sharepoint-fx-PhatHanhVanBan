@@ -15,3 +15,9 @@ export function resolveTabFromPathname(
 
   return (tabName as TabType) || fallback;
 }
+
+export function buildYeuCauDetailUrl(tab: TabType, idYeuCau: string): string {
+  const baseUrl = window.location.href.split('#')[0];
+  const normalizedId = encodeURIComponent(idYeuCau.trim());
+  return `${baseUrl}#/tab/${tab}/detail/${normalizedId}`;
+}

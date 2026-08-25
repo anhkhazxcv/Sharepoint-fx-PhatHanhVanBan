@@ -9,18 +9,9 @@ export function escapeODataValue(value: string): string {
 }
 
 export function getCandidateSiteUrls(context: Pick<IPhvbSiteContext, 'sourceSiteUrl' | 'currentWebUrl' | 'siteCollectionUrl'>): string[] {
-  const candidates = [context.sourceSiteUrl, context.currentWebUrl, context.siteCollectionUrl]
-    .filter((value): value is string => Boolean(value && value.trim()))
-    .map(normalizeSiteUrl);
-
-  const unique: string[] = [];
-  candidates.forEach(candidate => {
-    if (unique.indexOf(candidate) === -1) {
-      unique.push(candidate);
-    }
-  });
-
-  return unique;
+  return context.sourceSiteUrl && context.sourceSiteUrl.trim()
+    ? [normalizeSiteUrl(context.sourceSiteUrl)]
+    : [];
 }
 
 export function getSiteOrigin(siteUrl: string): string {

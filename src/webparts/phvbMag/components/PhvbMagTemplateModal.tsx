@@ -4,8 +4,9 @@ import { TEMPLATE_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
 import type { IPhvbSiteContext, ITemplateLibraryItem } from '../models/PhvbMag.models';
 import { toRuntimeMessage } from '../services/PhvbMag.error';
 import { phvbDocumentLibraryService } from '../services/PhvbMagDocumentLibrary.service';
-import { CloseIcon, DownloadIcon, FormTemplateFileIcon } from './PhvbMagIcons';
+import { DownloadIcon, FormTemplateFileIcon } from './PhvbMagIcons';
 import { PhvbMagExternalLink } from './PhvbMagExternalLink';
+import { PhvbMagDialog } from './primitives/PhvbMagDialog';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagTemplateModalProps {
@@ -14,7 +15,9 @@ interface IPhvbMagTemplateModalProps {
   onClose: () => void;
 }
 
-const TEMPLATE_ICON_COLORS = ['#4A7FD4', '#2F9B57', '#D9792B', '#7B4C2C', '#6B4AA8'];
+// Mirrors $badge-tc-text/$badge-qc-text/$badge-qd-text/$badge-cs-text/$badge-hd-text
+// in _PhvbMag.colors.scss — keep in sync if that SCSS palette ever changes.
+const TEMPLATE_ICON_COLORS = ['#8C5B38', '#6C5A49', '#70675D', '#4F473E', '#5A544A'];
 
 function getTemplateIconColor(index: number): string {
   return TEMPLATE_ICON_COLORS[index % TEMPLATE_ICON_COLORS.length];
@@ -72,81 +75,74 @@ export function PhvbMagTemplateModal(props: IPhvbMagTemplateModalProps): React.R
   }
 
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <div
-        className={styles.templateModalContent}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="template-modal-title"
-        onClick={event => event.stopPropagation()}
-      >
-        <div className={styles.dialogHeader}>
-          <div className={styles.templateModalTitleRow}>
-            <span className={styles.templateModalTitleIcon} aria-hidden="true">
-              <FormTemplateFileIcon style={{ width: 22, height: 22, color: '#FFFFFF' }} />
-            </span>
-            <h4 id="template-modal-title">Template mẫu soạn thảo</h4>
-          </div>
-          <button type="button" className={styles.dialogHeaderClose} onClick={onClose} aria-label="Đóng">
-            <CloseIcon />
-          </button>
-        </div>
+    <PhvbMagDialog
+      isOpen={isOpen}
+      title={(
+        <span className={styles.templateModalTitleRow}>
+          <span className={styles.templateModalTitleIcon} aria-hidden="true">
+            <FormTemplateFileIcon style={{ width: 22, height: 22 }} />
+          </span>
+          Template mẫu soạn thảo
+        </span>
+      )}
+      titleId="template-modal-title"
+      onDismiss={onClose}
+      contentClassName={styles.templateModalContent}
+      footerClassName={styles.templateModalFooter}
+      footer={(
+        <button type="button" className={styles.templateModalCloseBtn} onClick={onClose}>
+          Đóng
+        </button>
+      )}
+    >
+      <p className={styles.templateModalIntro}>
+        Tải xuống biểu mẫu chuẩn để soạn thảo văn bản trước khi tạo yêu cầu.
+      </p>
 
-        <p className={styles.templateModalIntro}>
-          Tải xuống biểu mẫu chuẩn để soạn thảo văn bản trước khi tạo yêu cầu.
-        </p>
+      <div className={styles.templateModalBody}>
+        {isLoading ? (
+          <p className={styles.templateModalStatus}>Đang tải danh sách template...</p>
+        ) : null}
 
-        <div className={styles.templateModalBody}>
-          {isLoading ? (
-            <p className={styles.templateModalStatus}>Đang tải danh sách template...</p>
-          ) : null}
+        {!isLoading && errorMessage ? (
+          <p className={styles.templateModalError} role="alert">{errorMessage}</p>
+        ) : null}
 
-          {!isLoading && errorMessage ? (
-            <p className={styles.templateModalError} role="alert">{errorMessage}</p>
-          ) : null}
+        {!isLoading && !errorMessage && templates.length === 0 ? (
+          <p className={styles.templateModalStatus}>Chưa có template trong thư viện BieuMau.</p>
+        ) : null}
 
-          {!isLoading && !errorMessage && templates.length === 0 ? (
-            <p className={styles.templateModalStatus}>Chưa có template trong thư viện BieuMau.</p>
-          ) : null}
+        {!isLoading && !errorMessage && templates.length > 0 ? (
+          <ul className={styles.templateModalList}>
+            {templates.map((item, index) => (
+              <li key={item.id} className={styles.templateModalItem}>
+                <span
+                  className={styles.templateModalItemIcon}
+                  style={{ color: getTemplateIconColor(index) }}
+                  aria-hidden="true"
+                >
+                  <FormTemplateFileIcon style={{ width: 28, height: 28, color: getTemplateIconColor(index) }} />
+                </span>
 
-          {!isLoading && !errorMessage && templates.length > 0 ? (
-            <ul className={styles.templateModalList}>
-              {templates.map((item, index) => (
-                <li key={item.id} className={styles.templateModalItem}>
-                  <span
-                    className={styles.templateModalItemIcon}
-                    style={{ color: getTemplateIconColor(index) }}
-                    aria-hidden="true"
-                  >
-                    <FormTemplateFileIcon style={{ width: 28, height: 28, color: getTemplateIconColor(index) }} />
-                  </span>
+                <div className={styles.templateModalItemMain}>
+                  <strong className={styles.templateModalItemTitle}>{item.name}</strong>
+                  <span className={styles.templateModalItemMeta}>{getTemplateMetaLabel(item)}</span>
+                </div>
 
-                  <div className={styles.templateModalItemMain}>
-                    <strong className={styles.templateModalItemTitle}>{item.name}</strong>
-                    <span className={styles.templateModalItemMeta}>{getTemplateMetaLabel(item)}</span>
-                  </div>
-
-                  <PhvbMagExternalLink
-                    href={item.fileUrl}
-                    mode="download"
-                    downloadFileName={item.name}
-                    className={styles.templateModalDownloadBtn}
-                  >
-                    <DownloadIcon style={{ width: 16, height: 16 }} />
-                    Tải
-                  </PhvbMagExternalLink>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-
-        <div className={styles.templateModalFooter}>
-          <button type="button" className={styles.templateModalCloseBtn} onClick={onClose}>
-            Đóng
-          </button>
-        </div>
+                <PhvbMagExternalLink
+                  href={item.fileUrl}
+                  mode="download"
+                  downloadFileName={item.name}
+                  className={styles.templateModalDownloadBtn}
+                >
+                  <DownloadIcon style={{ width: 16, height: 16 }} />
+                  Tải
+                </PhvbMagExternalLink>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
-    </div>
+    </PhvbMagDialog>
   );
 }

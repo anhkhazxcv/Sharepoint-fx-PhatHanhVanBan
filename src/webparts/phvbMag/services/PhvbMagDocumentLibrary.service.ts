@@ -27,6 +27,7 @@ import { buildLibraryFolderChildrenIndex } from '../utils/PhvbMagBanHanh.tree';
 import {
   getRecentPublishedStartDate,
   isExpiredArchivePath,
+  isFormAttachmentPath,
   isRecentPublishedFolderCandidate,
   toODataDateTimeLiteral
 } from '../utils/PhvbMagRecentPublished.utils';
@@ -57,6 +58,7 @@ interface ISharePointDocumentLibraryItem {
   HieuLucTu?: string;
   HieuLucDen?: string;
   LienHe?: string;
+  IsBieuMau?: boolean;
   EffectiveBasePermissions?: ISharePointBasePermissions;
 }
 
@@ -119,7 +121,8 @@ const BAN_HANH_SELECT_FIELDS: ReadonlyArray<string> = [
   'NgayPhatHanh',
   'HieuLucTu',
   'HieuLucDen',
-  'LienHe'
+  'LienHe',
+  'IsBieuMau'
 ];
 
 const RECENT_PUBLISHED_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -139,7 +142,8 @@ const BAN_HANH_FOLDER_SELECT_FIELDS: ReadonlyArray<string> = [
   'TomTatVanban',
   'HieuLucTu',
   'HieuLucDen',
-  'LienHe'
+  'LienHe',
+  'IsBieuMau'
 ];
 
 const TEMPLATE_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -311,7 +315,8 @@ function mapBanHanhLibraryItem(
     uniqueId,
     viewCount: extras?.viewCount,
     canDownload,
-    downloadUrl: downloadUrl || undefined
+    downloadUrl: downloadUrl || undefined,
+    isFormAttachment: item.IsBieuMau === true || isFormAttachmentPath(item.FileDirRef || '')
   };
 }
 

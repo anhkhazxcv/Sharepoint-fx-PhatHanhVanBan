@@ -12,10 +12,10 @@ type ActivityFilter = 'all' | 'discussion' | 'activity';
 
 type ActivityFeedItem =
   | { kind: 'discussion'; item: ICommentWithAttachments }
-  | { kind: 'activity'; item: ILichSuThucHienItem };
+  | { kind: 'activity'; item: ICommentWithAttachments };
 
 interface IPhvbMagDetailActivityFeedProps {
-  history: ILichSuThucHienItem[];
+  history: ICommentWithAttachments[];
   comments: ICommentWithAttachments[];
   selectedFiles: File[];
   isSaving?: boolean;
@@ -268,6 +268,7 @@ function renderFeedItem(entry: ActivityFeedItem): React.ReactElement {
     <PhvbMagDetailHistoryItem
       key={`activity-${entry.item.Id}`}
       item={entry.item}
+      attachments={entry.item.attachments}
     />
   );
 }

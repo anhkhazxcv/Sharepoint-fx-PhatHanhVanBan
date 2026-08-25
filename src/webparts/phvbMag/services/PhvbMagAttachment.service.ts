@@ -72,6 +72,7 @@ interface ISharePointAttachmentItem {
   FileDirRef?: string;
   Modified?: string;
   FSObjType?: number;
+  IsBieuMau?: boolean;
 }
 
 const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
@@ -81,13 +82,21 @@ const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'FileRef',
   'FileDirRef',
   'Modified',
-  'FSObjType'
+  'FSObjType',
+  'IsBieuMau'
 ];
 
 function buildRequestIdFormValue(requestReferenceId: string): IListFormValue {
   return {
     FieldName: 'IDYeuCau',
     FieldValue: requestReferenceId
+  };
+}
+
+function buildBieuMauFormValue(): IListFormValue {
+  return {
+    FieldName: 'IsBieuMau',
+    FieldValue: '1'
   };
 }
 
@@ -115,7 +124,7 @@ function mapAttachmentItem(item: ISharePointAttachmentItem, siteUrl: string): IA
     }),
     modified: item.Modified,
     folderPath: fileDirRef,
-    isFormAttachment: fileDirRef.indexOf(`/${ATTACHMENT_FORM_SUBFOLDER}`) > -1
+    isFormAttachment: item.IsBieuMau === true || fileDirRef.indexOf(`/${ATTACHMENT_FORM_SUBFOLDER}`) > -1
   };
 }
 
@@ -213,14 +222,13 @@ export class PhvbAttachmentService {
     return listItemId;
   }
 
-  private async applyListItemMetadataOnCreate(
+  private async validateUpdateListItem(
     siteUrl: string,
     context: IAttachmentServiceContext,
     listItemId: number,
-    requestReferenceId: string
+    formValues: IListFormValue[]
   ): Promise<void> {
     const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items(${listItemId})/ValidateUpdateListItem`;
-    const formValues = [buildRequestIdFormValue(requestReferenceId)];
     const response = await context.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
       body: JSON.stringify({
         formValues,
@@ -236,6 +244,32 @@ export class PhvbAttachmentService {
     await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_UPDATE', formValues);
     const payload = await response.json();
     assertValidateUpdateSucceeded(payload);
+  }
+
+  private async applyListItemMetadataOnCreate(
+    siteUrl: string,
+    context: IAttachmentServiceContext,
+    listItemId: number,
+    requestReferenceId: string,
+    isBieuMau?: boolean
+  ): Promise<void> {
+    const formValues = [buildRequestIdFormValue(requestReferenceId)];
+
+    if (isBieuMau) {
+      formValues.push(buildBieuMauFormValue());
+    }
+
+    try {
+      await this.validateUpdateListItem(siteUrl, context, listItemId, formValues);
+    } catch (error) {
+      const details = error instanceof Error ? error.message : '';
+      if (isBieuMau && /IsBieuMau/i.test(details)) {
+        await this.validateUpdateListItem(siteUrl, context, listItemId, [buildRequestIdFormValue(requestReferenceId)]);
+        return;
+      }
+
+      throw error;
+    }
   }
 
   private async ensureFolder(
@@ -278,7 +312,8 @@ export class PhvbAttachmentService {
     context: IAttachmentServiceContext,
     folderPath: string,
     file: File,
-    requestReferenceId: string
+    requestReferenceId: string,
+    isBieuMau: boolean
   ): Promise<void> {
     const uploadFileName = file.name.toLocaleUpperCase('vi-VN');
     const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/Files/add(url=@fileName,overwrite=true)?${buildODataParameterQuery({
@@ -308,7 +343,7 @@ export class PhvbAttachmentService {
       throw new Error(`Uploaded file ${uploadFileName} but could not resolve list item id.`);
     }
 
-    await this.applyListItemMetadataOnCreate(siteUrl, context, listItemId, requestReferenceId);
+    await this.applyListItemMetadataOnCreate(siteUrl, context, listItemId, requestReferenceId, isBieuMau);
   }
 
   private async resolveListItemIdByFilePath(
@@ -386,24 +421,20 @@ export class PhvbAttachmentService {
           targetRequestReferenceId
         );
 
-        const formFolderPath = bieuMau.length > 0
-          ? await this.ensureFolderPath(siteUrl, context, documentFolderPath, ATTACHMENT_FORM_SUBFOLDER, targetRequestReferenceId)
-          : undefined;
-
-        const copyAttachment = async (attachment: IAttachmentLibraryItem, targetFolderPath: string): Promise<void> => {
+        const copyAttachment = async (attachment: IAttachmentLibraryItem, isBieuMau: boolean): Promise<void> => {
           const sourcePath = joinServerRelativePath(attachment.folderPath || '', attachment.name);
-          const targetPath = joinServerRelativePath(targetFolderPath, attachment.name);
+          const targetPath = joinServerRelativePath(documentFolderPath, attachment.name);
           await this.copyFileTo(siteUrl, context, sourcePath, targetPath);
           const listItemId = await this.resolveListItemIdByFilePath(siteUrl, context, targetPath);
 
           if (listItemId) {
-            await this.applyListItemMetadataOnCreate(siteUrl, context, listItemId, targetRequestReferenceId);
+            await this.applyListItemMetadataOnCreate(siteUrl, context, listItemId, targetRequestReferenceId, isBieuMau);
           }
         };
 
         await Promise.all([
-          ...taiLieu.map(attachment => copyAttachment(attachment, documentFolderPath)),
-          ...bieuMau.map(attachment => copyAttachment(attachment, formFolderPath!))
+          ...taiLieu.map(attachment => copyAttachment(attachment, false)),
+          ...bieuMau.map(attachment => copyAttachment(attachment, true))
         ]);
 
         return;
@@ -452,27 +483,15 @@ export class PhvbAttachmentService {
 
         const draftUpload = Promise.all(
           draftFiles.map(file =>
-            this.uploadFileToFolder(siteUrl, options, documentFolderPath, file, requestReferenceId)
+            this.uploadFileToFolder(siteUrl, options, documentFolderPath, file, requestReferenceId, false)
           )
         );
 
-        const formUpload = formFiles.length > 0
-          ? (async (): Promise<void> => {
-            const formFolderPath = await this.ensureFolderPath(
-              siteUrl,
-              options,
-              documentFolderPath,
-              ATTACHMENT_FORM_SUBFOLDER,
-              requestReferenceId
-            );
-
-            await Promise.all(
-              formFiles.map(file =>
-                this.uploadFileToFolder(siteUrl, options, formFolderPath, file, requestReferenceId)
-              )
-            );
-          })()
-          : Promise.resolve();
+        const formUpload = Promise.all(
+          formFiles.map(file =>
+            this.uploadFileToFolder(siteUrl, options, documentFolderPath, file, requestReferenceId, true)
+          )
+        );
 
         await Promise.all([draftUpload, formUpload]);
 

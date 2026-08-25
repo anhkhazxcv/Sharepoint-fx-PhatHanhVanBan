@@ -1,6 +1,6 @@
 import type { WorkflowActionKey } from './PhvbMagWorkflowPermission.utils';
 
-export type CommentConfirmActionKey = WorkflowActionKey | 'returnBanHanhToAdmin';
+export type CommentConfirmActionKey = WorkflowActionKey | 'returnBanHanhToAdmin' | 'advanceStage';
 
 export const REJECT_COMMENT_REQUIRED_MESSAGE = 'Vui lòng nhập ghi chú khi từ chối.';
 export const RETURN_BAN_HANH_TO_ADMIN_COMMENT_REQUIRED_MESSAGE = 'Vui lòng nhập ghi chú khi trả về Admin.';
@@ -25,6 +25,8 @@ export function getWorkflowActionDialogTitle(action: CommentConfirmActionKey): s
       return 'Xác nhận từ chối';
     case 'returnBanHanhToAdmin':
       return 'Trả về Admin';
+    case 'advanceStage':
+      return 'Xác nhận chuyển giai đoạn';
     default:
       return 'Xác nhận thao tác';
   }
@@ -38,6 +40,8 @@ export function getWorkflowActionDialogMessage(action: CommentConfirmActionKey):
       return 'Bạn có chắc chắn muốn từ chối yêu cầu này? Vui lòng nhập ghi chú bên dưới.';
     case 'returnBanHanhToAdmin':
       return 'Bạn có chắc muốn trả yêu cầu về Admin? Vui lòng nhập ghi chú bên dưới.';
+    case 'advanceStage':
+      return 'Bạn có chắc chắn muốn chuyển giai đoạn của yêu cầu này?';
     default:
       return 'Bạn có chắc chắn muốn tiếp tục?';
   }
@@ -45,15 +49,17 @@ export function getWorkflowActionDialogMessage(action: CommentConfirmActionKey):
 
 export function getWorkflowActionDialogConfirmLabel(
   action: CommentConfirmActionKey,
-  approveLabel?: string
+  dynamicLabel?: string
 ): string {
   switch (action) {
     case 'approve':
-      return approveLabel || 'Phê duyệt';
+      return dynamicLabel || 'Phê duyệt';
     case 'reject':
       return 'Từ chối';
     case 'returnBanHanhToAdmin':
       return 'Trả về admin';
+    case 'advanceStage':
+      return dynamicLabel || 'Chuyển giai đoạn';
     default:
       return 'Xác nhận';
   }

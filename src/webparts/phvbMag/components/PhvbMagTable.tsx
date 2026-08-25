@@ -104,6 +104,13 @@ function isListTableTab(tab: TabType): tab is keyof typeof LIST_TAB_CONFIG {
 function getRequestStatusState(item: IVanBanItem): { label: string; className: string } {
   const statusDisplay = getRequestStatusDisplayForItem(item);
 
+  if (statusDisplay.filterKey === 'revoked') {
+    return {
+      label: statusDisplay.label,
+      className: styles.requestStatusRevoked
+    };
+  }
+
   if (statusDisplay.filterKey === 'rejected') {
     return {
       label: statusDisplay.label,
@@ -422,7 +429,19 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
                   const createdLabel = formatExecutionDate(item.Created) || '---';
 
                   return (
-                    <tr key={item.Id} className={styles.requestTableRow} onClick={() => onSelectItem(item)}>
+                    <tr
+                      key={item.Id}
+                      className={styles.requestTableRow}
+                      onClick={() => onSelectItem(item)}
+                      tabIndex={0}
+                      role="button"
+                      onKeyDown={event => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onSelectItem(item);
+                        }
+                      }}
+                    >
                       <td className={styles.requestTableIndexCol}>{rowNumber}</td>
                       <td className={styles.requestTitleCell}>
                         <div className={styles.requestTitle}>{item.Tenvanban || 'Chưa có tên văn bản'}</div>

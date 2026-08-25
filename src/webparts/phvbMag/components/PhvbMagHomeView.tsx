@@ -195,28 +195,31 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
         </section>
 
         {!isGuideDismissed ? (
-          <section className={styles.homeGuideBanner}>
-            <SidebarHelpIcon className={styles.homeGuideIcon} />
-            <div className={styles.homeGuideContent}>
-              <div className={styles.homeGuideTitle}>Bạn mới dùng hệ thống? Xem hướng dẫn &amp; biểu mẫu</div>
-              <div className={styles.homeGuideSub}>Hiểu rõ quy trình · Chọn đúng loại văn bản · Dùng đúng cách</div>
-            </div>
-            <button
-              type="button"
-              className={styles.homeGuideAction}
-              onClick={() => navigate('/tab/HuongDan')}
-            >
-              Hướng dẫn
-            </button>
-            <button
-              type="button"
-              className={styles.homeGuideDismiss}
-              onClick={handleDismissGuide}
-              aria-label="Ẩn banner hướng dẫn"
-            >
-              <CloseIcon />
-            </button>
-          </section>
+          <PhvbMagSectionShell
+            title="Bạn mới dùng hệ thống? Xem hướng dẫn & biểu mẫu"
+            icon={<SidebarHelpIcon className={styles.homeGuideIcon} />}
+            action={(
+              <>
+                <button
+                  type="button"
+                  className={styles.homeGuideAction}
+                  onClick={() => navigate('/tab/HuongDan')}
+                >
+                  Hướng dẫn
+                </button>
+                <button
+                  type="button"
+                  className={styles.homeGuideDismiss}
+                  onClick={handleDismissGuide}
+                  aria-label="Ẩn banner hướng dẫn"
+                >
+                  <CloseIcon />
+                </button>
+              </>
+            )}
+          >
+            <p className={styles.homeGuideSub}>Hiểu rõ quy trình · Chọn đúng loại văn bản · Dùng đúng cách</p>
+          </PhvbMagSectionShell>
         ) : null}
 
         {showCategoriesSection ? (
@@ -260,6 +263,8 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
               items={savedHomePreviewItems}
               onNavigate={path => navigate(path)}
             />
+
+            <div className={styles.homeLibraryPreviewDivider} aria-hidden="true" />
 
             <PhvbMagHomeLibraryPreviewColumn
               icon={<SidebarRecentViewsIcon className={styles.homeSectionIcon} />}

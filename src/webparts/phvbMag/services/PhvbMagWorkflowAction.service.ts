@@ -9,30 +9,17 @@ import {
   WORKFLOW_PARTICIPANT_STATUS
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
-import { phvbRoleService } from './PhvbMagRole.service';
 import { phvbSendMailService } from './PhvbMagSendMail.service';
+import { phvbCommentAttachmentService } from './PhvbMagCommentAttachment.service';
 import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from './PhvbMag.error';
 import { toSharePointDateTimeIso } from '../utils/PhvbMagDateTime.utils';
 import {
   buildXacNhanPayloadForStage,
-  buildYeuCauCapSoPayload,
-  buildYeuCauPayloadForStage,
-  getParticipantEmailsFromWorkflowItems,
-  resolveActiveWorkflowStageFromStatus,
   resolveSendMailDocumentInfoFromRelease,
   SEND_MAIL_APPROVAL_STATUS
 } from '../utils/PhvbMagSendMail.utils';
-import {
-  areAllParticipantsConfirmed,
-  getParticipantsForStage,
-  resolveDocumentStatusAfterSkippingEmptyStages,
-  resolveEffectiveWorkflowStage,
-  resolveHistoryStatusForApprove,
-  resolveNextDocumentStatusAfterStageComplete,
-  splitWorkflowParticipants,
-  type WorkflowDocumentStage
-} from '../utils/PhvbMagWorkflowState.utils';
+import { resolveHistoryStatusForApprove } from '../utils/PhvbMagWorkflowState.utils';
 import type {
   IAllUserWorkflowItem,
   IPhvbDocumentContext,
@@ -40,13 +27,39 @@ import type {
   IRequestDetailData,
   WorkflowStage
 } from '../models/PhvbMag.models';
-import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
+import type { IWorkflowActionContext, WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
 import { getWorkflowActionCommentRequiredMessage } from '../utils/PhvbMagWorkflowActionDialog.utils';
 import { resolveWorkflowActionContext } from '../utils/PhvbMagWorkflowPermission.utils';
+
+function findParticipantById(
+  participants: ReadonlyArray<IAllUserWorkflowItem>,
+  participantId: number
+): IAllUserWorkflowItem | undefined {
+  for (let index = 0; index < participants.length; index += 1) {
+    if (participants[index].Id === participantId) {
+      return participants[index];
+    }
+  }
+
+  return undefined;
+}
+
+function resolveTargetParticipant(
+  actionContext: IWorkflowActionContext,
+  input: IWorkflowActionInput
+): IAllUserWorkflowItem | undefined {
+  if (input.targetParticipantId === undefined) {
+    return actionContext.pendingParticipant;
+  }
+
+  return findParticipantById(actionContext.pendingParticipants, input.targetParticipantId);
+}
 
 export interface IWorkflowActionInput {
   action: WorkflowActionKey;
   comment?: string;
+  targetParticipantId?: number;
+  files?: File[];
 }
 
 interface IWorkflowActionOptions extends IPhvbDocumentContext {
@@ -94,8 +107,8 @@ async function createHistoryRecord(
   historyStatus: string,
   comment: string,
   department?: string
-): Promise<void> {
-  await createExecutionHistoryRecord(
+): Promise<number | undefined> {
+  return createExecutionHistoryRecord(
     { ...context, logContext: context.logContext },
     {
       idYeuCau,
@@ -105,6 +118,18 @@ async function createHistoryRecord(
       isComment: false
     }
   );
+}
+
+async function uploadActionAttachmentsIfAny(
+  context: IWorkflowActionOptions,
+  historyItemId: number | undefined,
+  files: ReadonlyArray<File> | undefined
+): Promise<void> {
+  if (!historyItemId || !files || files.length === 0) {
+    return;
+  }
+
+  await phvbCommentAttachmentService.uploadCommentFiles(context, historyItemId, files.slice(), context.logContext);
 }
 
 async function updateParticipantConfirmation(
@@ -143,58 +168,10 @@ async function updateReleaseStatus(
   });
 }
 
-function buildStageParticipantSnapshot(detail: IRequestDetailData): ReturnType<typeof splitWorkflowParticipants> {
-  return splitWorkflowParticipants(detail.workflowParticipants);
-}
-
-async function resolveNextStatusAfterApprove(
-  detail: IRequestDetailData,
-  stage: WorkflowDocumentStage
-): Promise<string | undefined> {
-  if (stage === 'none') {
-    return undefined;
-  }
-
-  const participants = buildStageParticipantSnapshot(detail);
-  const loaiYeuCau = detail.release.LoaiYeuCau;
-  const effectiveStage = resolveEffectiveWorkflowStage(detail.release.StatusApproved, participants, loaiYeuCau);
-
-  if (effectiveStage === 'none') {
-    return undefined;
-  }
-
-  const skippedStatus = resolveDocumentStatusAfterSkippingEmptyStages(
-    detail.release.StatusApproved,
-    participants,
-    loaiYeuCau
-  );
-
-  if (skippedStatus && skippedStatus !== (detail.release.StatusApproved || '').trim()) {
-    return skippedStatus;
-  }
-
-  const stageParticipants = getParticipantsForStage(effectiveStage, participants);
-
-  if (!areAllParticipantsConfirmed(stageParticipants)) {
-    return undefined;
-  }
-
-  return resolveNextDocumentStatusAfterStageComplete(effectiveStage, participants, loaiYeuCau);
-}
-
-function isWorkflowStageStatus(status: string): boolean {
-  return (
-    status === REQUEST_STATUS.DANG_GOP_Y ||
-    status === REQUEST_STATUS.DANG_THAM_DINH ||
-    status === REQUEST_STATUS.DANG_PHE_DUYET
-  );
-}
-
 async function sendApproveWorkflowMails(
   options: IWorkflowActionOptions,
   stage: WorkflowStage,
-  participant: IAllUserWorkflowItem,
-  nextStatus?: string
+  participant: IAllUserWorkflowItem
 ): Promise<void> {
   const documentInfo = resolveSendMailDocumentInfoFromRelease(options.detail.release);
   const participantEmail = (participant.Email_ThucHien || '').trim();
@@ -208,42 +185,6 @@ async function sendApproveWorkflowMails(
 
   if (xacNhanPayload) {
     await phvbSendMailService.sendMail(options, xacNhanPayload, options.logContext);
-  }
-
-  if (!nextStatus) {
-    return;
-  }
-
-  if (nextStatus === REQUEST_STATUS.CHO_CAP_SO) {
-    const roles = await phvbRoleService.loadRoles(options);
-    const capSoPayload = buildYeuCauCapSoPayload(options.userEmail, roles, documentInfo);
-
-    if (capSoPayload) {
-      await phvbSendMailService.sendMail(options, capSoPayload, options.logContext);
-    }
-
-    return;
-  }
-
-  if (!isWorkflowStageStatus(nextStatus)) {
-    return;
-  }
-
-  const nextStage = resolveActiveWorkflowStageFromStatus(nextStatus);
-
-  if (!nextStage) {
-    return;
-  }
-
-  const yeuCauPayload = buildYeuCauPayloadForStage(
-    options.userEmail,
-    nextStage,
-    getParticipantEmailsFromWorkflowItems(nextStage, options.detail.workflowParticipants),
-    documentInfo
-  );
-
-  if (yeuCauPayload) {
-    await phvbSendMailService.sendMail(options, yeuCauPayload, options.logContext);
   }
 }
 
@@ -274,6 +215,20 @@ export class PhvbWorkflowActionService {
   ): void {
     const actionContext = resolveWorkflowActionContext(detail, userEmail);
 
+    if (input.targetParticipantId !== undefined) {
+      const targetParticipant = findParticipantById(actionContext.pendingParticipants, input.targetParticipantId);
+
+      if (!targetParticipant) {
+        throw new Error('Người tham gia này đã được xử lý hoặc không còn hợp lệ.');
+      }
+
+      if (input.action === 'reject' && !actionContext.canRejectAtActiveStage) {
+        throw new Error('Bạn không có quyền thực hiện thao tác này ở bước hiện tại.');
+      }
+
+      return;
+    }
+
     if (!actionContext.availableActions[input.action]) {
       throw new Error('Bạn không có quyền thực hiện thao tác này ở bước hiện tại.');
     }
@@ -299,7 +254,7 @@ export class PhvbWorkflowActionService {
 
     const actionContext = resolveWorkflowActionContext(options.detail, options.userEmail);
     const stage = actionContext.activeStage;
-    const participant = actionContext.pendingParticipant;
+    const participant = resolveTargetParticipant(actionContext, options.input);
     const historyStatus = stage === 'none'
       ? EXECUTION_HISTORY_STATUS.PHE_DUYET
       : resolveHistoryStatusForAction(options.input.action, stage);
@@ -310,39 +265,16 @@ export class PhvbWorkflowActionService {
       }
 
       await updateParticipantConfirmation(options, stage, participant, comment);
+      await sendApproveWorkflowMails(options, stage, participant);
 
-      const refreshedParticipants = options.detail.workflowParticipants.map(item => {
-        if (item.Id !== participant.Id) {
-          return item;
-        }
-
-        return {
-          ...item,
-          TrangThai_ThucHien: WORKFLOW_PARTICIPANT_STATUS.DA_XAC_NHAN,
-          NoiDung: comment || item.NoiDung
-        };
-      });
-
-      const nextDetail: IRequestDetailData = {
-        ...options.detail,
-        workflowParticipants: refreshedParticipants
-      };
-
-      const nextStatus = await resolveNextStatusAfterApprove(nextDetail, stage);
-
-      if (nextStatus) {
-        await updateReleaseStatus(options, options.detail.release.Id, nextStatus);
-      }
-
-      await sendApproveWorkflowMails(options, stage, participant, nextStatus);
-
-      await createHistoryRecord(
+      const approveHistoryItemId = await createHistoryRecord(
         options,
         idYeuCau,
         historyStatus,
         comment,
         options.detail.release.KhoaPhongNguoiTao
       );
+      await uploadActionAttachmentsIfAny(options, approveHistoryItemId, options.input.files);
       return;
     }
 
@@ -359,13 +291,14 @@ export class PhvbWorkflowActionService {
     );
     await updateReleaseStatus(options, options.detail.release.Id, resolveDocumentStatusForAction(options.input.action));
     await sendRejectWorkflowMail(options, stage);
-    await createHistoryRecord(
+    const rejectHistoryItemId = await createHistoryRecord(
       options,
       idYeuCau,
       historyStatus,
       comment,
       options.detail.release.KhoaPhongNguoiTao
     );
+    await uploadActionAttachmentsIfAny(options, rejectHistoryItemId, options.input.files);
   }
 
   public getRuntimeErrorMessage(error: unknown): string {

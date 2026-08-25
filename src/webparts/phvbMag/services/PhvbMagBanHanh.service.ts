@@ -20,6 +20,7 @@ import { RETURN_BAN_HANH_TO_ADMIN_COMMENT_REQUIRED_MESSAGE } from '../utils/Phvb
 import { getRoleEmails } from '../utils/PhvbMagRole.utils';
 import { isDmvlBanHanhActor, isDmvlSubmissionRelease } from '../utils/PhvbMagDmvl.utils';
 import {
+  buildThongBaoLuuTruPayload,
   buildTraLaiAdminBanHanhPayload,
   buildXacNhanBanHanhPayload,
   buildYeuCauBanHanhPayload,
@@ -165,6 +166,39 @@ function assertPublishNotifyReady(release: IVanBanItem): void {
       validationError === 'Vui lòng nhập nơi nhận email.'
         ? 'Chưa có nội dung ban hành từ Admin. Vui lòng liên hệ Admin để chuẩn bị trước.'
         : validationError
+    );
+  }
+}
+
+async function sendThongBaoLuuTruMail(
+  context: IPhvbDocumentContext,
+  release: IVanBanItem,
+  logContext: IPhvbLogContext | undefined,
+  auditLogger: ReturnType<typeof createBanHanhPublishAuditLogger>
+): Promise<void> {
+  const mailPayload = buildThongBaoLuuTruPayload(context.userEmail, release);
+
+  if (!mailPayload) {
+    return;
+  }
+
+  try {
+    await phvbSendMailService.sendMail(context, mailPayload, logContext);
+    await auditLogger.logSendMail(
+      {
+        TypeSendMail: mailPayload.TypeSendMail,
+        EmailTo: mailPayload.EmailTo
+      },
+      'success'
+    );
+  } catch (error) {
+    await auditLogger.logSendMail(
+      {
+        TypeSendMail: mailPayload.TypeSendMail,
+        EmailTo: mailPayload.EmailTo
+      },
+      'failed',
+      error instanceof Error ? error.message : String(error)
     );
   }
 }
@@ -336,6 +370,8 @@ export async function publishIssuanceWithNotify(
     );
     throw error;
   }
+
+  await sendThongBaoLuuTruMail(context, detail.release, logContext, auditLogger);
 
   await auditLogger.logSuccess({
     loaiYeuCau: detail.release.LoaiYeuCau,
@@ -601,6 +637,8 @@ export class PhvbBanHanhService {
           isComment: false
         }
       );
+
+      await sendThongBaoLuuTruMail(context, detail.release, logContext, auditLogger);
 
       await auditLogger.logSuccess({
         loaiYeuCau: detail.release.LoaiYeuCau,

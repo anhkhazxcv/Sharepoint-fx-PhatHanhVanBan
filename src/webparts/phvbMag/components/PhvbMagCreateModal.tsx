@@ -25,7 +25,6 @@ import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 import styles from './PhvbMag.module.scss';
 import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import {
-  CloseIcon,
   DeleteFileIcon,
   DocumentFileIcon,
   FolderAccentIcon,
@@ -38,7 +37,9 @@ import {
   UploadDocumentIcon,
   UploadFormIcon
 } from './PhvbMagIcons';
+import { PhvbMagCreateTemplatePanel } from './PhvbMagCreateTemplatePanel';
 import { PhvbMagFolderPickerDialog } from './PhvbMagFolderPickerDialog';
+import { PhvbMagDialog } from './primitives/PhvbMagDialog';
 
 interface IPhvbMagCreateModalProps {
   isOpen: boolean;
@@ -637,6 +638,11 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
       return;
     }
 
+    if (formRules.requireGhiChuThamDinh && !formValues.ghiChuThamDinh?.trim()) {
+      setSubmitError('Vui lòng nhập ghi chú cho cấp thẩm định / phê duyệt.');
+      return;
+    }
+
     if (formValues.approvalUsers.length === 0) {
       setSubmitError('Vui lòng chọn ít nhất một người phê duyệt.');
       return;
@@ -670,20 +676,69 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     }
   };
 
-  return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modalContent}>
-        <div className={styles.modalHeader}>
-          <div className={styles.modalHeaderTitleArea}>
-            <ModalCreateIcon style={{ color: '#FFFFFF' }} />
-            <h3>{isEditMode ? 'Chỉnh sửa bản nháp' : isDmvlMode ? 'Trình DMVL' : 'Tạo yêu cầu phát hành văn bản'}</h3>
-          </div>
-          <button type="button" className={styles.btnClose} onClick={onClose} disabled={isSaving}>
-            <CloseIcon />
-          </button>
-        </div>
+  const createModalFormId = 'phvb-create-modal-form';
 
-        <form onSubmit={handleSubmit} className={styles.formContainer}>
+  return (
+    <>
+      <PhvbMagDialog
+        isOpen={isOpen}
+        title={(
+          <span className={styles.modalHeaderTitleArea}>
+            <ModalCreateIcon />
+            {isEditMode ? 'Chỉnh sửa bản nháp' : isDmvlMode ? 'Trình DMVL' : 'Tạo yêu cầu phát hành văn bản'}
+          </span>
+        )}
+        titleId="phvb-create-modal-title"
+        onDismiss={isSaving ? undefined : onClose}
+        contentClassName={styles.modalContent}
+        footer={(
+          <>
+            <button
+              type="button"
+              className={styles.btnSecondary}
+              onClick={onClose}
+              disabled={isSaving}
+            >
+              Hủy
+            </button>
+
+            {isDmvlMode ? (
+              <button
+                type="button"
+                className={styles.btnSubmit}
+                onClick={handleDmvlBanHanhClick}
+                disabled={isSaving || isDmvlFolderLoading || Boolean(folderError)}
+              >
+                Ban hành
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className={styles.btnDraft}
+                  onClick={handleSaveDraft}
+                  disabled={isSaving}
+                >
+                  Lưu nháp
+                </button>
+
+                <button
+                  type="submit"
+                  form={createModalFormId}
+                  className={styles.btnSubmit}
+                  disabled={isSaving}
+                >
+                  <span className={styles.submitButtonContent}>
+                    Gửi yêu cầu
+                    <SubmitRequestIcon />
+                  </span>
+                </button>
+              </>
+            )}
+          </>
+        )}
+      >
+        <form id={createModalFormId} onSubmit={handleSubmit} className={styles.formContainer}>
           <div className={styles.modalBody}>
             {/* LOẠI YÊU CẦU + THÔNG BÁO EMAIL */}
             <div className={styles.formRowTwoCol}>
@@ -870,7 +925,9 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   TÀI LIỆU SOẠN THẢO {!hasTaiLieuAttachments && <span className={styles.required}>*</span>}
                 </label>
                 <span className={styles.fieldSubtitle}>File văn bản chính cần phát hành (.docx, .pdf, .xlsx, .xls)</span>
-                
+
+                <PhvbMagCreateTemplatePanel isActive={isOpen} siteContext={siteContext} />
+
                 <div
                   className={`${styles.dragDropZone} ${isDragging1 ? styles.dragDropActive : ''} ${hasTaiLieuAttachments ? styles.dragDropHasFile : ''}`}
                   onDragOver={(e) => { e.preventDefault(); setIsDragging1(true); }}
@@ -1062,7 +1119,10 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
               {formRules.showGhiChuThamDinh && (
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
-                  <label className={styles.fieldLabel}>GHI CHÚ CHO CẤP TĐ / PD</label>
+                  <label className={styles.fieldLabel}>
+                    GHI CHÚ CHO CẤP TĐ / PD
+                    {formRules.requireGhiChuThamDinh && <span className={styles.required}>*</span>}
+                  </label>
                   <textarea
                     rows={2}
                     placeholder="Điểm cần chú ý, yêu cầu đặc biệt khi thẩm định / phê duyệt..."
@@ -1143,52 +1203,8 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
           {(submitError || externalSubmitError) && (
             <p className={styles.submitError} role="alert">{submitError || externalSubmitError}</p>
           )}
-
-          <div className={styles.modalFooter}>
-            <button
-              type="button"
-              className={styles.btnSecondary}
-              onClick={onClose}
-              disabled={isSaving}
-            >
-              Hủy
-            </button>
-
-            {isDmvlMode ? (
-              <button
-                type="button"
-                className={styles.btnSubmit}
-                onClick={handleDmvlBanHanhClick}
-                disabled={isSaving || isDmvlFolderLoading || Boolean(folderError)}
-              >
-                Ban hành
-              </button>
-            ) : (
-              <>
-            <button
-              type="button"
-              className={styles.btnDraft}
-              onClick={handleSaveDraft}
-              disabled={isSaving}
-            >
-              Lưu nháp
-            </button>
-            
-            <button
-              type="submit"
-              className={styles.btnSubmit}
-              disabled={isSaving}
-            >
-              <span className={styles.submitButtonContent}>
-                Gửi yêu cầu
-                <SubmitRequestIcon />
-              </span>
-            </button>
-              </>
-            )}
-          </div>
         </form>
-      </div>
+      </PhvbMagDialog>
 
       <PhvbMagFolderPickerDialog
         isOpen={showFolderPicker}
@@ -1197,6 +1213,6 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
         onClose={() => setShowFolderPicker(false)}
         onConfirm={handleFolderConfirm}
       />
-    </div>
+    </>
   );
 }

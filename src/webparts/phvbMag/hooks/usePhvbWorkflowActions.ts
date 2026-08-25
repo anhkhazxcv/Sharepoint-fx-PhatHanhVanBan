@@ -18,7 +18,12 @@ interface IUsePhvbWorkflowActionsResult {
   actionContext: ReturnType<typeof resolveWorkflowActionContext> | undefined;
   isProcessing: boolean;
   errorMessage?: string;
-  runAction: (action: WorkflowActionKey, comment?: string) => Promise<boolean>;
+  runAction: (
+    action: WorkflowActionKey,
+    comment?: string,
+    targetParticipantId?: number,
+    files?: File[]
+  ) => Promise<boolean>;
 }
 
 function buildWorkflowLogActionName(action: WorkflowActionKey): string {
@@ -60,7 +65,12 @@ export function usePhvbWorkflowActions(options: IUsePhvbWorkflowActionsOptions):
     return resolveWorkflowActionContext(detail, documentContext.userEmail);
   }, [detail, documentContext.userEmail]);
 
-  const runAction = useCallback(async (action: WorkflowActionKey, comment?: string): Promise<boolean> => {
+  const runAction = useCallback(async (
+    action: WorkflowActionKey,
+    comment?: string,
+    targetParticipantId?: number,
+    files?: File[]
+  ): Promise<boolean> => {
     if (!detail) {
       setErrorMessage('Chưa tải được dữ liệu chi tiết yêu cầu.');
       return false;
@@ -71,7 +81,9 @@ export function usePhvbWorkflowActions(options: IUsePhvbWorkflowActionsOptions):
 
     const input: IWorkflowActionInput = {
       action,
-      comment
+      comment,
+      targetParticipantId,
+      files
     };
 
     try {

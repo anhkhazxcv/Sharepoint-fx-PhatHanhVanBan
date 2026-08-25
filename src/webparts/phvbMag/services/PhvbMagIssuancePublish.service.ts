@@ -1,6 +1,5 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import {
-  ATTACHMENT_FORM_SUBFOLDER,
   ATTACHMENT_LIBRARY_TITLE,
   ISSUANCE_LIBRARY_TITLE
 } from '../config/PhvbMag.configuration';
@@ -31,6 +30,7 @@ interface ISharePointFileItem {
   FileRef?: string;
   FileDirRef?: string;
   FSObjType?: number;
+  IsBieuMau?: boolean;
 }
 
 interface IIssuancePublishResult {
@@ -54,6 +54,7 @@ interface IResolveFileListItemFieldsOptions {
 
 const DEFAULT_COPY_POLL_TIMEOUT_MS = 15000;
 const DEFAULT_COPY_POLL_INTERVAL_MS = 400;
+const FORM_FILE_PUBLISH_CHUNK_SIZE = 4;
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -64,7 +65,8 @@ const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'FileLeafRef',
   'FileRef',
   'FileDirRef',
-  'FSObjType'
+  'FSObjType',
+  'IsBieuMau'
 ];
 
 function buildODataParameterQuery(parameters: Record<string, string>): string {
@@ -860,14 +862,13 @@ export class PhvbIssuancePublishService {
     return roleDefId;
   }
 
-  private async breakFolderRoleInheritance(
+  private async breakItemRoleInheritance(
     siteUrl: string,
     context: IIssuancePublishContext,
-    folderPath: string
+    listTitle: string,
+    itemId: number
   ): Promise<void> {
-    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/ListItemAllFields/breakroleinheritance(copyRoleAssignments=false,clearSubscopes=true)?${buildODataParameterQuery({
-      '@folderPath': normalizeServerRelativePath(folderPath)
-    })}`;
+    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(listTitle)}')/items(${itemId})/breakroleinheritance(copyRoleAssignments=false,clearSubscopes=true)`;
     const response = await context.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
       headers: {
         accept: 'application/json;odata=nometadata',
@@ -876,19 +877,18 @@ export class PhvbIssuancePublishService {
       }
     });
 
-    await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_UPDATE', ISSUANCE_LIBRARY_TITLE);
+    await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_UPDATE', listTitle);
   }
 
-  private async grantFolderReadToGroup(
+  private async grantItemReadToGroup(
     siteUrl: string,
     context: IIssuancePublishContext,
-    folderPath: string,
+    listTitle: string,
+    itemId: number,
     principalId: number,
     roleDefId: number
   ): Promise<void> {
-    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/ListItemAllFields/roleassignments/addroleassignment(principalid=${principalId},roleDefId=${roleDefId})?${buildODataParameterQuery({
-      '@folderPath': normalizeServerRelativePath(folderPath)
-    })}`;
+    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(listTitle)}')/items(${itemId})/roleassignments/addroleassignment(principalid=${principalId},roleDefId=${roleDefId})`;
     const response = await context.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
       headers: {
         accept: 'application/json;odata=nometadata',
@@ -897,105 +897,165 @@ export class PhvbIssuancePublishService {
       }
     });
 
-    await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_UPDATE', ISSUANCE_LIBRARY_TITLE);
+    await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_UPDATE', listTitle);
   }
 
-  private async copyAndSecureFormFolder(
+  private async stampFormFileMetadata(
     siteUrl: string,
     context: IIssuancePublishContext,
-    sourceFolderPath: string,
-    targetFolderPath: string,
+    listItemId: number,
     metadataValues: IListFormValue[],
-    auditLogger: BanHanhPublishAuditLogger
-  ): Promise<string | undefined> {
-    const sourceFormFolderPath = joinServerRelativePath(sourceFolderPath, ATTACHMENT_FORM_SUBFOLDER);
-    const sourceExists = await this.folderExists(siteUrl, context, sourceFormFolderPath);
-
-    if (!sourceExists) {
-      return undefined;
-    }
-
-    const formFiles = await this.listFilesInFolder(siteUrl, context, sourceFormFolderPath);
-
-    if (formFiles.length === 0) {
-      return undefined;
-    }
-
-    const targetFormFolderPath = joinServerRelativePath(targetFolderPath, ATTACHMENT_FORM_SUBFOLDER);
-    const roleGroupId = parseInt((context.roleGroupID || '').trim(), 10);
-
-    if (!roleGroupId || roleGroupId <= 0) {
-      throw new Error('Chưa cấu hình roleGroupID để gán quyền Read cho thư mục Biểu Mẫu.');
-    }
+    auditLogger: BanHanhPublishAuditLogger,
+    auditLabel: { fileName: string; targetPath: string }
+  ): Promise<void> {
+    const bieuMauMetadataValues = [...metadataValues, { FieldName: 'IsBieuMau', FieldValue: '1' }];
 
     try {
-      await this.ensureFolderPath(
+      await this.stampListItemMetadata(
         siteUrl,
         context,
-        targetFolderPath,
-        ATTACHMENT_FORM_SUBFOLDER,
-        ISSUANCE_LIBRARY_TITLE
+        ISSUANCE_LIBRARY_TITLE,
+        listItemId,
+        bieuMauMetadataValues,
+        auditLogger,
+        { ...auditLabel, isFormAttachment: true }
       );
+    } catch (error) {
+      const details = error instanceof Error ? error.message : '';
 
-      for (let index = 0; index < formFiles.length; index += 1) {
-        const formFile = formFiles[index];
-        const targetPath = joinServerRelativePath(targetFormFolderPath, formFile.name);
-        await this.copyFile(siteUrl, context, formFile.serverRelativeUrl, targetPath);
-
-        await auditLogger.logCopyFile(
-          {
-            itemId: 0,
-            fileName: formFile.name,
-            sourcePath: formFile.serverRelativeUrl,
-            targetPath,
-            isFormAttachment: true
-          },
-          'success'
-        );
-
-        const listItemId = await this.resolveMovedListItemId(siteUrl, context, targetPath);
-
-        await this.stampListItemMetadata(
-          siteUrl,
-          context,
-          ISSUANCE_LIBRARY_TITLE,
-          listItemId,
-          metadataValues,
-          auditLogger,
-          {
-            fileName: formFile.name,
-            targetPath,
-            isFormAttachment: true
-          }
-        );
+      if (!/IsBieuMau/i.test(details)) {
+        throw error;
       }
 
-      await this.breakFolderRoleInheritance(siteUrl, context, targetFormFolderPath);
-      const readerRoleDefId = await this.resolveReaderRoleDefinitionId(siteUrl, context);
-      await this.grantFolderReadToGroup(
+      // Cột IsBieuMau có thể chưa tồn tại — vẫn ghi các field metadata còn lại.
+      await this.stampListItemMetadata(
         siteUrl,
         context,
-        targetFormFolderPath,
+        ISSUANCE_LIBRARY_TITLE,
+        listItemId,
+        metadataValues,
+        auditLogger,
+        { ...auditLabel, isFormAttachment: true }
+      );
+    }
+  }
+
+  private async copySecureAndStampFormFile(
+    siteUrl: string,
+    context: IIssuancePublishContext,
+    formFile: ISharePointFileItem,
+    targetFolderPath: string,
+    metadataValues: IListFormValue[],
+    roleGroupId: number,
+    readerRoleDefId: number,
+    auditLogger: BanHanhPublishAuditLogger
+  ): Promise<void> {
+    const sourcePath = resolveFileServerRelativePath(formFile);
+    const fileName = (formFile.FileLeafRef || '').trim();
+
+    if (!sourcePath || !fileName) {
+      return;
+    }
+
+    const targetPath = joinServerRelativePath(targetFolderPath, fileName);
+
+    try {
+      await this.copyFile(siteUrl, context, sourcePath, targetPath);
+      const listItemId = await this.resolveMovedListItemId(siteUrl, context, targetPath);
+
+      await this.stampFormFileMetadata(siteUrl, context, listItemId, metadataValues, auditLogger, {
+        fileName,
+        targetPath
+      });
+
+      await this.breakItemRoleInheritance(siteUrl, context, ISSUANCE_LIBRARY_TITLE, listItemId);
+      await this.grantItemReadToGroup(
+        siteUrl,
+        context,
+        ISSUANCE_LIBRARY_TITLE,
+        listItemId,
         roleGroupId,
         readerRoleDefId
       );
 
+      await auditLogger.logCopyFile(
+        {
+          itemId: formFile.Id,
+          fileName,
+          sourcePath,
+          targetPath,
+          isFormAttachment: true
+        },
+        'success'
+      );
+    } catch (error) {
+      await auditLogger.logCopyFile(
+        {
+          itemId: formFile.Id,
+          fileName,
+          sourcePath,
+          targetPath,
+          isFormAttachment: true
+        },
+        'failed',
+        error instanceof Error ? error.message : String(error)
+      );
+      throw error;
+    }
+  }
+
+  private async copyAndSecureFormFiles(
+    siteUrl: string,
+    context: IIssuancePublishContext,
+    formFiles: ISharePointFileItem[],
+    targetFolderPath: string,
+    metadataValues: IListFormValue[],
+    auditLogger: BanHanhPublishAuditLogger
+  ): Promise<void> {
+    if (formFiles.length === 0) {
+      return;
+    }
+
+    const roleGroupId = parseInt((context.roleGroupID || '').trim(), 10);
+
+    if (!roleGroupId || roleGroupId <= 0) {
+      throw new Error('Chưa cấu hình roleGroupID để gán quyền Read cho file Biểu Mẫu.');
+    }
+
+    try {
+      const readerRoleDefId = await this.resolveReaderRoleDefinitionId(siteUrl, context);
+
+      for (let index = 0; index < formFiles.length; index += FORM_FILE_PUBLISH_CHUNK_SIZE) {
+        const chunk = formFiles.slice(index, index + FORM_FILE_PUBLISH_CHUNK_SIZE);
+
+        await Promise.all(
+          chunk.map(formFile =>
+            this.copySecureAndStampFormFile(
+              siteUrl,
+              context,
+              formFile,
+              targetFolderPath,
+              metadataValues,
+              roleGroupId,
+              readerRoleDefId,
+              auditLogger
+            )
+          )
+        );
+      }
+
       await auditLogger.logSecureFormFolder(
         {
-          sourceFormFolderPath,
-          targetFormFolderPath,
+          targetFolderPath,
           roleGroupID: roleGroupId,
           fileCount: formFiles.length
         },
         'success'
       );
-
-      return targetFormFolderPath;
     } catch (error) {
       await auditLogger.logSecureFormFolder(
         {
-          sourceFormFolderPath,
-          targetFormFolderPath,
+          targetFolderPath,
           roleGroupID: roleGroupId
         },
         'failed',
@@ -1119,6 +1179,7 @@ export class PhvbIssuancePublishService {
         const metadataValues = buildIssuanceMetadataValues(release);
         let mainFileServerRelativePath = '';
         const copiedFiles: Array<{ itemId: number; fileName: string; targetPath: string; listItemId: number }> = [];
+        const formFiles: ISharePointFileItem[] = [];
 
         for (let fileIndex = 0; fileIndex < sourceFiles.length; fileIndex += 1) {
           const fileItem = sourceFiles[fileIndex];
@@ -1130,7 +1191,8 @@ export class PhvbIssuancePublishService {
           }
 
           const fileDirRef = (fileItem.FileDirRef || '').trim();
-          if (isFormAttachmentPath(fileDirRef)) {
+          if (fileItem.IsBieuMau === true || isFormAttachmentPath(fileDirRef)) {
+            formFiles.push(fileItem);
             continue;
           }
 
@@ -1207,10 +1269,10 @@ export class PhvbIssuancePublishService {
           auditLogger
         );
 
-        await this.copyAndSecureFormFolder(
+        await this.copyAndSecureFormFiles(
           siteUrl,
           context,
-          sourceFolderPath,
+          formFiles,
           targetFolderPath,
           metadataValues,
           auditLogger

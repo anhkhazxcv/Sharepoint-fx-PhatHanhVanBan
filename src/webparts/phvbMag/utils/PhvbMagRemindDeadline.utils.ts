@@ -9,11 +9,11 @@ import type {
   IPhvbRoleEntry,
   IRequestDetailData,
   ISendMailDocumentInfo,
-  ISendMailPayload,
+  ISendMailRequest,
   IVanBanItem,
   WorkflowStage
 } from '../models/PhvbMag.models';
-import { getRoleEmails, userHasRole } from './PhvbMagRole.utils';
+import { getRoleEmails, userHasAnyRole } from './PhvbMagRole.utils';
 import {
   buildSendMailPayload,
   joinEmails,
@@ -205,7 +205,7 @@ export function canRemindDeadlinePermission(
     return false;
   }
 
-  return normalizedUserEmail === creatorEmail || userHasRole(roles, userEmail, PHVB_ROLES.ADMIN);
+  return normalizedUserEmail === creatorEmail || userHasAnyRole(roles, userEmail, [PHVB_ROLES.ADMIN, PHVB_ROLES.SUPER_ADMIN]);
 }
 
 export function resolveRemindDeadlineContext(
@@ -284,7 +284,7 @@ export function buildRemindDeadlinePayload(
   selectedEmails: ReadonlyArray<string>,
   context: IRemindDeadlineContext,
   documentInfo: ISendMailDocumentInfo
-): ISendMailPayload | undefined {
+): ISendMailRequest | undefined {
   const emailTo = joinEmails(selectedEmails);
 
   if (!emailTo) {

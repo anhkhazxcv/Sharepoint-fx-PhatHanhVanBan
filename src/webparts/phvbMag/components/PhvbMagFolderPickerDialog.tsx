@@ -11,7 +11,7 @@ import { resolveIssuanceLibraryTitle } from '../config/PhvbMag.configuration';
 import { buildFolderTree, getStoragePathAfterLibrary } from '../utils/PhvbMagBanHanh.tree';
 import { PhvbMagFolderTreeNode } from './PhvbMagFolderTree';
 import { PhvbMagFolderConfirmDialog } from './PhvbMagFolderConfirmDialog';
-import { CloseIcon } from './PhvbMagIcons';
+import { PhvbMagDialog } from './primitives/PhvbMagDialog';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagFolderPickerDialogProps {
@@ -172,48 +172,16 @@ export function PhvbMagFolderPickerDialog(props: IPhvbMagFolderPickerDialogProps
 
   return (
     <>
-      <div className={styles.folderPickerOverlay}>
-        <div className={styles.folderPickerDialog}>
-          <div className={styles.dialogHeader}>
-            <h3>Danh mục thư mục ban hành</h3>
-            <button type="button" className={styles.dialogHeaderClose} onClick={onClose} aria-label="Đóng">
-              <CloseIcon />
-            </button>
-          </div>
-
-          <div className={styles.folderPickerBody}>
-            <div className={styles.folderPickerTreePane}>
-              <div className={styles.folderPickerTreeHeader}>
-                <h4>THƯ MỤC BAN HÀNH</h4>
-              </div>
-
-              <div className={styles.folderPickerTreeScroll}>
-                {isLoading && (
-                  <div className={styles.libraryStatusMessage}>Đang tải danh sách thư mục...</div>
-                )}
-                {!isLoading && errorMessage && (
-                  <div className={styles.libraryErrorBanner}>{errorMessage}</div>
-                )}
-                {!isLoading && !errorMessage && folderTree.length === 0 && (
-                  <div className={styles.libraryStatusMessage}>Không có thư mục nào.</div>
-                )}
-                {!isLoading && !errorMessage && folderTree.map(node => (
-                  <FolderTreeNode
-                    key={node.serverRelativePath}
-                    node={node}
-                    depth={0}
-                    expandedPaths={expandedPaths}
-                    selectedPath={selectedFolder?.serverRelativePath}
-                    libraryTitle={libraryTitle}
-                    onToggleExpand={handleToggleExpand}
-                    onSelectFolder={setSelectedFolder}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.folderPickerFooter}>
+      <PhvbMagDialog
+        isOpen={isOpen}
+        title="Danh mục thư mục ban hành"
+        titleId="phvb-folder-picker-title"
+        onDismiss={onClose}
+        contentClassName={styles.folderPickerDialog}
+        bodyClassName={styles.folderPickerBody}
+        footerClassName={styles.folderPickerFooter}
+        footer={(
+          <>
             <button type="button" className={styles.btnSecondary} onClick={onClose}>
               Thoát
             </button>
@@ -225,9 +193,39 @@ export function PhvbMagFolderPickerDialog(props: IPhvbMagFolderPickerDialogProps
             >
               Chọn
             </button>
+          </>
+        )}
+      >
+        <div className={styles.folderPickerTreePane}>
+          <div className={styles.folderPickerTreeHeader}>
+            <h4>THƯ MỤC BAN HÀNH</h4>
+          </div>
+
+          <div className={styles.folderPickerTreeScroll}>
+            {isLoading && (
+              <div className={styles.libraryStatusMessage}>Đang tải danh sách thư mục...</div>
+            )}
+            {!isLoading && errorMessage && (
+              <div className={styles.libraryErrorBanner}>{errorMessage}</div>
+            )}
+            {!isLoading && !errorMessage && folderTree.length === 0 && (
+              <div className={styles.libraryStatusMessage}>Không có thư mục nào.</div>
+            )}
+            {!isLoading && !errorMessage && folderTree.map(node => (
+              <FolderTreeNode
+                key={node.serverRelativePath}
+                node={node}
+                depth={0}
+                expandedPaths={expandedPaths}
+                selectedPath={selectedFolder?.serverRelativePath}
+                libraryTitle={libraryTitle}
+                onToggleExpand={handleToggleExpand}
+                onSelectFolder={setSelectedFolder}
+              />
+            ))}
           </div>
         </div>
-      </div>
+      </PhvbMagDialog>
 
       <PhvbMagFolderConfirmDialog
         isOpen={showConfirmDialog}

@@ -8,6 +8,7 @@ import { usePhvbBanHanh } from '../hooks/usePhvbBanHanh';
 import { usePhvbCapSo } from '../hooks/usePhvbCapSo';
 import { usePhvbComments } from '../hooks/usePhvbComments';
 import { usePhvbDetailDocuments, type DetailDocumentUploadKind } from '../hooks/usePhvbDetailDocuments';
+import { usePhvbDetailInfoEdit } from '../hooks/usePhvbDetailInfoEdit';
 import { usePhvbDmvlFlow } from '../hooks/usePhvbDmvlFlow';
 import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
 import { usePhvbDraftEdit } from '../hooks/usePhvbDraftEdit';
@@ -18,6 +19,7 @@ import { usePhvbRemindDeadline } from '../hooks/usePhvbRemindDeadline';
 import { usePhvbRequestDetail } from '../hooks/usePhvbRequestDetail';
 import { usePhvbRoles } from '../hooks/usePhvbRoles';
 import { usePhvbWorkflowActions } from '../hooks/usePhvbWorkflowActions';
+import { usePhvbWorkflowTransition } from '../hooks/usePhvbWorkflowTransition';
 import { usePhvbWorkflowParticipants } from '../hooks/usePhvbWorkflowParticipants';
 import { usePhvbTenantUsers } from '../hooks/usePhvbTenantUsers';
 import type { IAttachmentLibraryItem, IBanHanhNotifyDraft, ICreateRequestInput, IRequestDetailData, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
@@ -148,6 +150,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const canAccessCapSo = canAccessCapSoTab(roles, userEmail);
   const canAccessQLVanBan = canAccessQLVanBanTab(roles, userEmail);
   const canAccessDmvlFeature = canAccessDmvl(userDisplayName, roles, userEmail);
+  const canActOnBehalfOfParticipant = hasRole(PHVB_ROLES.ADMIN);
   const isProtectedRouteBlocked =
     (tabName === 'CapSo' && (isRolesLoading || !canAccessCapSo)) ||
     (tabName === 'QLVanBan' && (isRolesLoading || !canAccessQLVanBan));
@@ -256,6 +259,18 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   });
 
   const {
+    transitionContext,
+    isProcessing: isTransitionProcessing,
+    errorMessage: transitionErrorMessage,
+    runTransition
+  } = usePhvbWorkflowTransition({
+    documentContext,
+    detail: detailData,
+    roles,
+    onCompleted: handleDetailStatusChanged
+  });
+
+  const {
     selectedFiles: commentSelectedFiles,
     isSaving: isCommentSaving,
     errorMessage: commentErrorMessage,
@@ -336,6 +351,18 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     onCompleted: () => {
       refetchDetail('attachments');
     }
+  });
+
+  const {
+    canEdit: canEditInfo,
+    isSaving: isInfoSaving,
+    errorMessage: infoErrorMessage,
+    saveInfoFields: onSaveInfoFields
+  } = usePhvbDetailInfoEdit({
+    documentContext,
+    detail: detailData,
+    roles,
+    onCompleted: handleDetailStatusChanged
   });
 
   const handleOpenPrepareBanHanh = async (): Promise<void> => {
@@ -479,6 +506,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     documentContext,
     detail: detailData,
     directoryUsers: tenantUsers,
+    roles,
     onCompleted: handleDetailStatusChanged
   });
 
@@ -503,11 +531,26 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     navigate(`/tab/${activeTab}/duplicate/${detailData.release.IdYeuCau}`);
   };
 
-  const handleWorkflowAction = async (action: WorkflowActionKey, comment?: string): Promise<boolean> => {
-    const succeeded = await runWorkflowAction(action, comment);
+  const handleWorkflowAction = async (
+    action: WorkflowActionKey,
+    comment?: string,
+    targetParticipantId?: number,
+    files?: File[]
+  ): Promise<boolean> => {
+    const succeeded = await runWorkflowAction(action, comment, targetParticipantId, files);
 
     if (succeeded) {
       ToastService.success('Đã cập nhật trạng thái yêu cầu thành công.');
+    }
+
+    return succeeded;
+  };
+
+  const handleWorkflowTransition = async (): Promise<boolean> => {
+    const succeeded = await runTransition();
+
+    if (succeeded) {
+      ToastService.success('Đã chuyển giai đoạn yêu cầu thành công.');
     }
 
     return succeeded;
@@ -724,9 +767,17 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
                 data={detailData}
                 approveLabel={actionContext?.approveLabel}
                 availableActions={actionContext?.availableActions}
+                pendingParticipants={actionContext?.pendingParticipants}
+                canRejectAtActiveStage={actionContext?.canRejectAtActiveStage}
+                canActOnBehalfOfParticipant={canActOnBehalfOfParticipant}
                 isWorkflowProcessing={isWorkflowProcessing}
                 workflowErrorMessage={workflowErrorMessage}
                 onRunWorkflowAction={handleWorkflowAction}
+                transitionLabel={transitionContext?.transitionLabel}
+                canRunTransition={transitionContext?.canRun}
+                isTransitionProcessing={isTransitionProcessing}
+                transitionErrorMessage={transitionErrorMessage}
+                onRunTransition={handleWorkflowTransition}
                 commentSelectedFiles={commentSelectedFiles}
                 isCommentSaving={isCommentSaving}
                 commentErrorMessage={commentErrorMessage}
@@ -765,6 +816,11 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
                 onUploadDocuments={handleUploadDocuments}
                 onDeleteDocument={handleDeleteDocument}
                 onDeleteDocuments={handleDeleteDocuments}
+                siteContext={documentContext}
+                canEditInfo={canEditInfo}
+                isInfoSaving={isInfoSaving}
+                infoErrorMessage={infoErrorMessage}
+                onSaveInfoFields={onSaveInfoFields}
                 canResumeDmvlBanHanh={canResumeDmvl}
                 isDmvlResumeBusy={isDmvlNotifyLoading || isDmvlPublishing}
                 dmvlResumeErrorMessage={!isDmvlNotifyOpen ? dmvlErrorMessage : undefined}
@@ -834,8 +890,8 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         isLoadingApprovers={isLoadingTenantUsers}
         isEditMode={isEditRoute}
         variant={createModalVariant}
-        initialExistingTaiLieu={draftEdit?.existingTaiLieuAttachments}
-        initialExistingBieuMau={draftEdit?.existingBieuMauAttachments}
+        initialExistingTaiLieu={draftEdit?.existingTaiLieuAttachments || duplicateRequest?.form.existingTaiLieuAttachments}
+        initialExistingBieuMau={draftEdit?.existingBieuMauAttachments || duplicateRequest?.form.existingBieuMauAttachments}
         defaultValues={modalDefaultValues}
         siteContext={siteContext}
         approvers={tenantUsers}

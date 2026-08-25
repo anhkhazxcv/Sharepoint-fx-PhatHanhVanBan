@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { phvbBanHanhConfigService } from '../services/PhvbMagBanHanhConfig.service';
+import { phvbMailContentConfigService } from '../services/PhvbMagMailContentConfig.service';
 import { phvbBanHanhService } from '../services/PhvbMagBanHanh.service';
 import { phvbDocumentLibraryService } from '../services/PhvbMagDocumentLibrary.service';
 import { createFlowRunId } from '../services/PhvbMagLog.service';
@@ -83,12 +84,12 @@ export function usePhvbBanHanh(options: IUsePhvbBanHanhOptions): IUsePhvbBanHanh
 
     try {
       return await runBusy('Đang tải nội dung thông báo...', async () => {
-        const [mailConfig, labelConfig] = await Promise.all([
+        const [mailConfig, mailContentConfig] = await Promise.all([
           phvbBanHanhConfigService.loadMailBanHanhConfig(documentContext),
-          phvbBanHanhConfigService.loadLabelCustomConfig(documentContext)
+          phvbMailContentConfigService.loadMailContentConfig(documentContext)
         ]);
 
-        return buildBanHanhNotifyDraft(release, mailConfig, labelConfig);
+        return buildBanHanhNotifyDraft(release, mailConfig, mailContentConfig);
       });
     } catch (error) {
       setErrorMessage(phvbBanHanhConfigService.getRuntimeErrorMessage(error));

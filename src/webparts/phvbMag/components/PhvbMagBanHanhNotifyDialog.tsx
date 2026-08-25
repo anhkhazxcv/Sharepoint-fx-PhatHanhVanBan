@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { IBanHanhNotifyDraft, IAttachmentLibraryItem } from '../models/PhvbMag.models';
 import { parseStoredMainDocumentId } from '../services/PhvbMagIssuancePublish.service';
 import { validateBanHanhNotifyDraft } from '../utils/PhvbMagBanHanhNotify.utils';
-import { CloseIcon } from './PhvbMagIcons';
+import { PhvbMagDialog } from './primitives/PhvbMagDialog';
 import styles from './PhvbMag.module.scss';
 
 export type BanHanhNotifyMode = 'prepare' | 'publish' | 'edit';
@@ -173,110 +173,16 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
   };
 
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.banHanhNotifyModal} role="dialog" aria-modal="true" aria-labelledby="phvb-ban-hanh-notify-title">
-        <div className={styles.dialogHeader}>
-          <h4 id="phvb-ban-hanh-notify-title">{getDialogTitle(mode)}</h4>
-          <button
-            type="button"
-            className={styles.dialogHeaderClose}
-            onClick={onCancel}
-            aria-label="Đóng"
-            disabled={isBusy}
-          >
-            <CloseIcon />
-          </button>
-        </div>
-
-        <div className={styles.banHanhNotifyBody}>
-          {!isAwaitingDraft ? (
-            <>
-              <div className={styles.workflowActionDialogComment}>
-                <label htmlFor="phvb-ban-hanh-recipient">Nơi nhận:</label>
-                <input
-                  id="phvb-ban-hanh-recipient"
-                  type="text"
-                  className={styles.formInput}
-                  value={recipient}
-                  disabled={true}
-                  readOnly={true}
-                  aria-readonly="true"
-                />
-              </div>
-
-              <div className={styles.workflowActionDialogComment}>
-                <label htmlFor="phvb-ban-hanh-subject">Tiêu đề:</label>
-                <input
-                  id="phvb-ban-hanh-subject"
-                  type="text"
-                  className={styles.formInput}
-                  value={subject}
-                  disabled={isFieldDisabled}
-                  readOnly={isReadOnly}
-                  placeholder="Nhập tiêu đề email..."
-                  onChange={event => {
-                    setSubject(event.target.value);
-                    if (validationError) {
-                      setValidationError(undefined);
-                    }
-                  }}
-                />
-              </div>
-
-              <div className={styles.banHanhNotifyField}>
-                <label htmlFor="phvb-ban-hanh-body">Nội dung:</label>
-                <div
-                  id="phvb-ban-hanh-body"
-                  ref={bodyEditorRef}
-                  className={styles.banHanhNotifyHtmlEditor}
-                  contentEditable={!isFieldDisabled}
-                  role="textbox"
-                  aria-multiline="true"
-                  aria-label="Nội dung email"
-                  aria-readonly={isReadOnly}
-                  suppressContentEditableWarning={true}
-                  onInput={handleBodyInput}
-                />
-              </div>
-
-              {showMainDocumentPicker ? (
-                <div className={styles.banHanhNotifyField}>
-                  <span className={styles.banHanhNotifyMainDocLabel}>Văn bản chính:</span>
-                  {mainDocumentCandidates.length === 0 ? (
-                    <p className={styles.banHanhNotifyEmpty}>Không có tài liệu dự thảo để chọn.</p>
-                  ) : (
-                    <div className={styles.banHanhNotifyMainDocList} role="radiogroup" aria-label="Chọn văn bản chính">
-                      {mainDocumentCandidates.map(candidate => (
-                        <label key={candidate.id} className={styles.banHanhNotifyMainDocOption}>
-                          <input
-                            type="radio"
-                            name="phvb-ban-hanh-main-document"
-                            value={candidate.id}
-                            checked={selectedMainDocumentId === candidate.id}
-                            disabled={isBusy || mainDocumentReadOnly}
-                            onChange={() => {
-                              setSelectedMainDocumentId(candidate.id);
-                              if (validationError) {
-                                setValidationError(undefined);
-                              }
-                            }}
-                          />
-                          <span>{candidate.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </>
-          ) : null}
-
-          {displayedError ? (
-            <p className={styles.workflowActionDialogError} role="alert">{displayedError}</p>
-          ) : null}
-        </div>
-
-        <div className={styles.banHanhNotifyActions}>
+    <PhvbMagDialog
+      isOpen={isOpen}
+      title={getDialogTitle(mode)}
+      titleId="phvb-ban-hanh-notify-title"
+      onDismiss={isBusy ? undefined : onCancel}
+      contentClassName={styles.banHanhNotifyModal}
+      bodyClassName={styles.banHanhNotifyBody}
+      footerClassName={styles.banHanhNotifyActions}
+      footer={
+        <>
           <button
             type="button"
             className={styles.banHanhNotifyCancelBtn}
@@ -303,8 +209,94 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
           >
             {getConfirmLabel(mode, confirmLabel)}
           </button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      {!isAwaitingDraft ? (
+        <>
+          <div className={styles.workflowActionDialogComment}>
+            <label htmlFor="phvb-ban-hanh-recipient">Nơi nhận:</label>
+            <input
+              id="phvb-ban-hanh-recipient"
+              type="text"
+              className={styles.formInput}
+              value={recipient}
+              disabled={true}
+              readOnly={true}
+              aria-readonly="true"
+            />
+          </div>
+
+          <div className={styles.workflowActionDialogComment}>
+            <label htmlFor="phvb-ban-hanh-subject">Tiêu đề:</label>
+            <input
+              id="phvb-ban-hanh-subject"
+              type="text"
+              className={styles.formInput}
+              value={subject}
+              disabled={isFieldDisabled}
+              readOnly={isReadOnly}
+              placeholder="Nhập tiêu đề email..."
+              onChange={event => {
+                setSubject(event.target.value);
+                if (validationError) {
+                  setValidationError(undefined);
+                }
+              }}
+            />
+          </div>
+
+          <div className={styles.banHanhNotifyField}>
+            <label htmlFor="phvb-ban-hanh-body">Nội dung:</label>
+            <div
+              id="phvb-ban-hanh-body"
+              ref={bodyEditorRef}
+              className={styles.banHanhNotifyHtmlEditor}
+              contentEditable={!isFieldDisabled}
+              role="textbox"
+              aria-multiline="true"
+              aria-label="Nội dung email"
+              aria-readonly={isReadOnly}
+              suppressContentEditableWarning={true}
+              onInput={handleBodyInput}
+            />
+          </div>
+
+          {showMainDocumentPicker ? (
+            <div className={styles.banHanhNotifyField}>
+              <span className={styles.banHanhNotifyMainDocLabel}>Văn bản chính:</span>
+              {mainDocumentCandidates.length === 0 ? (
+                <p className={styles.banHanhNotifyEmpty}>Không có tài liệu dự thảo để chọn.</p>
+              ) : (
+                <div className={styles.banHanhNotifyMainDocList} role="radiogroup" aria-label="Chọn văn bản chính">
+                  {mainDocumentCandidates.map(candidate => (
+                    <label key={candidate.id} className={styles.banHanhNotifyMainDocOption}>
+                      <input
+                        type="radio"
+                        name="phvb-ban-hanh-main-document"
+                        value={candidate.id}
+                        checked={selectedMainDocumentId === candidate.id}
+                        disabled={isBusy || mainDocumentReadOnly}
+                        onChange={() => {
+                          setSelectedMainDocumentId(candidate.id);
+                          if (validationError) {
+                            setValidationError(undefined);
+                          }
+                        }}
+                      />
+                      <span>{candidate.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
+      {displayedError ? (
+        <p className={styles.workflowActionDialogError} role="alert">{displayedError}</p>
+      ) : null}
+    </PhvbMagDialog>
   );
 }

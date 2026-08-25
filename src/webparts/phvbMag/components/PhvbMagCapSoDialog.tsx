@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
+import { DMVL_DEFAULT_SO_VAN_BAN } from '../config/PhvbMag.configuration';
 import styles from './PhvbMag.module.scss';
 import { PhvbMagButton } from './primitives/PhvbMagButton';
 import { PhvbMagDialog } from './primitives/PhvbMagDialog';
@@ -21,11 +22,13 @@ export function PhvbMagCapSoDialog(props: IPhvbMagCapSoDialogProps): React.React
     onConfirm
   } = props;
   const [documentNumberDraft, setDocumentNumberDraft] = useState<string>('');
+  const [isNoNumberNeeded, setIsNoNumberNeeded] = useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (isOpen) {
       setDocumentNumberDraft('');
+      setIsNoNumberNeeded(false);
       setValidationError(undefined);
     }
   }, [isOpen]);
@@ -37,6 +40,12 @@ export function PhvbMagCapSoDialog(props: IPhvbMagCapSoDialogProps): React.React
   const displayedError = validationError || errorMessage;
 
   const handleConfirm = (): void => {
+    if (isNoNumberNeeded) {
+      setValidationError(undefined);
+      onConfirm(DMVL_DEFAULT_SO_VAN_BAN);
+      return;
+    }
+
     const normalizedNumber = documentNumberDraft.trim();
 
     if (!normalizedNumber) {
@@ -73,9 +82,22 @@ export function PhvbMagCapSoDialog(props: IPhvbMagCapSoDialogProps): React.React
     >
       <p>Nhập số văn bản chính thức cho yêu cầu này.</p>
 
+      <label className={styles.capSoSkipRow}>
+        <input
+          type="checkbox"
+          checked={isNoNumberNeeded}
+          disabled={isProcessing}
+          onChange={event => {
+            setIsNoNumberNeeded(event.target.checked);
+            setValidationError(undefined);
+          }}
+        />
+        <span>Văn bản không thuộc dạng yêu cầu cấp số → không cần cấp số</span>
+      </label>
+
       <div className={styles.workflowActionDialogComment}>
         <label htmlFor="phvb-cap-so-number">
-          Số văn bản<span className={styles.workflowActionDialogRequired}> *</span>
+          Số văn bản{!isNoNumberNeeded ? <span className={styles.workflowActionDialogRequired}> *</span> : null}
         </label>
         <input
           id="phvb-cap-so-number"
@@ -83,7 +105,7 @@ export function PhvbMagCapSoDialog(props: IPhvbMagCapSoDialogProps): React.React
           className={styles.formInput}
           value={documentNumberDraft}
           placeholder="Nhập số văn bản..."
-          disabled={isProcessing}
+          disabled={isProcessing || isNoNumberNeeded}
           onChange={event => {
             setDocumentNumberDraft(event.target.value);
             if (validationError) {

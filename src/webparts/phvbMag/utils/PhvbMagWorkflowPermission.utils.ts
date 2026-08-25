@@ -1,10 +1,13 @@
-import type { IAllUserWorkflowItem, IRequestDetailData, WorkflowStage } from '../models/PhvbMag.models';
+import { PHVB_ROLES, REQUEST_STATUS } from '../config/PhvbMag.configuration';
+import type { IAllUserWorkflowItem, IPhvbRoleEntry, IRequestDetailData, WorkflowStage } from '../models/PhvbMag.models';
+import { normalizeRoleEmail, userHasAnyRole } from './PhvbMagRole.utils';
 import { isWorkflowParticipantConfirmed } from './PhvbMagWorkflowTimeline.utils';
 import {
   getParticipantsForStage,
   isTerminalWorkflowStatus,
   isWorkflowActionableStatus,
   resolveEffectiveWorkflowStage,
+  resolveReadyNextStatus,
   splitWorkflowParticipants,
   type WorkflowDocumentStage
 } from './PhvbMagWorkflowState.utils';
@@ -20,6 +23,8 @@ export interface IWorkflowActionContext {
   approveLabel: string;
   activeStage: WorkflowDocumentStage;
   pendingParticipant?: IAllUserWorkflowItem;
+  pendingParticipants: IAllUserWorkflowItem[];
+  canRejectAtActiveStage: boolean;
   availableActions: IWorkflowActionAvailability;
 }
 
@@ -57,8 +62,31 @@ function findPendingParticipantForUser(
   return undefined;
 }
 
-function canRejectAtStage(stage: WorkflowStage): boolean {
-  return stage === 'pheduyet';
+export function canRejectAtStage(stage: WorkflowStage): boolean {
+  return stage === 'pheduyet' || stage === 'thamdinh';
+}
+
+function findPendingParticipantsForOthers(
+  participants: ReadonlyArray<IAllUserWorkflowItem>,
+  excludeParticipantId: number | undefined
+): IAllUserWorkflowItem[] {
+  const result: IAllUserWorkflowItem[] = [];
+
+  for (let index = 0; index < participants.length; index += 1) {
+    const participant = participants[index];
+
+    if (isWorkflowParticipantConfirmed(participant.TrangThai_ThucHien)) {
+      continue;
+    }
+
+    if (participant.Id === excludeParticipantId) {
+      continue;
+    }
+
+    result.push(participant);
+  }
+
+  return result;
 }
 
 export function resolveWorkflowActionContext(
@@ -75,6 +103,8 @@ export function resolveWorkflowActionContext(
     ? []
     : getParticipantsForStage(activeStage, groupedParticipants);
   const pendingParticipant = findPendingParticipantForUser(stageParticipants, userEmail);
+  const pendingParticipants = findPendingParticipantsForOthers(stageParticipants, pendingParticipant?.Id);
+  const canRejectAtActiveStage = activeStage !== 'none' && canRejectAtStage(activeStage);
 
   const isActionable = isWorkflowActionableStatus(data.release.StatusApproved)
     && !isTerminalWorkflowStatus(data.release.StatusApproved);
@@ -84,8 +114,7 @@ export function resolveWorkflowActionContext(
     reject: Boolean(
       isActionable &&
       pendingParticipant &&
-      activeStage !== 'none' &&
-      canRejectAtStage(activeStage)
+      canRejectAtActiveStage
     )
   };
 
@@ -93,6 +122,8 @@ export function resolveWorkflowActionContext(
     approveLabel: activeStage === 'none' ? 'Phê duyệt' : resolveApproveLabelForStage(activeStage),
     activeStage,
     pendingParticipant,
+    pendingParticipants,
+    canRejectAtActiveStage,
     availableActions
   };
 }
@@ -108,4 +139,46 @@ function resolveApproveLabelForStage(stage: WorkflowDocumentStage): string {
     default:
       return 'Phê duyệt';
   }
+}
+
+export interface IWorkflowTransitionContext {
+  nextStatus?: string;
+  transitionLabel: string;
+  canRun: boolean;
+}
+
+function resolveTransitionLabelForStatus(nextStatus?: string): string {
+  switch (nextStatus) {
+    case REQUEST_STATUS.DANG_THAM_DINH:
+      return 'Chuyển thẩm định';
+    case REQUEST_STATUS.DANG_PHE_DUYET:
+      return 'Chuyển phê duyệt';
+    case REQUEST_STATUS.CHO_CAP_SO:
+      return 'Chuyển cấp số';
+    default:
+      return 'Chuyển giai đoạn tiếp theo';
+  }
+}
+
+export function resolveWorkflowTransitionContext(
+  data: IRequestDetailData,
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  userEmail: string
+): IWorkflowTransitionContext {
+  const nextStatus = resolveReadyNextStatus(
+    data.release.StatusApproved,
+    data.workflowParticipants,
+    data.release.LoaiYeuCau
+  );
+
+  const hasPermission =
+    userHasAnyRole(roles, userEmail, [PHVB_ROLES.ADMIN, PHVB_ROLES.SUPER_ADMIN]) ||
+    (normalizeRoleEmail(data.release.EmailNguoiTao) === normalizeRoleEmail(userEmail) &&
+      normalizeRoleEmail(userEmail) !== '');
+
+  return {
+    nextStatus,
+    transitionLabel: resolveTransitionLabelForStatus(nextStatus),
+    canRun: Boolean(nextStatus) && hasPermission
+  };
 }

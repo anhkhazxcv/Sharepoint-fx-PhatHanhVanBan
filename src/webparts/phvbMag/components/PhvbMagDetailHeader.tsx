@@ -18,7 +18,17 @@ interface IPhvbMagDetailHeaderProps {
   availableActions?: IWorkflowActionAvailability;
   isProcessing?: boolean;
   errorMessage?: string;
-  onRunAction?: (action: WorkflowActionKey, comment?: string) => Promise<boolean>;
+  onRunAction?: (
+    action: WorkflowActionKey,
+    comment?: string,
+    targetParticipantId?: number,
+    files?: File[]
+  ) => Promise<boolean>;
+  transitionLabel?: string;
+  canRunTransition?: boolean;
+  isTransitionProcessing?: boolean;
+  transitionErrorMessage?: string;
+  onRunTransition?: () => Promise<boolean>;
   canAssignDocumentNumber?: boolean;
   isCapSoSaving?: boolean;
   capSoErrorMessage?: string;
@@ -64,6 +74,11 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       isProcessing = false,
       errorMessage,
       onRunAction,
+      transitionLabel = 'Chuyển giai đoạn',
+      canRunTransition = false,
+      isTransitionProcessing = false,
+      transitionErrorMessage,
+      onRunTransition,
       canAssignDocumentNumber = false,
       isCapSoSaving = false,
       capSoErrorMessage,
@@ -101,7 +116,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
 
     const canApprove = Boolean(availableActions?.approve);
     const canReject = Boolean(availableActions?.reject);
-    const hasWorkflowActions = canApprove || canReject;
+    const hasWorkflowActions = canApprove || canReject || canRunTransition;
     const hasPostApprovalActions =
       canAssignDocumentNumber ||
       canPrepareBanHanh ||
@@ -114,7 +129,13 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       isWorkflowDialogOpen ||
       isCapSoDialogOpen ||
       isNotifyDialogOpen;
-    const isBusy = isProcessing || isCapSoSaving || isBanHanhSaving || isBanHanhNotifyLoading || isDmvlResumeBusy;
+    const isBusy =
+      isProcessing ||
+      isCapSoSaving ||
+      isBanHanhSaving ||
+      isBanHanhNotifyLoading ||
+      isDmvlResumeBusy ||
+      isTransitionProcessing;
 
     const openActionDialog = (action: WorkflowActionKey): void => {
       if (isBusy) {
@@ -122,6 +143,14 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       }
 
       setPendingAction(action);
+    };
+
+    const openTransitionDialog = (): void => {
+      if (isBusy) {
+        return;
+      }
+
+      setPendingAction('advanceStage');
     };
 
     const closeActionDialog = (): void => {
@@ -132,7 +161,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       setPendingAction(undefined);
     };
 
-    const handleDialogConfirm = async (comment: string): Promise<void> => {
+    const handleDialogConfirm = async (comment: string, files: File[]): Promise<void> => {
       if (!pendingAction || isBusy) {
         return;
       }
@@ -152,11 +181,25 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
         return;
       }
 
+      if (pendingAction === 'advanceStage') {
+        if (!onRunTransition) {
+          return;
+        }
+
+        const succeeded = await onRunTransition();
+
+        if (succeeded) {
+          setPendingAction(undefined);
+        }
+
+        return;
+      }
+
       if (!onRunAction) {
         return;
       }
 
-      const succeeded = await onRunAction(pendingAction, comment || undefined);
+      const succeeded = await onRunAction(pendingAction, comment || undefined, undefined, files);
 
       if (succeeded) {
         setPendingAction(undefined);
@@ -311,6 +354,10 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
             <p className={styles.detailActionError} role="alert">{dmvlResumeErrorMessage}</p>
           ) : null}
 
+          {!isAnyDialogOpen && transitionErrorMessage ? (
+            <p className={styles.detailActionError} role="alert">{transitionErrorMessage}</p>
+          ) : null}
+
           {hasPostApprovalActions || hasWorkflowActions ? (
             <div className={styles.detailActions}>
               {canResumeDmvlBanHanh ? (
@@ -379,6 +426,17 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
                 </button>
               ) : null}
 
+              {canRunTransition ? (
+                <button
+                  type="button"
+                  className={styles.detailActionApprove}
+                  disabled={isBusy}
+                  onClick={openTransitionDialog}
+                >
+                  {transitionLabel}
+                </button>
+              ) : null}
+
               {canApprove ? (
                 <button
                   type="button"
@@ -407,18 +465,26 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
         <PhvbMagWorkflowActionDialog
           isOpen={isWorkflowDialogOpen}
           action={pendingAction}
-          approveLabel={approveLabel}
-          isProcessing={pendingAction === 'returnBanHanhToAdmin' ? isBanHanhSaving : isProcessing}
+          approveLabel={pendingAction === 'advanceStage' ? transitionLabel : approveLabel}
+          isProcessing={
+            pendingAction === 'returnBanHanhToAdmin'
+              ? isBanHanhSaving
+              : pendingAction === 'advanceStage'
+                ? isTransitionProcessing
+                : isProcessing
+          }
           errorMessage={
             isWorkflowDialogOpen
               ? pendingAction === 'returnBanHanhToAdmin'
                 ? banHanhErrorMessage
-                : errorMessage
+                : pendingAction === 'advanceStage'
+                  ? transitionErrorMessage
+                  : errorMessage
               : undefined
           }
           onCancel={closeActionDialog}
-          onConfirm={comment => {
-            handleDialogConfirm(comment).catch(() => undefined);
+          onConfirm={(comment, files) => {
+            handleDialogConfirm(comment, files).catch(() => undefined);
           }}
         />
 
