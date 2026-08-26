@@ -21,7 +21,8 @@ Use this skill when the task is primarily visual: layout, SCSS, dialogs, tables,
 
 ## Non-negotiables
 
-- **Source of truth:** SCSS variables at the top of `src/webparts/phvbMag/components/PhvbMag.module.scss` (`$primary-color`, `$primary-hover`, `$primary-light`, `$bg-*`, `$text-*`, `$border-color`, shadows). If tokens are later extracted to separate files, follow those files instead.
+- **Source of truth:** SCSS token partials in `src/webparts/phvbMag/components/` — colors (`$primary-color`, `$primary-hover`, `$primary-light`, `$bg-*`, `$text-*`, `$border-color`) in `_PhvbMag.colors.scss`; spacing/radius/shadow tokens in `_PhvbMag.design-tokens.scss`.
+- **Border radius — only 3 values, no exceptions:** `$radius-control: 4px` (button, input, select, textarea, small icon-button), `$radius-card: 8px` (card, container, modal, dropdown, list-row), `$radius-pill: 100px` (status pill/badge/tag, filter chip, avatar, or a button deliberately styled fully round). Never hardcode a different `border-radius` px value.
 - **No marketing surfaces:** Do not apply landing-page aesthetics (full-bleed hero, expressive display fonts, decorative gradients, floating promo badges) inside the web part.
 - **No new palette:** Do not invent colors or switch to default Fluent blue (`#0078D4`) unless the user asks for a rebrand.
 - **Icons:** Only via the web part icon wrapper (for example `PhvbMagIcons.tsx`) and `react-icons/fa`. Do not duplicate icon policy here — see `spfx-feature-implementer`.

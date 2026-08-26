@@ -130,10 +130,9 @@ export function PhvbMagTemplateModal(props: IPhvbMagTemplateModalProps): React.R
                 </div>
 
                 <PhvbMagExternalLink
-                  href={item.fileUrl}
-                  mode="download"
-                  downloadFileName={item.name}
+                  href={item.downloadUrl || item.fileUrl}
                   className={styles.templateModalDownloadBtn}
+                  aria-label={`Tải ${item.name}`}
                 >
                   <DownloadIcon style={{ width: 16, height: 16 }} />
                   Tải

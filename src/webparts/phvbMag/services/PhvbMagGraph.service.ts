@@ -85,6 +85,15 @@ function sortDirectoryUsers(users: IPhvbDirectoryUser[]): IPhvbDirectoryUser[] {
   return users.slice().sort((left, right) => left.displayName.localeCompare(right.displayName));
 }
 
+function blobToDataUrl(blob: Blob): Promise<string | undefined> {
+  return new Promise<string | undefined>(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : undefined);
+    reader.onerror = () => resolve(undefined);
+    reader.readAsDataURL(blob);
+  });
+}
+
 export class PhvbMagGraphService {
   private async getClient(msGraphClientFactory: MSGraphClientFactory): Promise<MSGraphClientV3> {
     return msGraphClientFactory.getClient('3');
@@ -103,6 +112,29 @@ export class PhvbMagGraphService {
       email: normalizeEmail(response),
       department: response.department
     };
+  }
+
+  public async loadCurrentUserPhoto(msGraphClientFactory: MSGraphClientFactory): Promise<string | undefined> {
+    try {
+      const client = await this.getClient(msGraphClientFactory);
+      const photoBlob = await client.api('/me/photo/$value').version('v1.0').get() as Blob;
+      return await blobToDataUrl(photoBlob);
+    } catch {
+      return undefined;
+    }
+  }
+
+  public async loadUserPhotoByEmail(msGraphClientFactory: MSGraphClientFactory, email: string): Promise<string | undefined> {
+    try {
+      const client = await this.getClient(msGraphClientFactory);
+      const photoBlob = await client
+        .api(`/users/${encodeURIComponent(email)}/photo/$value`)
+        .version('v1.0')
+        .get() as Blob;
+      return await blobToDataUrl(photoBlob);
+    } catch {
+      return undefined;
+    }
   }
 
   public async loadInternalTenantUsers(msGraphClientFactory: MSGraphClientFactory): Promise<IPhvbDirectoryUser[]> {

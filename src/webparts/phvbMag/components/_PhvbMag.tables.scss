@@ -19,7 +19,7 @@
 
   .metricCard {
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: $radius-card;
     gap: 2px;
   }
 
@@ -47,7 +47,7 @@
   .taskCard {
     padding: 10px 12px 10px 10px;
     gap: 10px;
-    border-radius: 10px;
+    border-radius: $radius-card;
   }
 
   .taskCardBody {
@@ -72,7 +72,7 @@
   }
 
   .emptyState {
-    border-radius: 10px;
+    border-radius: $radius-card;
     font-size: 12px;
   }
 }
@@ -145,7 +145,7 @@
   padding: 18px 20px;
   background-color: $surface-card;
   border: 1px solid #EDE2D7;
-  border-radius: $radius-lg;
+  border-radius: $radius-card;
   box-shadow: $elevation-2;
   @include phvb-document-spine;
   padding-left: calc(20px - #{$document-spine-width});
@@ -239,7 +239,7 @@
   font-weight: $font-weight-bold;
   color: $primary-color;
   background-color: #F5EDE4;
-  border-radius: 20px;
+  border-radius: $radius-pill;
   padding: 2px 8px;
 }
 
@@ -250,7 +250,7 @@
   flex-direction: column;
   background-color: $surface-card;
   border: 1px solid #E7DACB;
-  border-radius: 18px;
+  border-radius: $radius-card;
   box-shadow: $elevation-2;
   overflow: hidden;
 
@@ -281,7 +281,7 @@
     font-weight: $font-weight-bold;
     color: $primary-color;
     background-color: #F5EDE4;
-    border-radius: 20px;
+    border-radius: $radius-pill;
     padding: 2px 8px;
   }
 }
@@ -292,7 +292,7 @@
   color: #FFFFFF;
   min-height: 32px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: $radius-control;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -442,7 +442,7 @@
 .requestReloadButton,
 .requestPageButton {
   min-height: auto;
-  border-radius: 7px;
+  border-radius: $radius-control;
   font-family: $font-family-base;
   font-size: $font-size-base2;
 }
@@ -489,7 +489,7 @@
   min-width: 84px;
   padding: 6px 14px;
   border: 1px solid #E8E2D9;
-  border-radius: 7px;
+  border-radius: $radius-control;
   background-color: $surface-white;
   color: $text-ink2;
   font-family: $font-family-base;
@@ -598,36 +598,91 @@
 .requestStatusBadge {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   min-height: auto;
   padding: 2px 8px;
-  border-radius: 20px;
+  border: 1px solid transparent;
+  border-radius: $radius-pill;
   @include ty-badge;
   line-height: $line-height-tight;
+
+  svg {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+  }
 }
 
-.requestStatusPending {
-  background-color: #FFF4D8;
-  color: #B18422;
+.requestStatusBanNhap {
+  background-color: var(--st-ban-nhap-bg);
+  border-color: var(--st-ban-nhap-bd);
+  color: var(--st-ban-nhap-fg);
 }
 
-.requestStatusRevision {
-  background-color: #FCE3E4;
-  color: #C14D56;
+.requestStatusDangGopY {
+  background-color: var(--st-dang-gop-y-bg);
+  border-color: var(--st-dang-gop-y-bd);
+  color: var(--st-dang-gop-y-fg);
 }
 
-.requestStatusApproved {
-  background-color: #E0F4E8;
-  color: #2E8D61;
+.requestStatusDangThamDinh {
+  background-color: var(--st-dang-tham-dinh-bg);
+  border-color: var(--st-dang-tham-dinh-bd);
+  color: var(--st-dang-tham-dinh-fg);
 }
 
-.requestStatusRejected {
-  background-color: #F1E7E7;
-  color: #9F5A59;
+.requestStatusDangPheDuyet {
+  background-color: var(--st-dang-phe-duyet-bg);
+  border-color: var(--st-dang-phe-duyet-bd);
+  color: var(--st-dang-phe-duyet-fg);
 }
 
-.requestStatusRevoked {
-  background-color: $color-neutral-strong-bg;
-  color: $color-neutral-strong;
+.requestStatusChoCapSo {
+  background-color: var(--st-cho-cap-so-bg);
+  border-color: var(--st-cho-cap-so-bd);
+  color: var(--st-cho-cap-so-fg);
+}
+
+.requestStatusDaCapSo {
+  background-color: var(--st-da-cap-so-bg);
+  border-color: var(--st-da-cap-so-bd);
+  color: var(--st-da-cap-so-fg);
+}
+
+.requestStatusChoBanHanh {
+  background-color: var(--st-cho-ban-hanh-bg);
+  border-color: var(--st-cho-ban-hanh-bd);
+  color: var(--st-cho-ban-hanh-fg);
+}
+
+.requestStatusBanHanh {
+  background-color: var(--st-ban-hanh-bg);
+  border-color: var(--st-ban-hanh-bd);
+  color: var(--st-ban-hanh-fg);
+}
+
+.requestStatusTuChoiThamDinh {
+  background-color: var(--st-tc-tham-dinh-bg);
+  border-color: var(--st-tc-tham-dinh-bd);
+  color: var(--st-tc-tham-dinh-fg);
+}
+
+.requestStatusTuChoiPheDuyet {
+  background-color: var(--st-tc-phe-duyet-bg);
+  border-color: var(--st-tc-phe-duyet-bd);
+  color: var(--st-tc-phe-duyet-fg);
+}
+
+.requestStatusThuHoi {
+  background-color: var(--st-thu-hoi-bg);
+  border-color: var(--st-thu-hoi-bd);
+  color: var(--st-thu-hoi-fg);
+}
+
+.requestStatusDefault {
+  background-color: #FFFFFF;
+  border-color: $border-color;
+  color: $text-muted;
 }
 
 .requestFooter {
@@ -681,7 +736,7 @@
   padding: 18px 20px 18px 18px;
   background-color: $surface-card;
   border: 1px solid #E8DDD1;
-  border-radius: 14px;
+  border-radius: $radius-card;
   box-shadow: 0 6px 18px rgba(123, 76, 44, 0.04);
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
@@ -703,7 +758,7 @@
 .taskIconBadge {
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: $radius-card;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -771,7 +826,7 @@
   align-items: center;
   min-height: auto;
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: $radius-pill;
   font-size: $font-size-sm2;
   font-weight: $font-weight-semibold;
 }
@@ -799,7 +854,7 @@
   justify-content: center;
   background-color: rgba(255, 255, 255, 0.7);
   border: 1px dashed #DDCFC1;
-  border-radius: 16px;
+  border-radius: $radius-card;
 }
 
 .skeletonContainer {
@@ -815,7 +870,7 @@
   gap: 16px;
   padding: 18px;
   border: 1px solid #E8DDD1;
-  border-radius: 14px;
+  border-radius: $radius-card;
   background-color: $surface-card;
 }
 

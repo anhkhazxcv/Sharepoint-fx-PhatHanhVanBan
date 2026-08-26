@@ -144,9 +144,7 @@ export function PhvbMagCreateTemplatePanel(props: IPhvbMagCreateTemplatePanelPro
                     <span className={styles.templateModalItemMeta}>{getTemplateMetaLabel(item)}</span>
                   </div>
                   <PhvbMagExternalLink
-                    href={item.fileUrl}
-                    mode="download"
-                    downloadFileName={item.name}
+                    href={item.downloadUrl || item.fileUrl}
                     className={styles.templateModalDownloadBtn}
                     aria-label={`Tải ${item.name}`}
                   >

@@ -34,7 +34,7 @@ Verify against **existing code and docs** — do not invent rules.
 ## Data model
 
 - [ ] List/field names match configuration constants — no invented internal names
-- [ ] History records use `EXECUTION_HISTORY_STATUS` appropriately
+- [ ] History records use `TRANG_THAI_THUC_HIEN` appropriately
 - [ ] No new statuses/roles/lists without user approval
 
 ## Plan review (when reviewing a plan, not only code)

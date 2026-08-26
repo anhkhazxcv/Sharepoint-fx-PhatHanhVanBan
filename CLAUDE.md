@@ -46,6 +46,7 @@ Roles are `PHVB_ROLES` (`dc`, `admin`, `superAdmin`) plus stage-specific partici
 
 - Icons: only via `react-icons/fa`, wrapped through `PhvbMagIcons.tsx`. Never import `@fluentui/react-icons` or use emoji/text glyphs as icons.
 - Styling: SCSS modules per component (`*.module.scss`); reuse existing `$primary-*`/`$bg-*`/`$text-*`/border/radius/shadow tokens already defined in the web part stylesheets rather than introducing new hex colors. Design language is PHVB bronze/cream — do not fall back to default Fluent blue theme.
+- Border radius: only 3 values, via tokens in `_PhvbMag.design-tokens.scss` — `$radius-control: 4px` (button/input/select/textarea/small icon-button), `$radius-card: 8px` (card/container/modal/dropdown/list-row), `$radius-pill: 100px` (status pill/badge/tag/filter chip/avatar or button styled fully round). Never hardcode a different `border-radius` px value.
 - Keep enterprise density (tables/forms), not marketing-style spacious layouts — this renders inside a SharePoint web part frame, not a full page.
 
 ### Reference docs

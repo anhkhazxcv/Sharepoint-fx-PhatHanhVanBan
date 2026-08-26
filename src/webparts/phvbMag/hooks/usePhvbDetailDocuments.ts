@@ -1,13 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   cloneDefaultRequestForm,
-  EXECUTION_HISTORY_STATUS
+  TRANG_THAI_THUC_HIEN
 } from '../config/PhvbMag.configuration';
 import { createFlowRunId } from '../services/PhvbMagLog.service';
 import { phvbAttachmentService } from '../services/PhvbMagAttachment.service';
-import { createExecutionHistoryRecord } from '../services/PhvbMagExecutionHistory.service';
+import { appendHistory } from '../services/PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from '../services/PhvbMag.error';
 import { canManageDetailDocuments } from '../utils/PhvbMagDetailDocuments.utils';
+import { findDuplicateAttachmentGroupFileName } from '../utils/PhvbMagRequestForm.utils';
+import { joinWithLimit, resolveAttachmentDisplayNames } from '../utils/PhvbMagHistoryText.utils';
 import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 import type {
   IAttachmentLibraryItem,
@@ -88,6 +90,20 @@ export function usePhvbDetailDocuments(
       return false;
     }
 
+    const otherKindAttachments = detail.attachments.filter(item =>
+      kind === 'form' ? !item.isFormAttachment : item.isFormAttachment
+    );
+    const duplicateName = findDuplicateAttachmentGroupFileName(
+      otherKindAttachments.map(item => item.name),
+      selectedFiles.map(file => file.name)
+    );
+
+    if (duplicateName) {
+      const otherGroupLabel = kind === 'form' ? 'Tài liệu soạn thảo' : 'Biểu mẫu đính kèm';
+      setErrorMessage(`Tên file "${duplicateName}" đã tồn tại ở nhóm ${otherGroupLabel}. Vui lòng đổi tên file hoặc chọn file khác.`);
+      return false;
+    }
+
     setIsMutating(true);
     setErrorMessage(undefined);
 
@@ -116,12 +132,12 @@ export function usePhvbDetailDocuments(
           input
         });
 
-        await createExecutionHistoryRecord(
+        await appendHistory(
           { ...documentContext, logContext },
           {
             idYeuCau: requestReferenceId,
-            historyStatus: EXECUTION_HISTORY_STATUS.THEM_TAI_LIEU,
-            noiDung: selectedFiles.map(file => file.name).join('; '),
+            trangThaiThucHien: TRANG_THAI_THUC_HIEN.THEM_TAI_LIEU,
+            noiDung: joinWithLimit(resolveAttachmentDisplayNames(selectedFiles), { moreLabel: 'tệp khác' }),
             department: detail.release.KhoaPhongNguoiTao,
             isComment: false
           }
@@ -177,12 +193,12 @@ export function usePhvbDetailDocuments(
           targets.map(file => file.id)
         );
 
-        await createExecutionHistoryRecord(
+        await appendHistory(
           { ...documentContext, logContext },
           {
             idYeuCau: requestReferenceId,
-            historyStatus: EXECUTION_HISTORY_STATUS.XOA_TAI_LIEU,
-            noiDung: targets.map(file => file.name || String(file.id)).join('; '),
+            trangThaiThucHien: TRANG_THAI_THUC_HIEN.XOA_TAI_LIEU,
+            noiDung: joinWithLimit(resolveAttachmentDisplayNames(targets), { moreLabel: 'tệp khác' }),
             department: detail.release.KhoaPhongNguoiTao,
             isComment: false
           }

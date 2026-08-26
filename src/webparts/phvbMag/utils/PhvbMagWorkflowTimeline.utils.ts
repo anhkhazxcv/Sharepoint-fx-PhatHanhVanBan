@@ -8,6 +8,7 @@ export interface IWorkflowTimelineStep {
   id: string;
   stageLabel: string;
   name: string;
+  email?: string;
   meta?: string;
   subtitle?: string;
   status?: string;
@@ -115,7 +116,7 @@ function buildParticipantSubtitle(participant: IWorkflowParticipantItem): string
     return undefined;
   }
 
-  const actionDate = participant.Modified || participant.Ngay_ThucHien;
+  const actionDate = participant.Modified;
   return actionDate ? formatExecutionDateTime(actionDate) : undefined;
 }
 
@@ -197,6 +198,7 @@ export function buildWorkflowTimelineSteps(
       id: 'draft-creator',
       stageLabel: 'Soạn thảo',
       name: release.NguoiTao || '---',
+      email: release.EmailNguoiTao,
       meta: release.Created,
       subtitle: release.Created ? formatExecutionDateTime(release.Created) : undefined,
       status: 'Hoàn thành',
@@ -215,7 +217,8 @@ export function buildWorkflowTimelineSteps(
           id: `participant-${stage}-${participant.Id}`,
           stageLabel: STAGE_LABELS[stage],
           name: participant.User_ThucHien || '---',
-          meta: participant.Modified || participant.Ngay_ThucHien,
+          email: participant.Email_ThucHien,
+          meta: participant.Modified,
           subtitle: buildParticipantSubtitle(participant),
           status: resolveWorkflowParticipantStatusLabel(participant.TrangThai_ThucHien),
           statusTone: resolveWorkflowStepTone(participant.TrangThai_ThucHien),

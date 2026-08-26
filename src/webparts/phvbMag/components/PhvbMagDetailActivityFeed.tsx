@@ -1,8 +1,10 @@
 import * as React from 'react';
 import { useMemo, useRef, useState } from 'react';
+import type { MSGraphClientFactory } from '@microsoft/sp-http';
 import { DRAFT_DOCUMENT_ACCEPT } from '../config/PhvbMag.configuration';
 import type { ICommentWithAttachments, ILichSuThucHienItem } from '../models/PhvbMag.models';
 import { parseExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
+import { usePhvbUserPhotosByEmail } from '../hooks/usePhvbUserPhotosByEmail';
 import { DeleteFileIcon, UploadDocumentIcon } from './PhvbMagIcons';
 import { PhvbMagDetailHistoryItem } from './PhvbMagDetailHistoryItem';
 import { PhvbMagSidebarAccordion } from './PhvbMagSidebarAccordion';
@@ -15,6 +17,7 @@ type ActivityFeedItem =
   | { kind: 'activity'; item: ICommentWithAttachments };
 
 interface IPhvbMagDetailActivityFeedProps {
+  msGraphClientFactory: MSGraphClientFactory;
   history: ICommentWithAttachments[];
   comments: ICommentWithAttachments[];
   selectedFiles: File[];
@@ -45,8 +48,7 @@ function getItemTimestamp(item: ILichSuThucHienItem): number {
     }
   }
 
-  const performedDate = parseExecutionDateTime(item.Ngay_ThucHien);
-  return performedDate ? performedDate.getTime() : 0;
+  return 0;
 }
 
 function getFilterButtonLabel(
@@ -253,28 +255,27 @@ function ActivityCommentComposer(props: IActivityCommentComposerProps): React.Re
   );
 }
 
-function renderFeedItem(entry: ActivityFeedItem): React.ReactElement {
-  if (entry.kind === 'discussion') {
-    return (
-      <PhvbMagDetailHistoryItem
-        key={`discussion-${entry.item.Id}`}
-        item={entry.item}
-        attachments={entry.item.attachments}
-      />
-    );
-  }
+function renderFeedItem(
+  entry: ActivityFeedItem,
+  photosByEmail: Record<string, string | undefined>
+): React.ReactElement {
+  const photoUrl = entry.item.Email_ThucHien
+    ? photosByEmail[entry.item.Email_ThucHien.trim().toLowerCase()]
+    : undefined;
 
   return (
     <PhvbMagDetailHistoryItem
-      key={`activity-${entry.item.Id}`}
+      key={`${entry.kind}-${entry.item.Id}`}
       item={entry.item}
       attachments={entry.item.attachments}
+      photoUrl={photoUrl}
     />
   );
 }
 
 export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps): React.ReactElement {
   const {
+    msGraphClientFactory,
     history,
     comments,
     selectedFiles,
@@ -311,6 +312,12 @@ export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps
 
   const totalCount = history.length + comments.length;
 
+  const authorEmails = useMemo(
+    () => history.concat(comments).map(item => item.Email_ThucHien),
+    [history, comments]
+  );
+  const photosByEmail = usePhvbUserPhotosByEmail({ msGraphClientFactory, emails: authorEmails });
+
   return (
     <PhvbMagSidebarAccordion
       title="Trao đổi & hoạt động"
@@ -340,7 +347,7 @@ export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps
           {filteredItems.length === 0 ? (
             <p className={styles.detailWorkflowEmpty}>{getEmptyMessage(activeFilter)}</p>
           ) : (
-            filteredItems.map(entry => renderFeedItem(entry))
+            filteredItems.map(entry => renderFeedItem(entry, photosByEmail))
           )}
         </div>
       </div>

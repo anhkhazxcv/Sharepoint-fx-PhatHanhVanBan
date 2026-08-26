@@ -41,7 +41,7 @@
   align-items: center;
   gap: $space-3;
   padding: $space-5 $space-6;
-  border-radius: $radius-md;
+  border-radius: $radius-card;
   background-color: $surface-card;
   box-shadow: $shadow-md;
   border: 1px solid $border-subtle;
@@ -66,7 +66,7 @@
   max-width: 100%;
   max-height: 94vh;
   background-color: $surface-white;
-  border-radius: 16px;
+  border-radius: $radius-card;
   box-shadow: $shadow-lg;
   display: flex;
   flex-direction: column;
@@ -162,7 +162,7 @@
       .requestTypeBtn {
         background-color: $surface-white;
         border: 1.5px solid #E8E2D9;
-        border-radius: 6px;
+        border-radius: $radius-control;
         padding: 5px 12px;
         font-family: $font-family-base;
         font-size: $font-size-base;
@@ -193,7 +193,7 @@
     .formInput, .formSelect, .formTextArea, .formTextAreaSmall {
       padding: 8px 11px;
       border: 1.5px solid #E8E2D9;
-      border-radius: 7px;
+      border-radius: $radius-control;
       @include ty-input;
       outline: none;
       background-color: $surface-white;
@@ -208,6 +208,13 @@
 
       &::placeholder {
         color: $text-muted;
+      }
+
+      &:disabled {
+        background-color: #F8F5EF;
+        color: $text-muted;
+        cursor: not-allowed;
+        opacity: 0.72;
       }
     }
 
@@ -320,7 +327,7 @@
         align-items: center;
         border: 1px solid #E5D6C7;
         background-color: #F8F5EF;
-        border-radius: 8px;
+        border-radius: $radius-control;
         padding: 0 12px;
         flex-grow: 1;
         gap: 8px;
@@ -349,7 +356,7 @@
         gap: 6px;
         background-color: $surface-white;
         border: 1px solid #E5D6C7;
-        border-radius: 8px;
+        border-radius: $radius-control;
         padding: 0 16px;
         font-size: 13.5px;
         font-weight: 600;
@@ -369,7 +376,7 @@
         width: 100%;
         background-color: $surface-white;
         border: 1px solid #E5D6C7;
-        border-radius: 12px;
+        border-radius: $radius-card;
         box-shadow: 0 10px 30px rgba(123, 76, 44, 0.12);
         z-index: 1000;
         margin-top: 6px;
@@ -420,7 +427,7 @@
     .dragDropZone {
       border: 1.5px dashed #DCCFBF;
       background-color: #FDFBF8;
-      border-radius: 12px;
+      border-radius: $radius-card;
       padding: 24px;
       text-align: center;
       cursor: pointer;
@@ -480,7 +487,7 @@
       padding: 12px 16px;
       background-color: $surface-white;
       border: 1px solid #E5D6C7;
-      border-radius: 10px;
+      border-radius: $radius-card;
       gap: 12px;
       position: relative;
     }
@@ -547,7 +554,7 @@
     .userPickerInputWrapper {
       position: relative;
       border: 1px solid #E5D6C7;
-      border-radius: 8px;
+      border-radius: $radius-control;
       background-color: $surface-white;
       transition: all 0.2s ease;
 
@@ -574,7 +581,7 @@
       font-size: 12.5px;
       font-weight: 600;
       padding: 4px 10px;
-      border-radius: 6px;
+      border-radius: $radius-pill;
       border: 1px solid $color-primary-alpha-10;
     }
 
@@ -674,7 +681,7 @@
     .deadlineInput {
       padding: 4px 8px;
       border: 1px solid #E5D6C7;
-      border-radius: 6px;
+      border-radius: $radius-control;
       font-size: 12px;
       color: $text-main;
       outline: none;
@@ -748,9 +755,9 @@
     background-color: $bg-folders;
 
     .btnSecondary {
-      background-color: $surface-white;
-      border: 1px solid $border-color;
-      border-radius: 7px;
+      background-color: #FFFFFF;
+      border: 1px solid #E2D6C8;
+      border-radius: $radius-control;
       padding: 6px 14px;
       @include ty-button;
       font-weight: $font-weight-bold;
@@ -759,7 +766,9 @@
       transition: all 0.15s ease;
 
       &:hover {
-        background-color: $bg-content;
+        background-color: #FBF8F4;
+        border-color: rgba(123, 76, 44, 0.28);
+        color: $primary-color;
       }
 
       &:disabled {
@@ -769,18 +778,19 @@
     }
 
     .btnDraft {
-      background-color: $surface-white;
-      border: 1px solid #C0B2A3;
-      border-radius: 7px;
+      background-color: #FFFFFF;
+      border: 1px solid #E2D6C8;
+      border-radius: $radius-control;
       padding: 6px 14px;
       @include ty-button;
-      color: $primary-color;
+      color: $text-ink2;
       cursor: pointer;
       transition: all 0.2s ease;
 
       &:hover {
-        background-color: $bg-folders;
-        border-color: $primary-color;
+        background-color: #FBF8F4;
+        border-color: rgba(123, 76, 44, 0.28);
+        color: $primary-color;
       }
 
       &:disabled {
@@ -792,7 +802,7 @@
     .btnSubmit {
       background: $gradient-submit;
       border: none;
-      border-radius: 7px;
+      border-radius: $radius-control;
       padding: 6px 14px;
       @include ty-button;
       color: $surface-white;
@@ -863,7 +873,7 @@
   min-height: 32px;
   padding: 0 12px;
   border: 1px solid $border-color;
-  border-radius: 8px;
+  border-radius: $radius-control;
   background-color: $surface-white;
   color: $primary-color;
   font-size: $font-size-base;

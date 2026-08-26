@@ -3,7 +3,8 @@ import {
   DMVL_DEFAULT_SO_VAN_BAN,
   hasSharePointSiteContext,
   PHVB_ROLES,
-  REQUEST_STATUS
+  REQUEST_STATUS,
+  TRANG_THAI_THUC_HIEN
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { toRuntimeMessage } from './PhvbMag.error';
@@ -28,7 +29,7 @@ import {
 } from '../utils/PhvbMagSendMail.utils';
 import { phvbRoleService } from './PhvbMagRole.service';
 import { phvbSendMailService } from './PhvbMagSendMail.service';
-import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
+import { appendHistory } from './PhvbMagExecutionHistory.service';
 import { phvbBanHanhConfigService } from './PhvbMagBanHanhConfig.service';
 import { phvbDetailService } from './PhvbMagDetail.service';
 import {
@@ -43,9 +44,9 @@ import { createBanHanhPublishAuditLogger } from '../utils/PhvbMagBanHanhPublishA
 import { mapBanHanhPublishToastError } from '../utils/PhvbMagBanHanhPublish.utils';
 import {
   buildDirectFileUrl,
-  buildIssuanceLibraryViewUrl,
   resolveShortUrlApiKey
 } from '../utils/PhvbMagShortUrl.utils';
+import { buildLibraryFolderDeepLinkUrl } from '../utils/PhvbMagRoute.utils';
 import type {
   IBanHanhNotifyDraft,
   IBanHanhPublishOptions,
@@ -56,11 +57,6 @@ import type {
   ISendMailDocumentInfo,
   IVanBanItem
 } from '../models/PhvbMag.models';
-
-const PREPARE_BAN_HANH_HISTORY_STATUS = 'Chuẩn bị ban hành';
-const PUBLISH_BAN_HANH_HISTORY_STATUS = 'Ban hành';
-const RETURN_BAN_HANH_TO_ADMIN_HISTORY_STATUS = 'Trả về admin ban hành';
-const EDIT_BAN_HANH_NOTIFY_HISTORY_STATUS = 'Sửa nội dung ban hành';
 
 function appendIdVanBanChinh(
   payload: Record<string, string | boolean | number>,
@@ -151,8 +147,6 @@ function assertReturnToAdminMailReady(
   return documentInfo;
 }
 
-const DMVL_PUBLISH_HISTORY_NOI_DUNG = 'Đã trình DMVL và ban hành văn bản.';
-
 function assertPublishNotifyReady(release: IVanBanItem): void {
   const draft: IBanHanhNotifyDraft = {
     recipient: (release.EmailNhanBanHanh || '').trim(),
@@ -242,10 +236,7 @@ export async function publishIssuanceWithNotify(
     publishResult.siteUrl,
     publishResult.mainFileServerRelativePath
   );
-  const folderLongUrl = buildIssuanceLibraryViewUrl(
-    publishResult.siteUrl,
-    publishResult.folderServerRelativePath
-  );
+  const folderLongUrl = buildLibraryFolderDeepLinkUrl(publishResult.folderListItemId);
 
   let linkFile = '';
   let linkTatCaTaiLieu = '';
@@ -331,12 +322,12 @@ export async function publishIssuanceWithNotify(
     throw error;
   }
 
-  await createExecutionHistoryRecord(
+  await appendHistory(
     { ...context, logContext },
     {
       idYeuCau,
-      historyStatus: PUBLISH_BAN_HANH_HISTORY_STATUS,
-      noiDung: (options?.historyNoiDung || '').trim() || 'SuperAdmin đã ban hành văn bản.',
+      trangThaiThucHien: TRANG_THAI_THUC_HIEN.BAN_HANH,
+      noiDung: '',
       department: detail.release.KhoaPhongNguoiTao,
       isComment: false
     }
@@ -442,12 +433,12 @@ export class PhvbBanHanhService {
       )
     });
 
-    await createExecutionHistoryRecord(
+    await appendHistory(
       { ...context, logContext },
       {
         idYeuCau,
-        historyStatus: PREPARE_BAN_HANH_HISTORY_STATUS,
-        noiDung: notify.subject.trim() || 'Admin đã chuyển yêu cầu sang chờ ban hành.',
+        trangThaiThucHien: TRANG_THAI_THUC_HIEN.CHUAN_BI_BAN_HANH,
+        noiDung: notify.subject.trim(),
         department: detail.release.KhoaPhongNguoiTao,
         isComment: false
       }
@@ -508,12 +499,12 @@ export class PhvbBanHanhService {
       )
     });
 
-    await createExecutionHistoryRecord(
+    await appendHistory(
       { ...context, logContext },
       {
         idYeuCau,
-        historyStatus: EDIT_BAN_HANH_NOTIFY_HISTORY_STATUS,
-        noiDung: notify.subject.trim() || 'Admin đã chỉnh sửa nội dung ban hành.',
+        trangThaiThucHien: TRANG_THAI_THUC_HIEN.SUA_THONG_BAO,
+        noiDung: notify.subject.trim(),
         department: detail.release.KhoaPhongNguoiTao,
         isComment: false
       }
@@ -568,11 +559,11 @@ export class PhvbBanHanhService {
       }
     });
 
-    await createExecutionHistoryRecord(
+    await appendHistory(
       { ...context, logContext },
       {
         idYeuCau,
-        historyStatus: RETURN_BAN_HANH_TO_ADMIN_HISTORY_STATUS,
+        trangThaiThucHien: TRANG_THAI_THUC_HIEN.TRA_VE_BAN_HANH,
         noiDung: normalizedComment,
         department: detail.release.KhoaPhongNguoiTao,
         isComment: false
@@ -627,12 +618,12 @@ export class PhvbBanHanhService {
         }
       });
 
-      await createExecutionHistoryRecord(
+      await appendHistory(
         { ...context, logContext },
         {
           idYeuCau,
-          historyStatus: PUBLISH_BAN_HANH_HISTORY_STATUS,
-          noiDung: 'SuperAdmin đã ban hành văn bản.',
+          trangThaiThucHien: TRANG_THAI_THUC_HIEN.BAN_HANH,
+          noiDung: '',
           department: detail.release.KhoaPhongNguoiTao,
           isComment: false
         }
@@ -740,10 +731,7 @@ export class PhvbBanHanhService {
       await publishIssuanceWithNotify(
         context,
         publishDetail,
-        {
-          ...options,
-          historyNoiDung: DMVL_PUBLISH_HISTORY_NOI_DUNG
-        },
+        options,
         logContext,
         auditLogger
       );

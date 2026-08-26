@@ -1,7 +1,10 @@
-import { PHVB_ROLES } from '../config/PhvbMag.configuration';
+import { PHVB_ROLES, REQUEST_STATUS } from '../config/PhvbMag.configuration';
 import type { IPhvbRoleEntry, IVanBanItem } from '../models/PhvbMag.models';
+import { toInputDateValue } from './PhvbMagDraftEdit.utils';
 import { userHasAnyRole } from './PhvbMagRole.utils';
-import { ADMIN_LOCKED_STATUSES } from './PhvbMagDetailDocuments.utils';
+
+/** Chỉ khoá sửa thông tin khi đã Ban hành (bản thân document đã phát hành chính thức). Admin/Super Admin vẫn được sửa khi Chờ ban hành. */
+const INFO_EDIT_LOCKED_STATUSES: ReadonlySet<string> = new Set([REQUEST_STATUS.BAN_HANH]);
 
 export interface IRequestInfoFieldsInput {
   tenVanBan: string;
@@ -21,7 +24,7 @@ export function canEditRequestInfoFields(
 ): boolean {
   const status = (release.StatusApproved || '').trim();
 
-  if (!status || ADMIN_LOCKED_STATUSES.has(status)) {
+  if (!status || INFO_EDIT_LOCKED_STATUSES.has(status)) {
     return false;
   }
 
@@ -33,10 +36,32 @@ export function buildRequestInfoFieldsFromRelease(release: IVanBanItem): IReques
     tenVanBan: release.Tenvanban || '',
     tenVanBanEng: release.TenVanBan_ENG || '',
     folderLuuTru: release.ThuMucBanHanh || '',
-    hieuLucTu: release.HieuLucTu || '',
-    hieuLucDen: release.HieuLucDen || '',
+    hieuLucTu: toInputDateValue(release.HieuLucTu),
+    hieuLucDen: toInputDateValue(release.HieuLucDen),
     isSendMailNotify: release.IsSendMailNotify === true,
     summary: release.TomTatNoiDung || '',
     ghiChuThamDinh: release.GhiChuChoThamDinh || ''
   };
+}
+
+/** Nhãn hiển thị đúng như UI (`PhvbMagDetailInfoTab.tsx`, dạng sentence case cho log). */
+const REQUEST_INFO_FIELD_LABELS: Record<keyof IRequestInfoFieldsInput, string> = {
+  tenVanBan: 'Tên văn bản',
+  tenVanBanEng: 'Tên văn bản (tiếng Anh)',
+  folderLuuTru: 'Thư mục',
+  hieuLucTu: 'Ngày hiệu lực',
+  hieuLucDen: 'Ngày hết hiệu lực',
+  isSendMailNotify: 'Gửi thông báo email',
+  summary: 'Tóm tắt nội dung',
+  ghiChuThamDinh: 'Ghi chú cho cấp TĐ/PD'
+};
+
+/** Danh sách nhãn field đã đổi giá trị, dùng để build NoiDung log "Sửa thông tin yêu cầu". */
+export function buildRequestInfoChangedFieldLabels(
+  before: IRequestInfoFieldsInput,
+  after: IRequestInfoFieldsInput
+): string[] {
+  return (Object.keys(REQUEST_INFO_FIELD_LABELS) as Array<keyof IRequestInfoFieldsInput>)
+    .filter(field => before[field] !== after[field])
+    .map(field => REQUEST_INFO_FIELD_LABELS[field]);
 }

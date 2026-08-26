@@ -7,6 +7,7 @@ import {
 import type { IPhvbRoleEntry, IVanBanItem, IWorkflowParticipantItem, WorkflowStage } from '../models/PhvbMag.models';
 import { normalizeRoleEmail, userHasAnyRole } from './PhvbMagRole.utils';
 import { getRequestTypeFormRules, type RequestTypeValue } from './PhvbMagRequestForm.utils';
+import { joinWithLimit } from './PhvbMagHistoryText.utils';
 import { isTerminalWorkflowStatus, resolveWorkflowStageFromStatus } from './PhvbMagWorkflowState.utils';
 import { isWorkflowParticipantUnconfirmed } from './PhvbMagWorkflowTimeline.utils';
 
@@ -120,8 +121,7 @@ export function getRequiredParticipantStages(
     ? visibleStages
     : visibleStages.filter(stage => WORKFLOW_STAGE_ORDER.indexOf(stage) >= WORKFLOW_STAGE_ORDER.indexOf(currentStage));
 
-  // Góp ý optional — khớp Create Modal (requireNguoiGopY: false)
-  return candidateStages.filter(stage => stage !== 'gopy');
+  return candidateStages;
 }
 
 export function validatePendingWorkflowParticipants(
@@ -279,35 +279,110 @@ function mapParticipantToDraftRow(participant: IWorkflowParticipantItem): IWorkf
   };
 }
 
+function resolveParticipantRoleLabel(stage: WorkflowStage): string {
+  switch (stage) {
+    case 'gopy':
+      return 'Góp ý';
+    case 'thamdinh':
+      return 'Thẩm định';
+    case 'pheduyet':
+      return 'Phê duyệt';
+    default:
+      return '';
+  }
+}
+
+function addUniqueEmail(target: string[], email: string): void {
+  const trimmed = email.trim();
+  const normalized = trimmed.toLowerCase();
+
+  if (!trimmed || target.some(existing => existing.toLowerCase() === normalized)) {
+    return;
+  }
+
+  target.push(trimmed);
+}
+
 export function buildParticipantChangesSummary(
   changes: IWorkflowParticipantChanges,
   visibleStages: WorkflowStage[],
   resolveRemovedEmail: (participantId: number) => string | undefined
 ): string {
   const segments: string[] = [];
+  const addedByEmail = new Map<string, { email: string; stage: WorkflowStage }>();
+  const removedByEmail = new Map<string, { email: string; stage: WorkflowStage }>();
 
   visibleStages.forEach(stage => {
     const stageChanges = changes[stage];
-    const parts: string[] = [];
 
     stageChanges.addedEmails.forEach(email => {
       const trimmed = email.trim();
       if (trimmed) {
-        parts.push(`Thêm ${trimmed}`);
+        addedByEmail.set(trimmed.toLowerCase(), { email: trimmed, stage });
       }
     });
 
     stageChanges.removedParticipantIds.forEach(participantId => {
       const email = (resolveRemovedEmail(participantId) || '').trim();
       if (email) {
-        parts.push(`Xóa ${email}`);
+        removedByEmail.set(email.toLowerCase(), { email, stage });
       }
     });
+  });
 
-    if (parts.length > 0) {
-      segments.push(`${WORKFLOW_PARTICIPANT_STAGE_CONFIG[stage].sectionLabel}: ${parts.join('; ')}`);
+  const addedEmails: string[] = [];
+  const removedEmails: string[] = [];
+  const changedRoles: string[] = [];
+
+  visibleStages.forEach(stage => {
+    const stageChanges = changes[stage];
+
+    stageChanges.addedEmails.forEach(email => {
+      const trimmed = email.trim();
+      const normalized = trimmed.toLowerCase();
+      const removed = removedByEmail.get(normalized);
+
+      if (!trimmed || removed) {
+        return;
+      }
+
+      addUniqueEmail(addedEmails, trimmed);
+    });
+
+    stageChanges.removedParticipantIds.forEach(participantId => {
+      const email = (resolveRemovedEmail(participantId) || '').trim();
+      const normalized = email.toLowerCase();
+      const added = addedByEmail.get(normalized);
+
+      if (!email || added) {
+        return;
+      }
+
+      addUniqueEmail(removedEmails, email);
+    });
+  });
+
+  removedByEmail.forEach((removed, normalizedEmail) => {
+    const added = addedByEmail.get(normalizedEmail);
+
+    if (added && added.stage !== removed.stage) {
+      changedRoles.push(
+        `${removed.email} (${resolveParticipantRoleLabel(removed.stage)} → ${resolveParticipantRoleLabel(added.stage)})`
+      );
     }
   });
 
-  return segments.join(' | ');
+  if (addedEmails.length > 0) {
+    segments.push(`Thêm: ${joinWithLimit(addedEmails, { moreLabel: 'người khác' })}`);
+  }
+
+  if (removedEmails.length > 0) {
+    segments.push(`Bỏ: ${joinWithLimit(removedEmails, { moreLabel: 'người khác' })}`);
+  }
+
+  if (changedRoles.length > 0) {
+    segments.push(`Đổi vai: ${joinWithLimit(changedRoles, { moreLabel: 'người khác' })}`);
+  }
+
+  return segments.join('. ');
 }

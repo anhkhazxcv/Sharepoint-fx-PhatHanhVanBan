@@ -22,6 +22,7 @@ import { usePhvbWorkflowActions } from '../hooks/usePhvbWorkflowActions';
 import { usePhvbWorkflowTransition } from '../hooks/usePhvbWorkflowTransition';
 import { usePhvbWorkflowParticipants } from '../hooks/usePhvbWorkflowParticipants';
 import { usePhvbTenantUsers } from '../hooks/usePhvbTenantUsers';
+import { usePhvbUserPhoto } from '../hooks/usePhvbUserPhoto';
 import type { IAttachmentLibraryItem, IBanHanhNotifyDraft, ICreateRequestInput, IRequestDetailData, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
 import { canAccessCapSoTab, canAccessDmvl, canAccessQLVanBanTab } from '../utils/PhvbMagRole.utils';
@@ -31,6 +32,7 @@ import { isDraftStatus } from '../utils/PhvbMagDraftEdit.utils';
 import { resolveTabFromPathname } from '../utils/PhvbMagRoute.utils';
 import { ToastService } from '../utils/ToastService';
 import { phvbDetailService } from '../services/PhvbMagDetail.service';
+import { drainAllHistoryQueues } from '../services/PhvbMagExecutionHistory.service';
 import styles from './PhvbMag.module.scss';
 import type { IPhvbMagProps } from './IPhvbMagProps';
 import type { BanHanhNotifyMode } from './PhvbMagBanHanhNotifyDialog';
@@ -80,6 +82,8 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     errorMessage: tenantUsersErrorMessage,
     currentUserDepartment
   } = usePhvbTenantUsers({ msGraphClientFactory });
+
+  const { photoUrl: userPhotoUrl } = usePhvbUserPhoto({ msGraphClientFactory });
 
   const userDepartment = currentUserDepartment || '';
 
@@ -138,6 +142,10 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     userDisplayName,
     userEmail
   }), [siteContext, userDisplayName, userEmail]);
+
+  useEffect(() => {
+    drainAllHistoryQueues(documentContext).catch(() => undefined);
+  }, [documentContext]);
 
   const {
     roles,
@@ -705,6 +713,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         }}
         userDisplayName={userDisplayName}
         userDepartment={userDepartment}
+        userPhotoUrl={userPhotoUrl}
         showCapSoTab={canAccessCapSo}
         showQLVanBanTab={canAccessQLVanBan}
       />
@@ -765,7 +774,9 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
               <PhvbMagDetail
                 tabName={resolvedTabName}
                 data={detailData}
+                msGraphClientFactory={msGraphClientFactory}
                 approveLabel={actionContext?.approveLabel}
+                rejectLabel={actionContext?.rejectLabel}
                 availableActions={actionContext?.availableActions}
                 pendingParticipants={actionContext?.pendingParticipants}
                 canRejectAtActiveStage={actionContext?.canRejectAtActiveStage}

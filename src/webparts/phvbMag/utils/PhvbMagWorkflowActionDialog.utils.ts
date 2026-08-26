@@ -55,7 +55,7 @@ export function getWorkflowActionDialogConfirmLabel(
     case 'approve':
       return dynamicLabel || 'Phê duyệt';
     case 'reject':
-      return 'Từ chối';
+      return dynamicLabel || 'Từ chối';
     case 'returnBanHanhToAdmin':
       return 'Trả về admin';
     case 'advanceStage':

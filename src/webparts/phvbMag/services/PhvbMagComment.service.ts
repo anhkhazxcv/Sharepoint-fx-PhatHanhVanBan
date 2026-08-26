@@ -1,8 +1,6 @@
-import { COMMENT_HISTORY_STATUS, hasSharePointSiteContext, HISTORY_LIST_TITLE } from '../config/PhvbMag.configuration';
-import { phvbRepository } from '../repositories/PhvbMag.repository';
-import { toRuntimeMessage } from './PhvbMag.error';
+import { hasSharePointSiteContext, TRANG_THAI_THUC_HIEN } from '../config/PhvbMag.configuration';
+import { appendHistory, getExecutionHistoryRuntimeErrorMessage } from './PhvbMagExecutionHistory.service';
 import { phvbCommentAttachmentService } from './PhvbMagCommentAttachment.service';
-import { toSharePointDateTimeIso } from '../utils/PhvbMagDateTime.utils';
 import { validateCommentAttachmentFiles } from '../utils/PhvbMagCommentAttachment.utils';
 import type { IPhvbDocumentContext, IPhvbLogContext } from '../models/PhvbMag.models';
 
@@ -17,7 +15,7 @@ export class PhvbCommentService {
     idYeuCau: string,
     input: ICreateCommentInput,
     logContext?: IPhvbLogContext
-  ): Promise<number> {
+  ): Promise<number | undefined> {
     if (!hasSharePointSiteContext(context)) {
       throw new Error('Missing SharePoint site context.');
     }
@@ -39,53 +37,35 @@ export class PhvbCommentService {
       throw new Error(attachmentValidationError);
     }
 
-    const performedAt = toSharePointDateTimeIso();
-    const payload: Record<string, string | boolean | number> = {
-      Title: COMMENT_HISTORY_STATUS,
-      IDYeuCau: normalizedIdYeuCau,
-      User_ThucHien: context.userDisplayName || '',
-      Email_ThucHien: context.userEmail || '',
-      PhongBan_ThucHien: '',
-      Ngay_ThucHien: performedAt,
-      TrangThai_ThucHien: COMMENT_HISTORY_STATUS,
-      NoiDung: normalizedText,
-      IsComment: true
-    };
-
-    let commentId = 0;
-
-    try {
-      commentId = await phvbRepository.createItem({
-        ...context,
-        logContext,
-        listTitle: HISTORY_LIST_TITLE,
-        payload
-      });
-    } catch (error) {
-      const details = error instanceof Error ? error.message : '';
-      if (/IsComment/i.test(details)) {
-        const payloadWithoutIsComment = { ...payload };
-        delete payloadWithoutIsComment.IsComment;
-        commentId = await phvbRepository.createItem({
-          ...context,
-          logContext,
-          listTitle: HISTORY_LIST_TITLE,
-          payload: payloadWithoutIsComment
-        });
-      } else {
-        throw error;
+    const result = await appendHistory(
+      { ...context, logContext },
+      {
+        idYeuCau: normalizedIdYeuCau,
+        trangThaiThucHien: TRANG_THAI_THUC_HIEN.BINH_LUAN,
+        noiDung: normalizedText,
+        isComment: true
       }
+    );
+
+    if (result.status === 'queued') {
+      if (files.length > 0) {
+        // Chưa có Id item thật (đang ở hàng chờ ghi lại) nên không thể đính kèm file —
+        // báo lỗi để người dùng thử lại, thay vì âm thầm mất file đính kèm.
+        throw new Error('Không thể gửi bình luận kèm file lúc này, vui lòng thử lại.');
+      }
+
+      return undefined;
     }
 
     if (files.length > 0) {
-      await phvbCommentAttachmentService.uploadCommentFiles(context, commentId, files, logContext);
+      await phvbCommentAttachmentService.uploadCommentFiles(context, result.id, files, logContext);
     }
 
-    return commentId;
+    return result.id;
   }
 
   public getRuntimeErrorMessage(error: unknown): string {
-    return toRuntimeMessage(error, HISTORY_LIST_TITLE);
+    return getExecutionHistoryRuntimeErrorMessage(error);
   }
 }
 

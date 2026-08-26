@@ -1,8 +1,5 @@
-import {
-  ISSUANCE_LIBRARY_TITLE,
-  SHORT_URL_API_KEY_LABEL
-} from '../config/PhvbMag.configuration';
-import { getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
+import { SHORT_URL_API_KEY_LABEL } from '../config/PhvbMag.configuration';
+import { getSiteOrigin } from '../infrastructure/SharePointSite.utils';
 import type { ILabelCustomConfigItem } from '../models/PhvbMag.models';
 import { getLabelValue } from './PhvbMagBanHanhNotify.utils';
 
@@ -41,19 +38,5 @@ export function buildDirectFileUrl(siteUrl: string, serverRelativePath: string):
     .map(segment => encodeURIComponent(segment))
     .join('/');
 
-  return `${origin}${encodedPath}`;
-}
-
-export function buildIssuanceLibraryViewUrl(siteUrl: string, serverRelativePath: string): string {
-  const webUrl = normalizeSiteUrl(siteUrl);
-  const normalizedPath = (serverRelativePath || '').trim();
-
-  if (!webUrl || !normalizedPath) {
-    return '';
-  }
-
-  const pathWithoutSlash = normalizedPath.replace(/^\/+/, '');
-  const folderId = encodeURIComponent(`/${pathWithoutSlash}`);
-
-  return `${webUrl}/${ISSUANCE_LIBRARY_TITLE}/Forms/AllItems.aspx?id=${folderId}`;
+  return `${origin}${encodedPath}?web=1`;
 }

@@ -4,8 +4,7 @@ import { normalizeRoleEmail, userHasAnyRole } from './PhvbMagRole.utils';
 
 const CREATOR_MANAGE_STATUSES: ReadonlySet<string> = new Set([
   REQUEST_STATUS.DANG_GOP_Y,
-  REQUEST_STATUS.DANG_THAM_DINH,
-  REQUEST_STATUS.DANG_PHE_DUYET
+  REQUEST_STATUS.DANG_THAM_DINH
 ]);
 
 export const ADMIN_LOCKED_STATUSES: ReadonlySet<string> = new Set([

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { ATTACHMENT_FORM_SUBFOLDER, TAB_LABELS } from '../config/PhvbMag.configuration';
+import { TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { IBanHanhLibraryItem, IPhvbSiteContext } from '../models/PhvbMag.models';
 import { usePhvbRecentPublished } from '../hooks/usePhvbRecentPublished';
 import { resolveLibraryContactPerson } from '../utils/PhvbMagLibrary.utils';
@@ -59,7 +59,7 @@ function RecentDocumentCard(props: IRecentDocumentCardProps): React.ReactElement
 
 function RecentPublishedSection(props: IRecentPublishedSectionProps): React.ReactElement {
   const { section, isExpanded, onToggle } = props;
-  const fileCount = section.documents.length + section.formDocuments.length;
+  const fileCount = section.documents.length;
 
   return (
     <section className={styles.recentSection}>
@@ -80,34 +80,16 @@ function RecentPublishedSection(props: IRecentPublishedSectionProps): React.Reac
         />
       </button>
 
-      {isExpanded ? (
-        <>
-          {section.documents.length > 0 ? (
-            <div className={styles.libraryDocumentList}>
-              {section.documents.map(document => (
-                <RecentDocumentCard key={document.id} document={document} />
-              ))}
-            </div>
-          ) : null}
-
-          {section.formDocuments.length > 0 ? (
-            <div className={styles.recentFormSubsection}>
-              <div className={styles.recentFormSubsectionHeader}>
-                <FolderAccentIcon className={styles.recentSectionFolderIcon} />
-                <span>{ATTACHMENT_FORM_SUBFOLDER}</span>
-              </div>
-              <div className={styles.libraryDocumentList}>
-                {section.formDocuments.map(document => (
-                  <RecentDocumentCard
-                    key={document.id}
-                    document={document}
-                    isFormAttachment
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </>
+      {isExpanded && section.documents.length > 0 ? (
+        <div className={styles.libraryDocumentList}>
+          {section.documents.map(document => (
+            <RecentDocumentCard
+              key={document.id}
+              document={document}
+              isFormAttachment={document.isFormAttachment}
+            />
+          ))}
+        </div>
       ) : null}
     </section>
   );

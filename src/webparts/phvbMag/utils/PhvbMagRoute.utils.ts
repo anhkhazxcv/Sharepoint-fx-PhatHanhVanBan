@@ -1,4 +1,5 @@
 import type { TabType } from '../models/PhvbMag.models';
+import { buildLibraryFolderPath } from './PhvbMagLibrary.utils';
 
 export function resolveTabFromPathname(
   pathname: string,
@@ -20,4 +21,9 @@ export function buildYeuCauDetailUrl(tab: TabType, idYeuCau: string): string {
   const baseUrl = window.location.href.split('#')[0];
   const normalizedId = encodeURIComponent(idYeuCau.trim());
   return `${baseUrl}#/tab/${tab}/detail/${normalizedId}`;
+}
+
+export function buildLibraryFolderDeepLinkUrl(folderId: number): string {
+  const baseUrl = window.location.href.split('#')[0];
+  return `${baseUrl}#${buildLibraryFolderPath(folderId, 1)}`;
 }

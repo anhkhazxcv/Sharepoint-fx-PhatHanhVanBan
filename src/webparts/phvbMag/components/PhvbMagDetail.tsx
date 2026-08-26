@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
+import type { MSGraphClientFactory } from '@microsoft/sp-http';
 import type { IAllUserWorkflowItem, IBanHanhNotifyDraft, IAttachmentLibraryItem, IPhvbSiteContext, IRequestDetailData, TabType } from '../models/PhvbMag.models';
 import type { DetailDocumentUploadKind } from '../hooks/usePhvbDetailDocuments';
 import type { IRemindDeadlineContext } from '../utils/PhvbMagRemindDeadline.utils';
@@ -7,6 +8,7 @@ import type { IRequestInfoFieldsInput } from '../utils/PhvbMagDetailInfoEdit.uti
 import type { IWorkflowActionAvailability } from '../utils/PhvbMagWorkflowPermission.utils';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
 import { canDuplicateRelease } from '../utils/PhvbMagDraftEdit.utils';
+import { buildWorkflowTimelineSteps } from '../utils/PhvbMagWorkflowTimeline.utils';
 import styles from './PhvbMag.module.scss';
 import { PhvbMagDetailActivityFeed } from './PhvbMagDetailActivityFeed';
 import { PhvbMagDetailDocumentsTab } from './PhvbMagDetailDocumentsTab';
@@ -23,7 +25,9 @@ type DetailTabKey = 'info' | 'documents' | 'workflow';
 interface IPhvbMagDetailProps {
   tabName: TabType;
   data: IRequestDetailData;
+  msGraphClientFactory: MSGraphClientFactory;
   approveLabel?: string;
+  rejectLabel?: string;
   availableActions?: IWorkflowActionAvailability;
   pendingParticipants?: IAllUserWorkflowItem[];
   canRejectAtActiveStage?: boolean;
@@ -104,7 +108,9 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
   const {
     tabName,
     data,
+    msGraphClientFactory,
     approveLabel,
+    rejectLabel,
     availableActions,
     pendingParticipants,
     canRejectAtActiveStage,
@@ -180,6 +186,15 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     () => data.attachments.filter(item => !item.isFormAttachment),
     [data.attachments]
   );
+  const documentsCount = data.attachments.length;
+  const workflowStepsCount = useMemo(
+    () => buildWorkflowTimelineSteps(data.release, data.workflowParticipants).length,
+    [data.release, data.workflowParticipants]
+  );
+  const tabCountByKey: Partial<Record<DetailTabKey, number>> = {
+    documents: documentsCount,
+    workflow: workflowStepsCount
+  };
 
   const handleRemindConfirm = async (selectedRecipientIds: string[]): Promise<void> => {
     if (!onSendRemindDeadline || isRemindSending) {
@@ -211,6 +226,7 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
         return (
           <PhvbMagDetailWorkflowSidebar
             layout="tab"
+            msGraphClientFactory={msGraphClientFactory}
             release={data.release}
             workflowParticipants={data.workflowParticipants}
             canOpenParticipantModal={canOpenParticipantModal}
@@ -221,6 +237,7 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
             isRemindDialogOpen={isRemindDialogOpen}
             onOpenRemindDeadline={() => setIsRemindDialogOpen(true)}
             approveLabel={approveLabel}
+            rejectLabel={rejectLabel}
             pendingParticipants={pendingParticipants}
             canRejectAtActiveStage={canRejectAtActiveStage}
             canActOnBehalfOfParticipant={canActOnBehalfOfParticipant}
@@ -250,6 +267,7 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
         tabName={tabName}
         title={title}
         approveLabel={approveLabel}
+        rejectLabel={rejectLabel}
         availableActions={availableActions}
         isProcessing={isWorkflowProcessing}
         errorMessage={workflowErrorMessage}
@@ -311,6 +329,9 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
                   onClick={() => setActiveTab(tab.key)}
                 >
                   {tab.label}
+                  {tabCountByKey[tab.key] ? (
+                    <span className={styles.detailTabCount}>{tabCountByKey[tab.key]}</span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -322,6 +343,7 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
 
         <PhvbMagDetailRightPanel>
           <PhvbMagDetailActivityFeed
+            msGraphClientFactory={msGraphClientFactory}
             history={data.history}
             comments={data.comments}
             selectedFiles={commentSelectedFiles || []}

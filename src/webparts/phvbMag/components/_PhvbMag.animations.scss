@@ -256,7 +256,7 @@
   gap: 8px;
   background-color: #FFFFFF;
   border: 1px solid #E5D6C7;
-  border-radius: 12px;
+  border-radius: $radius-control;
   padding: 8px 10px;
   box-shadow: 0 2px 8px rgba(123, 76, 44, 0.05);
 
@@ -280,7 +280,7 @@
   width: 36px;
   height: 36px;
   border: none;
-  border-radius: 8px;
+  border-radius: $radius-control;
   background: transparent;
   color: $primary-color;
   cursor: pointer;
@@ -430,7 +430,7 @@ button.libraryDocumentTitle {
   width: 28px;
   height: 28px;
   border: 1px solid #E2D6C8;
-  border-radius: 6px;
+  border-radius: $radius-control;
   background-color: #FFFFFF;
   color: $text-muted;
   text-decoration: none;
@@ -563,7 +563,7 @@ button.libraryDocumentTitle {
 .libraryFolderNodeActive {
   background-color: $primary-light;
   border-left: 3px solid $primary-color;
-  border-radius: $radius-sm;
+  border-radius: $radius-card;
 }
 
 .libraryFolderNodeActive .libraryFolderNodeButton {
@@ -602,7 +602,7 @@ button.libraryDocumentTitle {
   border: none;
   background: transparent;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: $radius-control;
   text-align: left;
   cursor: pointer;
   color: $text-main;
@@ -634,7 +634,7 @@ button.libraryDocumentTitle {
 .libraryStatusMessage,
 .libraryErrorBanner {
   padding: 16px;
-  border-radius: 12px;
+  border-radius: $radius-card;
   font-size: 13px;
 }
 
@@ -733,7 +733,7 @@ button.libraryDocumentTitle {
   width: 100%;
   min-height: 0;
   border: 1px solid $border-subtle;
-  border-radius: $radius-md;
+  border-radius: $radius-card;
   background-color: #EDE7E0;
 }
 
@@ -795,7 +795,7 @@ button.libraryDocumentTitle {
   margin: 0 $content-pane-padding-x $space-5;
   background-color: $surface-card;
   border: 1px solid $border-color;
-  border-radius: 18px;
+  border-radius: $radius-card;
   box-shadow: 0 8px 24px rgba(123, 76, 44, 0.05);
   overflow: hidden;
 
@@ -845,7 +845,7 @@ button.libraryDocumentTitle {
   margin: 0;
   padding: 10px 12px;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
+  border-radius: $radius-control;
   background-color: #FFFFFF;
   text-align: left;
   cursor: pointer;
@@ -898,32 +898,13 @@ button.libraryDocumentTitle {
   color: #6b6560;
 }
 
-.recentFormSubsection {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 4px;
-  margin-left: 12px;
-  padding-left: 12px;
-  border-left: 2px solid rgba(0, 0, 0, 0.06);
-}
-
-.recentFormSubsectionHeader {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #5c564f;
-}
-
 .recentFormBadge {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
   border-radius: 999px;
-  background-color: #EEF4FF;
-  color: #2F5AA8;
+  background-color: $primary-light;
+  color: $primary-color;
   font-size: 11px;
   font-weight: 600;
   line-height: 1.4;

@@ -15,6 +15,7 @@ interface IPhvbMagDetailHeaderProps {
   title: string;
   className?: string;
   approveLabel?: string;
+  rejectLabel?: string;
   availableActions?: IWorkflowActionAvailability;
   isProcessing?: boolean;
   errorMessage?: string;
@@ -70,6 +71,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       title,
       className,
       approveLabel = 'Phê duyệt',
+      rejectLabel = 'Từ chối',
       availableActions,
       isProcessing = false,
       errorMessage,
@@ -145,12 +147,12 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       setPendingAction(action);
     };
 
-    const openTransitionDialog = (): void => {
-      if (isBusy) {
+    const handleRunTransitionClick = (): void => {
+      if (isBusy || !onRunTransition) {
         return;
       }
 
-      setPendingAction('advanceStage');
+      onRunTransition().catch(() => undefined);
     };
 
     const closeActionDialog = (): void => {
@@ -182,16 +184,6 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       }
 
       if (pendingAction === 'advanceStage') {
-        if (!onRunTransition) {
-          return;
-        }
-
-        const succeeded = await onRunTransition();
-
-        if (succeeded) {
-          setPendingAction(undefined);
-        }
-
         return;
       }
 
@@ -316,10 +308,6 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
       >
         <div className={styles.detailHeaderMain}>
           <nav className={styles.detailBreadcrumb} aria-label="Breadcrumb">
-            <Link to="/tab/ViecCanLam" className={styles.detailBreadcrumbLink}>
-              {TAB_LABELS.ViecCanLam}
-            </Link>
-            <span className={styles.detailBreadcrumbSep}>&gt;</span>
             <Link to={`/tab/${tabName}`} className={styles.detailBreadcrumbLink}>
               {tabLabel}
             </Link>
@@ -431,7 +419,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
                   type="button"
                   className={styles.detailActionApprove}
                   disabled={isBusy}
-                  onClick={openTransitionDialog}
+                  onClick={handleRunTransitionClick}
                 >
                   {transitionLabel}
                 </button>
@@ -455,7 +443,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
                   disabled={isBusy}
                   onClick={() => openActionDialog('reject')}
                 >
-                  Từ chối
+                  {rejectLabel}
                 </button>
               ) : null}
             </div>
@@ -465,21 +453,13 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
         <PhvbMagWorkflowActionDialog
           isOpen={isWorkflowDialogOpen}
           action={pendingAction}
-          approveLabel={pendingAction === 'advanceStage' ? transitionLabel : approveLabel}
-          isProcessing={
-            pendingAction === 'returnBanHanhToAdmin'
-              ? isBanHanhSaving
-              : pendingAction === 'advanceStage'
-                ? isTransitionProcessing
-                : isProcessing
-          }
+          approveLabel={pendingAction === 'reject' ? rejectLabel : approveLabel}
+          isProcessing={pendingAction === 'returnBanHanhToAdmin' ? isBanHanhSaving : isProcessing}
           errorMessage={
             isWorkflowDialogOpen
               ? pendingAction === 'returnBanHanhToAdmin'
                 ? banHanhErrorMessage
-                : pendingAction === 'advanceStage'
-                  ? transitionErrorMessage
-                  : errorMessage
+                : errorMessage
               : undefined
           }
           onCancel={closeActionDialog}

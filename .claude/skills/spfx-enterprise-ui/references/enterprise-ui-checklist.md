@@ -5,6 +5,7 @@ Use before finalizing UI or SCSS changes.
 ## Tokens and layout
 
 - [ ] Reused `$primary-*`, `$bg-*`, `$text-*`, `$border-color`, radius, and shadow variables from the web part stylesheet
+- [ ] `border-radius` uses only `$radius-control` (4px), `$radius-card` (8px), or `$radius-pill` (100px) — no other hardcoded px value
 - [ ] No new hex colors unless the same file already uses that value for the same purpose
 - [ ] Clear hierarchy: title → toolbar/filters → content
 - [ ] One job per section; no competing headlines or promo blocks in the same viewport

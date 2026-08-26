@@ -43,7 +43,6 @@ export interface ILichSuThucHienItem {
   User_ThucHien?: string;
   Email_ThucHien?: string;
   PhongBan_ThucHien?: string;
-  Ngay_ThucHien?: string;
   TrangThai_ThucHien?: string;
   NoiDung?: string;
   /** Thời điểm tạo item trên SharePoint (list LichSuThucHien) */
@@ -60,7 +59,6 @@ export interface IAllUserWorkflowItem {
   User_ThucHien?: string;
   Email_ThucHien?: string;
   PhongBan_ThucHien?: string;
-  Ngay_ThucHien?: string;
   TrangThai_ThucHien?: string;
   NoiDung?: string;
   Modified?: string;
@@ -318,6 +316,7 @@ export interface ITemplateLibraryItem {
   name: string;
   fileExtension: string;
   fileUrl: string;
+  downloadUrl?: string;
 }
 
 export interface IBanHanhFolderNode {
@@ -387,7 +386,6 @@ export interface IBanHanhPublishOptions {
   mainDocumentId?: number;
   soVanBanOverride?: string;
   skipPermissionCheck?: boolean;
-  historyNoiDung?: string;
 }
 
 export interface IPhvbSiteContext {

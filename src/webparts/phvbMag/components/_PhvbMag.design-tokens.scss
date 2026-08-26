@@ -11,9 +11,9 @@ $content-pane-padding-top: 28px;
 $content-pane-padding-x: 30px;
 $content-pane-padding-bottom: 36px;
 
-$radius-sm: 8px;
-$radius-md: 12px;
-$radius-lg: 14px;
+$radius-control: 4px;
+$radius-card: 8px;
+$radius-pill: 100px;
 
 $surface-card: #FFFFFF;
 $surface-muted: #FAF6F0;
@@ -85,7 +85,7 @@ $dialog-header-gradient: linear-gradient(135deg, #A06A43 0%, #8B5A39 100%);
   cursor: pointer;
   padding: 4px;
   line-height: 1;
-  border-radius: 6px;
+  border-radius: $radius-control;
   transition: background-color $transition-fast;
 
   &:hover:not(:disabled) {

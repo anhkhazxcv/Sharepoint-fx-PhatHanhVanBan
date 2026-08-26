@@ -21,6 +21,7 @@ export interface IWorkflowActionAvailability {
 
 export interface IWorkflowActionContext {
   approveLabel: string;
+  rejectLabel: string;
   activeStage: WorkflowDocumentStage;
   pendingParticipant?: IAllUserWorkflowItem;
   pendingParticipants: IAllUserWorkflowItem[];
@@ -120,6 +121,7 @@ export function resolveWorkflowActionContext(
 
   return {
     approveLabel: activeStage === 'none' ? 'Phê duyệt' : resolveApproveLabelForStage(activeStage),
+    rejectLabel: activeStage === 'none' ? 'Từ chối' : resolveRejectLabelForStage(activeStage),
     activeStage,
     pendingParticipant,
     pendingParticipants,
@@ -138,6 +140,17 @@ function resolveApproveLabelForStage(stage: WorkflowDocumentStage): string {
       return 'Phê duyệt';
     default:
       return 'Phê duyệt';
+  }
+}
+
+function resolveRejectLabelForStage(stage: WorkflowDocumentStage): string {
+  switch (stage) {
+    case 'thamdinh':
+      return 'Từ chối thẩm định';
+    case 'pheduyet':
+      return 'Từ chối phê duyệt';
+    default:
+      return 'Từ chối';
   }
 }
 

@@ -11,7 +11,6 @@ export interface IRecentPublishedSection {
   displayPath: string;
   displayPathFull?: string;
   documents: IBanHanhLibraryItem[];
-  formDocuments: IBanHanhLibraryItem[];
   newestNgayPhatHanhMs: number;
   folderNgayPhatHanh?: string;
 }
@@ -143,18 +142,13 @@ export function groupRecentPublishedByDocumentFolder(
         displayPath: resolveDocumentFolderDisplayName(documentFolderKey),
         displayPathFull: storagePath || documentFolderKey,
         documents: [],
-        formDocuments: [],
         newestNgayPhatHanhMs: getNgayPhatHanhMs(folderNgayPhatHanh),
         folderNgayPhatHanh
       };
       sectionMap.set(documentFolderKey, section);
     }
 
-    if (item.isFormAttachment || isFormAttachmentPath(item.fileDirRef)) {
-      section.formDocuments.push(item);
-    } else {
-      section.documents.push(item);
-    }
+    section.documents.push(item);
 
     const itemMs = getNgayPhatHanhMs(item.ngayPhatHanh);
 
@@ -170,7 +164,6 @@ export function groupRecentPublishedByDocumentFolder(
 
   sections.forEach((section: IRecentPublishedSection) => {
     section.documents.sort(compareRecentItems);
-    section.formDocuments.sort(compareRecentItems);
   });
 
   return sections;

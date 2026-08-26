@@ -290,7 +290,29 @@ module.exports = {
         // ====================================================================
         '@microsoft/spfx/import-requires-chunk-name': 1,
         '@microsoft/spfx/no-require-ensure': 2,
-        '@microsoft/spfx/pair-react-dom-render-unmount': 1
+        '@microsoft/spfx/pair-react-dom-render-unmount': 1,
+        'no-restricted-imports': [
+          2,
+          {
+            paths: [
+              {
+                name: '../config/PhvbMag.configuration',
+                importNames: ['HISTORY_LIST_TITLE'],
+                message: 'Chỉ PhvbMagExecutionHistory.service.ts được tạo lịch sử; Detail/CommentAttachment chỉ đọc hoặc cập nhật attachment marker.'
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      files: [
+        'src/webparts/phvbMag/services/PhvbMagExecutionHistory.service.ts',
+        'src/webparts/phvbMag/services/PhvbMagDetail.service.ts',
+        'src/webparts/phvbMag/services/PhvbMagCommentAttachment.service.ts'
+      ],
+      rules: {
+        'no-restricted-imports': 0
       }
     },
     {

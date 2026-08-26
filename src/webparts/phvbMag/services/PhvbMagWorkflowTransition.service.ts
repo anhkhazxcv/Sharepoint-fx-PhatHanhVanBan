@@ -1,13 +1,14 @@
 import {
   DEFAULT_LIST_TITLE,
-  EXECUTION_HISTORY_STATUS,
   hasSharePointSiteContext,
-  REQUEST_STATUS
+  REQUEST_STATUS,
+  TRANG_THAI_THUC_HIEN,
+  TrangThaiThucHien
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { phvbRoleService } from './PhvbMagRole.service';
 import { phvbSendMailService } from './PhvbMagSendMail.service';
-import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
+import { appendHistory } from './PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from './PhvbMag.error';
 import {
   buildYeuCauCapSoPayload,
@@ -30,16 +31,19 @@ export interface IWorkflowTransitionOptions extends IPhvbDocumentContext {
   logContext?: IPhvbLogContext;
 }
 
-function resolveTransitionHistoryStatus(nextStatus: string): string {
+function resolveTransitionHistoryStatus(nextStatus: string): TrangThaiThucHien {
   switch (nextStatus) {
     case REQUEST_STATUS.DANG_THAM_DINH:
-      return EXECUTION_HISTORY_STATUS.CHUYEN_THAM_DINH;
+      return TRANG_THAI_THUC_HIEN.CHUYEN_THAM_DINH;
     case REQUEST_STATUS.DANG_PHE_DUYET:
-      return EXECUTION_HISTORY_STATUS.CHUYEN_PHE_DUYET;
+      return TRANG_THAI_THUC_HIEN.CHUYEN_PHE_DUYET;
     case REQUEST_STATUS.CHO_CAP_SO:
-      return EXECUTION_HISTORY_STATUS.CHUYEN_CAP_SO;
+      return TRANG_THAI_THUC_HIEN.CHUYEN_CAP_SO;
     default:
-      return EXECUTION_HISTORY_STATUS.CAP_NHAT_YEU_CAU;
+      // Các trường hợp còn lại (chuyển thẳng CHO_ADMIN_THU_HOI/DA_CAP_SO khi bỏ qua
+      // bước trung gian) — không có mã trạng thái riêng trong 23 Choice value, dùng
+      // CAP_NHAT_YEU_CAU (kind=system, cần NoiDung — xem chỗ gọi appendHistory).
+      return TRANG_THAI_THUC_HIEN.CAP_NHAT_YEU_CAU;
   }
 }
 
@@ -107,11 +111,18 @@ export class PhvbWorkflowTransitionService {
 
     await sendTransitionMail(options, nextStatus);
 
-    await createExecutionHistoryRecord(
+    const trangThaiThucHien = resolveTransitionHistoryStatus(nextStatus);
+    const isEmptyHistoryContent =
+      trangThaiThucHien === TRANG_THAI_THUC_HIEN.CHUYEN_THAM_DINH ||
+      trangThaiThucHien === TRANG_THAI_THUC_HIEN.CHUYEN_PHE_DUYET ||
+      trangThaiThucHien === TRANG_THAI_THUC_HIEN.CHUYEN_CAP_SO;
+
+    await appendHistory(
       { ...options, logContext: options.logContext },
       {
         idYeuCau,
-        historyStatus: resolveTransitionHistoryStatus(nextStatus),
+        trangThaiThucHien,
+        noiDung: isEmptyHistoryContent ? '' : (options.detail.release.Tenvanban || options.detail.release.IdYeuCau || ''),
         department: options.detail.release.KhoaPhongNguoiTao
       }
     );

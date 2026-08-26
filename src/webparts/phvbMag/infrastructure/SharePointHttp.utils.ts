@@ -6,6 +6,28 @@ import { getCandidateSiteUrls } from './SharePointSite.utils';
 
 export type { IApiLogParams };
 
+function parseRetryAfterSeconds(response: SPHttpClientResponse): number | undefined {
+  const raw = response.headers.get('Retry-After');
+
+  if (!raw) {
+    return undefined;
+  }
+
+  const asSeconds = Number(raw);
+
+  if (!isNaN(asSeconds) && asSeconds >= 0) {
+    return asSeconds;
+  }
+
+  const asDate = Date.parse(raw);
+
+  if (!isNaN(asDate)) {
+    return Math.max(0, Math.ceil((asDate - Date.now()) / 1000));
+  }
+
+  return undefined;
+}
+
 export async function ensureSharePointResponseOk(
   response: SPHttpClientResponse,
   requestUrl: string,
@@ -17,7 +39,8 @@ export async function ensureSharePointResponseOk(
       `SharePoint request failed with status ${response.status}`,
       response.status,
       requestUrl,
-      details
+      details,
+      parseRetryAfterSeconds(response)
     );
 
     if (apiLogParams) {

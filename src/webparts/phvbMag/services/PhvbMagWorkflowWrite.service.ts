@@ -2,13 +2,13 @@ import {
   ALL_USER_GOPY_LIST_TITLE,
   ALL_USER_PHEDUYET_LIST_TITLE,
   ALL_USER_THAMDINH_LIST_TITLE,
-  EXECUTION_HISTORY_STATUS,
+  TRANG_THAI_THUC_HIEN,
+  TrangThaiThucHien,
   WORKFLOW_PARTICIPANT_STATUS
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { phvbSendMailService } from './PhvbMagSendMail.service';
-import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
-import { toSharePointDateTimeIso } from '../utils/PhvbMagDateTime.utils';
+import { appendHistory } from './PhvbMagExecutionHistory.service';
 import { getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
 import {
   buildYeuCauPayloadForStage,
@@ -73,8 +73,7 @@ export function resolveDirectoryUser(email: string, directoryMap: Record<string,
 
 export function buildAllUserPayload(
   requestReferenceId: string,
-  user: IResolvedDirectoryUser,
-  performedAt: string
+  user: IResolvedDirectoryUser
 ): Record<string, string | boolean | number> {
   return {
     Title: user.displayName,
@@ -82,30 +81,28 @@ export function buildAllUserPayload(
     User_ThucHien: user.displayName,
     Email_ThucHien: user.email,
     PhongBan_ThucHien: user.department,
-    Ngay_ThucHien: performedAt,
     TrangThai_ThucHien: WORKFLOW_PARTICIPANT_STATUS.CHUA_XAC_NHAN,
     NoiDung: ''
   };
 }
 
-function resolveHistoryStatusForCreate(options: ICreateWorkflowRecordsOptions): string {
+function resolveHistoryStatusForCreate(options: ICreateWorkflowRecordsOptions): TrangThaiThucHien {
   const isDraft = options.saveMode === 'draft';
 
   if (options.isUpdate) {
     return isDraft
-      ? EXECUTION_HISTORY_STATUS.CAP_NHAT_BAN_NHAP
-      : EXECUTION_HISTORY_STATUS.CAP_NHAT_YEU_CAU;
+      ? TRANG_THAI_THUC_HIEN.CAP_NHAT_BAN_NHAP
+      : TRANG_THAI_THUC_HIEN.CAP_NHAT_YEU_CAU;
   }
 
   return isDraft
-    ? EXECUTION_HISTORY_STATUS.TAO_BAN_NHAP
-    : EXECUTION_HISTORY_STATUS.TAO_YEU_CAU;
+    ? TRANG_THAI_THUC_HIEN.TAO_BAN_NHAP
+    : TRANG_THAI_THUC_HIEN.TAO_YEU_CAU;
 }
 
 function buildCreateHistoryNoiDung(options: ICreateWorkflowRecordsOptions): string {
-  const summary = options.input.summary ? options.input.summary.trim() : '';
   const title = options.input.title ? options.input.title.trim() : '';
-  return summary || title;
+  return title;
 }
 
 async function createAllUserItemsForEmails(
@@ -113,8 +110,7 @@ async function createAllUserItemsForEmails(
   listTitle: string,
   emails: string[],
   requestReferenceId: string,
-  directoryMap: Record<string, IResolvedDirectoryUser>,
-  performedAt: string
+  directoryMap: Record<string, IResolvedDirectoryUser>
 ): Promise<void> {
   const uniqueEmails: string[] = [];
 
@@ -132,7 +128,7 @@ async function createAllUserItemsForEmails(
     await phvbRepository.createItem({
       ...context,
       listTitle,
-      payload: buildAllUserPayload(requestReferenceId, resolvedUser, performedAt)
+      payload: buildAllUserPayload(requestReferenceId, resolvedUser)
     });
   }
 }
@@ -140,18 +136,16 @@ async function createAllUserItemsForEmails(
 export class PhvbWorkflowWriteService {
   public async createWorkflowRecords(options: ICreateWorkflowRecordsOptions): Promise<void> {
     const isDraft = options.saveMode === 'draft';
-    const historyStatus = resolveHistoryStatusForCreate(options);
+    const trangThaiThucHien = resolveHistoryStatusForCreate(options);
 
-    await createExecutionHistoryRecord(
-      { ...options, logContext: options.logContext },
+    await appendHistory(
+      { ...options, logContext: options.logContext, userDisplayName: options.creatorDisplayName, userEmail: options.creatorEmail },
       {
         idYeuCau: options.requestReferenceId,
-        historyStatus,
+        trangThaiThucHien,
         noiDung: buildCreateHistoryNoiDung(options),
         department: options.input.department || '',
-        isComment: false,
-        userDisplayName: options.creatorDisplayName,
-        userEmail: options.creatorEmail
+        isComment: false
       }
     );
 
@@ -159,7 +153,6 @@ export class PhvbWorkflowWriteService {
       return;
     }
 
-    const performedAt = toSharePointDateTimeIso();
     const directoryMap = buildDirectoryUserMap(options.directoryUsers);
     const formRules = getRequestTypeFormRules(options.input.requestType);
     const workflowTasks: Array<Promise<void>> = [];
@@ -171,16 +164,14 @@ export class PhvbWorkflowWriteService {
           ALL_USER_GOPY_LIST_TITLE,
           options.input.nguoiGopY,
           options.requestReferenceId,
-          directoryMap,
-          performedAt
+          directoryMap
         ),
         createAllUserItemsForEmails(
           options,
           ALL_USER_THAMDINH_LIST_TITLE,
           options.input.nguoiThamDinh,
           options.requestReferenceId,
-          directoryMap,
-          performedAt
+          directoryMap
         )
       );
     }
@@ -191,8 +182,7 @@ export class PhvbWorkflowWriteService {
         ALL_USER_PHEDUYET_LIST_TITLE,
         options.input.approvalUsers,
         options.requestReferenceId,
-        directoryMap,
-        performedAt
+        directoryMap
       )
     );
 

@@ -1,11 +1,10 @@
 import {
-  EXECUTION_HISTORY_STATUS,
   hasSharePointSiteContext,
-  HISTORY_LIST_TITLE
+  TRANG_THAI_THUC_HIEN
 } from '../config/PhvbMag.configuration';
 import { phvbSendMailService } from './PhvbMagSendMail.service';
-import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
-import { toRuntimeMessage } from './PhvbMag.error';
+import { appendHistory, getExecutionHistoryRuntimeErrorMessage } from './PhvbMagExecutionHistory.service';
+import { joinWithLimit } from '../utils/PhvbMagHistoryText.utils';
 import {
   buildRemindDeadlinePayload,
   canRemindDeadline,
@@ -77,12 +76,12 @@ export class PhvbRemindDeadlineService {
 
     await phvbSendMailService.sendMail(options, mailPayload, options.logContext);
 
-    await createExecutionHistoryRecord(
+    await appendHistory(
       { ...options, logContext: options.logContext },
       {
         idYeuCau,
-        historyStatus: EXECUTION_HISTORY_STATUS.NHAC_HAN,
-        noiDung: selectedEmails.join('; '),
+        trangThaiThucHien: TRANG_THAI_THUC_HIEN.NHAC_HAN,
+        noiDung: `Nhắc ${selectedEmails.length} người: ${joinWithLimit(selectedEmails, { moreLabel: 'người khác' })}`,
         department: detail.release.KhoaPhongNguoiTao,
         isComment: false
       }
@@ -99,7 +98,7 @@ export class PhvbRemindDeadlineService {
   }
 
   public getRuntimeErrorMessage(error: unknown): string {
-    return toRuntimeMessage(error, HISTORY_LIST_TITLE);
+    return getExecutionHistoryRuntimeErrorMessage(error);
   }
 }
 

@@ -151,7 +151,8 @@ const TEMPLATE_SELECT_FIELDS: ReadonlyArray<string> = [
   'Title',
   'FileLeafRef',
   'FSObjType',
-  'FileRef'
+  'FileRef',
+  'UniqueId'
 ];
 
 const SEARCH_SELECT_PROPERTIES = [
@@ -197,7 +198,7 @@ interface IMostViewedCacheEntry {
 }
 
 let recentPublishedDataCache: IRecentPublishedDataCacheEntry | undefined;
-let recentPublishedDataPromise: Promise<IRecentPublishedDataCacheEntry> | undefined;
+const recentPublishedDataPromises: Map<number, Promise<IRecentPublishedDataCacheEntry>> = new Map();
 let mostViewedCache: IMostViewedCacheEntry | undefined;
 let mostViewedPromise: Promise<IMostViewedCacheEntry> | undefined;
 
@@ -323,12 +324,14 @@ function mapBanHanhLibraryItem(
 function mapTemplateLibraryItem(item: ISharePointDocumentLibraryItem, siteUrl: string): ITemplateLibraryItem {
   const name = item.FileLeafRef || item.Title || '';
   const fileRef = item.FileRef || '';
+  const uniqueId = item.UniqueId;
 
   return {
     id: item.Id,
     name,
     fileExtension: getFileExtension(name),
-    fileUrl: buildSharePointFileOpenUrl(siteUrl, { fileRef, fileName: name })
+    fileUrl: buildSharePointFileOpenUrl(siteUrl, { fileRef, fileName: name, uniqueId }),
+    downloadUrl: buildSharePointFileDownloadUrl(siteUrl, { uniqueId, fileRef }) || undefined
   };
 }
 
@@ -771,25 +774,36 @@ export class PhvbDocumentLibraryService {
       });
     }
 
-    if (!recentPublishedDataPromise) {
-      recentPublishedDataPromise = this.fetchRecentPublishedData(context, windowDays).then(entry => {
+    let pendingPromise = recentPublishedDataPromises.get(windowDays);
+
+    if (!pendingPromise) {
+      pendingPromise = this.fetchRecentPublishedData(context, windowDays).then(entry => {
         recentPublishedDataCache = entry;
         return entry;
       });
+      recentPublishedDataPromises.set(windowDays, pendingPromise);
     }
 
-    const pendingPromise = recentPublishedDataPromise;
+    const trackedPromise = pendingPromise;
 
-    return pendingPromise.then(entry => {
-      if (recentPublishedDataPromise === pendingPromise) {
-        recentPublishedDataPromise = undefined;
-      }
+    return trackedPromise
+      .then(entry => {
+        if (recentPublishedDataPromises.get(windowDays) === trackedPromise) {
+          recentPublishedDataPromises.delete(windowDays);
+        }
 
-      return {
-        folders: entry.folders.slice(),
-        items: entry.items.slice()
-      };
-    });
+        return {
+          folders: entry.folders.slice(),
+          items: entry.items.slice()
+        };
+      })
+      .catch(error => {
+        if (recentPublishedDataPromises.get(windowDays) === trackedPromise) {
+          recentPublishedDataPromises.delete(windowDays);
+        }
+
+        throw error;
+      });
   }
 
   private fetchRecentPublishedData(
@@ -907,7 +921,7 @@ export class PhvbDocumentLibraryService {
 
   public clearHomeDataCache(): void {
     recentPublishedDataCache = undefined;
-    recentPublishedDataPromise = undefined;
+    recentPublishedDataPromises.clear();
     mostViewedCache = undefined;
     mostViewedPromise = undefined;
   }

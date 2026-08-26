@@ -96,7 +96,7 @@
       width: 100%;
       border: none;
       background: transparent;
-      border-radius: $radius-sm;
+      border-radius: $radius-control;
       cursor: pointer;
       color: $text-ink2;
       font-family: $font-family-base;
@@ -141,7 +141,7 @@
         font-size: $font-size-xs;
         font-weight: $font-weight-extrabold;
         padding: 1px 6px;
-        border-radius: 10px;
+        border-radius: $radius-pill;
         min-width: 18px;
         text-align: center;
       }
@@ -254,7 +254,7 @@
       align-items: center;
       justify-content: center;
       align-self: center;
-      border-radius: 8px;
+      border-radius: $radius-control;
       border: 1px solid $border-color;
       background-color: #FFFFFF;
       color: $text-main;
@@ -286,6 +286,15 @@
       color: #FFFFFF;
       font-size: $font-size-sm;
       border: none;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .userAvatarImage {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
     }
 
     .userInfo {

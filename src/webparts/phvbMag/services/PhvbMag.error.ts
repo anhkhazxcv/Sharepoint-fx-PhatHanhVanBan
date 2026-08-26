@@ -2,13 +2,21 @@ export class SharePointRequestError extends Error {
   public readonly status: number;
   public readonly requestUrl: string;
   public readonly details: string;
+  public readonly retryAfterSeconds?: number;
 
-  public constructor(message: string, status: number, requestUrl: string, details: string) {
+  public constructor(
+    message: string,
+    status: number,
+    requestUrl: string,
+    details: string,
+    retryAfterSeconds?: number
+  ) {
     super(message);
     this.name = 'SharePointRequestError';
     this.status = status;
     this.requestUrl = requestUrl;
     this.details = details;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 

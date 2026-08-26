@@ -8,6 +8,7 @@ import {
   buildRequestInfoFieldsFromRelease,
   type IRequestInfoFieldsInput
 } from '../utils/PhvbMagDetailInfoEdit.utils';
+import { getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
 import { FolderAccentIcon, FolderSelectIcon, NotePinIcon } from './PhvbMagIcons';
 import { PhvbMagFolderPickerDialog } from './PhvbMagFolderPickerDialog';
 import styles from './PhvbMag.module.scss';
@@ -45,6 +46,8 @@ function renderNoteBody(text: string): React.ReactNode {
 export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.ReactElement {
   const { release, siteContext, canEdit = false, isSaving = false, errorMessage, onSave } = props;
   const noteText = release.GhiChuChoThamDinh?.trim();
+  const requestType = (release.LoaiYeuCau || 'Viết mới') as 'Viết mới' | 'Điều chỉnh' | 'Thu hồi';
+  const formRules = getRequestTypeFormRules(requestType);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [draft, setDraft] = useState<IRequestInfoFieldsInput>(() => buildRequestInfoFieldsFromRelease(release));
@@ -79,8 +82,28 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
       return;
     }
 
+    if (!draft.folderLuuTru.trim()) {
+      setValidationError('Vui lòng chọn thư mục ban hành.');
+      return;
+    }
+
+    if (!draft.hieuLucTu.trim()) {
+      setValidationError('Vui lòng chọn ngày hiệu lực.');
+      return;
+    }
+
     if (draft.hieuLucDen && draft.hieuLucTu && draft.hieuLucDen < draft.hieuLucTu) {
       setValidationError('Ngày hết hiệu lực phải sau ngày hiệu lực.');
+      return;
+    }
+
+    if (!draft.summary.trim()) {
+      setValidationError('Vui lòng nhập tóm tắt nội dung.');
+      return;
+    }
+
+    if (formRules.requireGhiChuThamDinh && !draft.ghiChuThamDinh.trim()) {
+      setValidationError('Vui lòng nhập ghi chú cho cấp thẩm định / phê duyệt.');
       return;
     }
 
@@ -92,8 +115,6 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
       setIsEditing(false);
     }
   };
-
-  const requestType = (release.LoaiYeuCau || 'Viết mới') as 'Viết mới' | 'Điều chỉnh' | 'Thu hồi';
 
   return (
     <div className={styles.detailInfoLayout}>
@@ -112,7 +133,7 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
       <div className={styles.detailInfoGrid}>
         {isEditing ? (
           <div className={styles.detailField}>
-            <label htmlFor="phvb-detail-info-ten-van-ban" className={styles.detailFieldLabel}>TÊN VĂN BẢN</label>
+            <label htmlFor="phvb-detail-info-ten-van-ban" className={styles.detailFieldLabel}>TÊN VĂN BẢN <span className={styles.required}>*</span></label>
             <input
               id="phvb-detail-info-ten-van-ban"
               type="text"
@@ -145,7 +166,7 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
 
         {isEditing ? (
           <div className={styles.detailField}>
-            <label htmlFor="phvb-detail-info-folder" className={styles.detailFieldLabel}>THƯ MỤC</label>
+            <label htmlFor="phvb-detail-info-folder" className={styles.detailFieldLabel}>THƯ MỤC <span className={styles.required}>*</span></label>
             <div className={styles.folderInputWrapper}>
               <div className={styles.folderInputLeft}>
                 <FolderAccentIcon />
@@ -171,7 +192,7 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
 
         {isEditing ? (
           <div className={styles.detailField}>
-            <label htmlFor="phvb-detail-info-hieu-luc-tu" className={styles.detailFieldLabel}>NGÀY HIỆU LỰC</label>
+            <label htmlFor="phvb-detail-info-hieu-luc-tu" className={styles.detailFieldLabel}>NGÀY HIỆU LỰC <span className={styles.required}>*</span></label>
             <input
               id="phvb-detail-info-hieu-luc-tu"
               type="date"
@@ -221,7 +242,9 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
       </div>
 
       <section className={styles.detailInfoSummaryBlock} aria-label="Tóm tắt nội dung">
-        <span className={styles.detailInfoSummaryTitle}>TÓM TẮT NỘI DUNG</span>
+        <span className={styles.detailInfoSummaryTitle}>
+          TÓM TẮT NỘI DUNG {isEditing ? <span className={styles.required}>*</span> : null}
+        </span>
         {isEditing ? (
           <textarea
             rows={3}
@@ -239,7 +262,9 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
       <section className={styles.detailInfoNoteCallout} aria-label="Ghi chú cho cấp TĐ / PD">
         <div className={styles.detailInfoNoteHeader}>
           <NotePinIcon className={styles.detailInfoNoteIcon} />
-          <span className={styles.detailInfoNoteTitle}>GHI CHÚ CHO CẤP TĐ / PD</span>
+          <span className={styles.detailInfoNoteTitle}>
+            GHI CHÚ CHO CẤP TĐ / PD {isEditing && formRules.requireGhiChuThamDinh ? <span className={styles.required}>*</span> : null}
+          </span>
         </div>
         {isEditing ? (
           <textarea

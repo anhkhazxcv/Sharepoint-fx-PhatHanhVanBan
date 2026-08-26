@@ -13,6 +13,7 @@ import {
 } from '../utils/PhvbMagSla.utils';
 import {
   collectAttachmentRemovalIds,
+  findDuplicateAttachmentGroupFileName,
   getDmvlFormRules,
   getRequestTypeFormRules,
   getRevokeExcludedFormFields,
@@ -377,11 +378,48 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     }
   };
 
+  const getOtherAttachmentGroupNames = (field: 'taiLieuFiles' | 'bieuMauFiles'): string[] => {
+    return field === 'taiLieuFiles'
+      ? [...formValues.bieuMauFiles.map(file => file.name), ...existingBieuMau.map(item => item.name)]
+      : [...formValues.taiLieuFiles.map(file => file.name), ...existingTaiLieu.map(item => item.name)];
+  };
+
+  const rejectCrossGroupDuplicateFiles = (
+    field: 'taiLieuFiles' | 'bieuMauFiles',
+    incomingFiles: FileList | File[]
+  ): boolean => {
+    const incoming = Array.prototype.slice.call(incomingFiles) as File[];
+    const duplicateName = findDuplicateAttachmentGroupFileName(
+      getOtherAttachmentGroupNames(field),
+      incoming.map(file => file.name)
+    );
+
+    if (duplicateName) {
+      const otherGroupLabel = field === 'taiLieuFiles' ? 'Biểu mẫu đính kèm' : 'Tài liệu soạn thảo';
+      setSubmitError(`Tên file "${duplicateName}" đã tồn tại ở nhóm ${otherGroupLabel}. Vui lòng đổi tên file hoặc chọn file khác.`);
+      return true;
+    }
+
+    return false;
+  };
+
+  const getSubmitCrossGroupDuplicateFileName = (): string | undefined => {
+    const taiLieuNames = [...formValues.taiLieuFiles.map(file => file.name), ...existingTaiLieu.map(item => item.name)];
+    const bieuMauNames = [...formValues.bieuMauFiles.map(file => file.name), ...existingBieuMau.map(item => item.name)];
+
+    return findDuplicateAttachmentGroupFileName(taiLieuNames, bieuMauNames);
+  };
+
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>,
     field: 'taiLieuFiles' | 'bieuMauFiles'
   ): void => {
     if (event.target.files && event.target.files.length > 0) {
+      if (rejectCrossGroupDuplicateFiles(field, event.target.files)) {
+        event.target.value = '';
+        return;
+      }
+
       const currentFiles = field === 'taiLieuFiles' ? formValues.taiLieuFiles : formValues.bieuMauFiles;
       updateField(field, appendFiles(currentFiles, event.target.files));
     }
@@ -402,6 +440,10 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     }
 
     if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      if (rejectCrossGroupDuplicateFiles(field, event.dataTransfer.files)) {
+        return;
+      }
+
       const currentFiles = field === 'taiLieuFiles' ? formValues.taiLieuFiles : formValues.bieuMauFiles;
       updateField(field, appendFiles(currentFiles, event.dataTransfer.files));
     }
@@ -594,6 +636,12 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
       return;
     }
 
+    const dmvlDuplicateFileName = getSubmitCrossGroupDuplicateFileName();
+    if (dmvlDuplicateFileName) {
+      setSubmitError(`Tên file "${dmvlDuplicateFileName}" bị trùng giữa Tài liệu soạn thảo và Biểu mẫu đính kèm. Vui lòng đổi tên hoặc xóa bớt.`);
+      return;
+    }
+
     if (requiresTaiLieuAttachments && !hasTaiLieuAttachments) {
       setSubmitError('Vui lòng đính kèm ít nhất một tài liệu soạn thảo trước khi ban hành.');
       return;
@@ -620,6 +668,12 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     setSubmitError(undefined);
 
     if (!validateIssuanceFolder()) {
+      return;
+    }
+
+    const duplicateFileName = getSubmitCrossGroupDuplicateFileName();
+    if (duplicateFileName) {
+      setSubmitError(`Tên file "${duplicateFileName}" bị trùng giữa Tài liệu soạn thảo và Biểu mẫu đính kèm. Vui lòng đổi tên hoặc xóa bớt.`);
       return;
     }
 

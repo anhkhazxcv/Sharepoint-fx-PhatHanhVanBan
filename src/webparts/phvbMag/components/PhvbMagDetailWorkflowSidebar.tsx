@@ -1,11 +1,13 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
+import type { MSGraphClientFactory } from '@microsoft/sp-http';
 import type { IAllUserWorkflowItem, IVanBanItem, IWorkflowParticipantItem } from '../models/PhvbMag.models';
 import type { WorkflowActionKey } from '../utils/PhvbMagWorkflowPermission.utils';
 import {
   buildWorkflowTimelineSteps,
   findCurrentWorkflowStepIndex
 } from '../utils/PhvbMagWorkflowTimeline.utils';
+import { usePhvbUserPhotosByEmail } from '../hooks/usePhvbUserPhotosByEmail';
 import { RemindDeadlineIcon, WorkflowParticipantIcon } from './PhvbMagIcons';
 import { PhvbMagDetailWorkflowStepCard } from './PhvbMagDetailWorkflowStepCard';
 import { PhvbMagWorkflowActionDialog } from './PhvbMagWorkflowActionDialog';
@@ -13,6 +15,7 @@ import { PhvbMagSidebarAccordion } from './PhvbMagSidebarAccordion';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagDetailWorkflowSidebarProps {
+  msGraphClientFactory: MSGraphClientFactory;
   release: IVanBanItem;
   workflowParticipants: IWorkflowParticipantItem[];
   canOpenParticipantModal?: boolean;
@@ -24,6 +27,7 @@ interface IPhvbMagDetailWorkflowSidebarProps {
   onOpenRemindDeadline?: () => void;
   layout?: 'sidebar' | 'tab';
   approveLabel?: string;
+  rejectLabel?: string;
   pendingParticipants?: IAllUserWorkflowItem[];
   canRejectAtActiveStage?: boolean;
   canActOnBehalfOfParticipant?: boolean;
@@ -41,6 +45,7 @@ function WorkflowPanelContent(props: {
   allSteps: ReturnType<typeof buildWorkflowTimelineSteps>;
   currentStepIndex: number;
   workflowParticipants: IWorkflowParticipantItem[];
+  photosByEmail: Record<string, string | undefined>;
   onBehalfParticipantsById: Map<number, IAllUserWorkflowItem>;
   canRejectOnBehalf: boolean;
   isOnBehalfBusy: boolean;
@@ -51,6 +56,7 @@ function WorkflowPanelContent(props: {
     allSteps,
     currentStepIndex,
     workflowParticipants,
+    photosByEmail,
     onBehalfParticipantsById,
     canRejectOnBehalf,
     isOnBehalfBusy,
@@ -68,6 +74,7 @@ function WorkflowPanelContent(props: {
             <PhvbMagDetailWorkflowStepCard
               key={step.id}
               step={step}
+              photoUrl={step.email ? photosByEmail[step.email.trim().toLowerCase()] : undefined}
               isCurrent={step.statusTone === 'active' || stepIndex === currentStepIndex}
               onBehalfParticipant={
                 step.participantId !== undefined ? onBehalfParticipantsById.get(step.participantId) : undefined
@@ -92,6 +99,7 @@ function WorkflowPanelContent(props: {
 
 export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSidebarProps): React.ReactElement {
   const {
+    msGraphClientFactory,
     release,
     workflowParticipants,
     canOpenParticipantModal,
@@ -103,6 +111,7 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
     onOpenRemindDeadline,
     layout = 'sidebar',
     approveLabel,
+    rejectLabel,
     pendingParticipants = [],
     canRejectAtActiveStage = false,
     canActOnBehalfOfParticipant = false,
@@ -120,6 +129,8 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
   );
 
   const currentStepIndex = findCurrentWorkflowStepIndex(allSteps);
+  const stepEmails = useMemo(() => allSteps.map(step => step.email), [allSteps]);
+  const photosByEmail = usePhvbUserPhotosByEmail({ msGraphClientFactory, emails: stepEmails });
   const showParticipantButton = Boolean(canOpenParticipantModal) && Boolean(onOpenParticipantModal);
   const showRemindButton = canRemindDeadline && Boolean(onOpenRemindDeadline);
   const showWorkflowActions = showRemindButton || showParticipantButton;
@@ -209,6 +220,7 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
       allSteps={allSteps}
       currentStepIndex={currentStepIndex}
       workflowParticipants={workflowParticipants}
+      photosByEmail={photosByEmail}
       onBehalfParticipantsById={onBehalfParticipantsById}
       canRejectOnBehalf={canRejectAtActiveStage}
       isOnBehalfBusy={isWorkflowActionProcessing}
@@ -221,7 +233,7 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
     <PhvbMagWorkflowActionDialog
       isOpen={isOnBehalfDialogOpen}
       action={onBehalfAction}
-      approveLabel={approveLabel}
+      approveLabel={onBehalfAction === 'reject' ? rejectLabel : approveLabel}
       isProcessing={isWorkflowActionProcessing}
       errorMessage={isOnBehalfDialogOpen ? workflowActionErrorMessage : undefined}
       onCancel={closeOnBehalfDialog}
@@ -234,15 +246,11 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
   if (layout === 'tab') {
     return (
       <div className={styles.detailWorkflowTabPanel}>
-        <div className={styles.detailWorkflowTabHeader}>
-          <div className={styles.detailWorkflowTabTitleRow}>
-            <h3 className={styles.detailWorkflowTabTitle}>Quy trình phê duyệt</h3>
-            {allSteps.length > 0 ? (
-              <span className={styles.detailWorkflowTabTitleSuffix}>{allSteps.length} bước</span>
-            ) : null}
+        {workflowActions ? (
+          <div className={styles.detailWorkflowTabHeader}>
+            {workflowActions}
           </div>
-          {workflowActions}
-        </div>
+        ) : null}
         {remindError}
         {onBehalfError}
         {panelContent}

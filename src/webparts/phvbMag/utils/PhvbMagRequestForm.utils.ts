@@ -23,7 +23,7 @@ const STANDARD_FORM_RULES: IRequestTypeFormRules = {
   showBieuMauDinhKem: true,
   showGhiChuThamDinh: true,
   requireTaiLieuSoanThao: true,
-  requireNguoiGopY: false,
+  requireNguoiGopY: true,
   requireNguoiThamDinh: true,
   requireGhiChuThamDinh: true,
   includeGopYThamDinhWorkflow: true,
@@ -123,6 +123,25 @@ export function collectAttachmentRemovalIds(
   });
 
   return mergedIds;
+}
+
+export function findDuplicateAttachmentGroupFileName(
+  otherGroupNames: ReadonlyArray<string>,
+  candidateNames: ReadonlyArray<string>
+): string | undefined {
+  const normalizedOtherNames = new Set(
+    otherGroupNames.map(name => name.trim().toLowerCase())
+  );
+
+  for (let index = 0; index < candidateNames.length; index += 1) {
+    const normalized = candidateNames[index].trim().toLowerCase();
+
+    if (normalizedOtherNames.has(normalized)) {
+      return candidateNames[index];
+    }
+  }
+
+  return undefined;
 }
 
 export function sanitizeRequestInputForSave(input: ICreateRequestInput): ICreateRequestInput {

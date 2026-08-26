@@ -37,6 +37,7 @@ interface IIssuancePublishResult {
   siteUrl: string;
   mainFileServerRelativePath: string;
   folderServerRelativePath: string;
+  folderListItemId: number;
   expiredFolderServerRelativePath?: string;
 }
 
@@ -527,7 +528,7 @@ export class PhvbIssuancePublishService {
     folderPath: string,
     metadataValues: IListFormValue[],
     auditLogger: BanHanhPublishAuditLogger
-  ): Promise<void> {
+  ): Promise<number> {
     const folderListItemId = await this.resolveFolderListItemId(siteUrl, context, folderPath);
 
     await this.stampListItemMetadata(
@@ -542,6 +543,8 @@ export class PhvbIssuancePublishService {
         isFolder: true
       }
     );
+
+    return folderListItemId;
   }
 
   private async listFilesRecursive(
@@ -813,6 +816,11 @@ export class PhvbIssuancePublishService {
         expiredFolderPath,
         expiredEndDateFieldValue
       );
+
+      // Khoá hoàn toàn quyền xem thư mục Expired: break kế thừa, không cấp lại quyền cho ai —
+      // chỉ Site Collection Administrator (luôn bỏ qua permission item-level) mới xem được.
+      const expiredFolderListItemId = await this.resolveFolderListItemId(siteUrl, context, expiredFolderPath);
+      await this.breakItemRoleInheritance(siteUrl, context, ISSUANCE_LIBRARY_TITLE, expiredFolderListItemId);
 
       await auditLogger.logArchiveOldFolder(
         {
@@ -1261,7 +1269,7 @@ export class PhvbIssuancePublishService {
           );
         }
 
-        await this.stampDocumentFolderMetadata(
+        const folderListItemId = await this.stampDocumentFolderMetadata(
           siteUrl,
           context,
           targetFolderPath,
@@ -1282,6 +1290,7 @@ export class PhvbIssuancePublishService {
           siteUrl,
           mainFileServerRelativePath,
           folderServerRelativePath: targetFolderPath,
+          folderListItemId,
           expiredFolderServerRelativePath
         };
       } catch (error) {

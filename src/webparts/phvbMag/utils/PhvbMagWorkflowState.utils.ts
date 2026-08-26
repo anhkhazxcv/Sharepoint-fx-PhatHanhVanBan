@@ -1,4 +1,4 @@
-import { REQUEST_STATUS } from '../config/PhvbMag.configuration';
+import { REQUEST_STATUS, TRANG_THAI_THUC_HIEN, TrangThaiThucHien } from '../config/PhvbMag.configuration';
 import type { IAllUserWorkflowItem, IVanBanItem, WorkflowStage } from '../models/PhvbMag.models';
 import { isIssueOrAdjustRequest, isRevokeRelease } from './PhvbMagCapSo.utils';
 import { isWorkflowParticipantConfirmed } from './PhvbMagWorkflowTimeline.utils';
@@ -172,16 +172,27 @@ export function resolveApproveActionLabel(stage: WorkflowDocumentStage): string 
   }
 }
 
-export function resolveHistoryStatusForApprove(stage: WorkflowStage): string {
+export function resolveHistoryStatusForApprove(stage: WorkflowStage): TrangThaiThucHien {
   switch (stage) {
     case 'gopy':
-      return 'Xác nhận góp ý';
+      return TRANG_THAI_THUC_HIEN.XAC_NHAN_GOP_Y;
     case 'thamdinh':
-      return 'Xác nhận thẩm định';
+      return TRANG_THAI_THUC_HIEN.XAC_NHAN_THAM_DINH;
     case 'pheduyet':
-      return 'Phê duyệt';
-    default:
-      return 'Phê duyệt';
+      return TRANG_THAI_THUC_HIEN.XAC_NHAN_PHE_DUYET;
+  }
+}
+
+export function resolveHistoryStatusForReject(stage: WorkflowStage): TrangThaiThucHien {
+  switch (stage) {
+    // 'gopy' không có action từ chối trong quyền hạn (canRejectAtStage chỉ true cho
+    // thamdinh/pheduyet) — nhánh này về lý thuyết không bao giờ chạy, giữ fallback
+    // hợp lệ (thay vì giá trị 'Từ chối' cũ không còn nằm trong 23 Choice value).
+    case 'gopy':
+    case 'thamdinh':
+      return TRANG_THAI_THUC_HIEN.TU_CHOI_THAM_DINH;
+    case 'pheduyet':
+      return TRANG_THAI_THUC_HIEN.TU_CHOI_PHE_DUYET;
   }
 }
 
@@ -197,6 +208,8 @@ export function isTerminalWorkflowStatus(statusApproved?: string): boolean {
     status === REQUEST_STATUS.CHO_ADMIN_THU_HOI ||
     status === REQUEST_STATUS.CHO_SUPER_ADMIN_THU_HOI ||
     status === REQUEST_STATUS.TU_CHOI ||
+    status === REQUEST_STATUS.TU_CHOI_THAM_DINH ||
+    status === REQUEST_STATUS.TU_CHOI_PHE_DUYET ||
     status === REQUEST_STATUS.BAN_NHAP
   );
 }

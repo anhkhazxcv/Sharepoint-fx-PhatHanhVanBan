@@ -53,13 +53,15 @@ Trong quá trình góp ý, thẩm định hoặc phê duyệt, yêu cầu có th
 
 ```mermaid
 flowchart TD
-  Workflow[Đang góp ý / thẩm định / phê duyệt]
-  Workflow -->|Từ chối| TuChoi[Từ chối - kết thúc]
-  Workflow -.->|Yêu cầu chỉnh sửa ghi lịch sử| Workflow
+  ThamDinh[Đang thẩm định]
+  PheDuyet[Đang phê duyệt]
+  ThamDinh -->|Từ chối| TuChoiThamDinh[Từ chối thẩm định - kết thúc]
+  PheDuyet -->|Từ chối| TuChoiPheDuyet[Từ chối phê duyệt - kết thúc]
+  Workflow[Đang góp ý / thẩm định / phê duyệt] -.->|Yêu cầu chỉnh sửa ghi lịch sử| Workflow
   ChoBanHanh[Chờ ban hành] -->|Trả về Admin| DaCapSo[Đã cấp số]
 ```
 
-- **Từ chối:** trạng thái yêu cầu chuyển sang **Từ chối** — yêu cầu dừng lại, không tiếp tục xử lý.
+- **Từ chối:** chỉ khả dụng ở giai đoạn **Đang thẩm định** hoặc **Đang phê duyệt** (giai đoạn Đang góp ý không có hành động từ chối). Trạng thái yêu cầu chuyển tương ứng sang **Từ chối thẩm định** hoặc **Từ chối phê duyệt** — yêu cầu dừng lại, không tiếp tục xử lý. Trạng thái **Từ chối** (không phân biệt giai đoạn) chỉ còn tồn tại trên các yêu cầu đã bị từ chối trước khi có 2 trạng thái riêng này.
 - **Yêu cầu chỉnh sửa:** đây là **hành động ghi lịch sử** (activity log), **không** đổi trạng thái yêu cầu. Trạng thái vẫn giữ nguyên (Đang góp ý / Đang thẩm định / Đang phê duyệt); người tạo cập nhật nội dung trong cùng trạng thái hiện tại.
 - **Trả về Admin:** Super Admin trả yêu cầu về bước Đã cấp số để Admin chỉnh sửa nội dung ban hành.
 

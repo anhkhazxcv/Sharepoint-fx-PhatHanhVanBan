@@ -199,7 +199,7 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
             title="Bạn mới dùng hệ thống? Xem hướng dẫn & biểu mẫu"
             icon={<SidebarHelpIcon className={styles.homeGuideIcon} />}
             action={(
-              <>
+              <div className={styles.homeGuideActions}>
                 <button
                   type="button"
                   className={styles.homeGuideAction}
@@ -215,7 +215,7 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
                 >
                   <CloseIcon />
                 </button>
-              </>
+              </div>
             )}
           >
             <p className={styles.homeGuideSub}>Hiểu rõ quy trình · Chọn đúng loại văn bản · Dùng đúng cách</p>
@@ -307,7 +307,7 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
                 const publishDate = formatRecentPublishDate(section.folderNgayPhatHanh)
                   || formatRecentPublishDate(section.documents[0]?.ngayPhatHanh)
                   || 'Chưa xác định';
-                const fileCount = section.documents.length + section.formDocuments.length;
+                const fileCount = section.documents.length;
 
                 return (
                   <button

@@ -31,7 +31,6 @@ export const RECENT_VIEWS_TOP = 50;
 export const RECENT_VIEWS_HYDRATE_CHUNK_SIZE = 25;
 export const COMMENT_ATTACHMENT_CHUNK_SIZE = 8;
 export const TAB_COUNTS_CACHE_STALE_MS = 60 * 1000;
-export const COMMENT_HISTORY_STATUS = 'Bình luận';
 export const ALL_USER_GOPY_LIST_TITLE = 'AllUser_GopY';
 export const ALL_USER_THAMDINH_LIST_TITLE = 'AllUser_ThamDinh';
 export const ALL_USER_PHEDUYET_LIST_TITLE = 'AllUser_PheDuyet';
@@ -56,7 +55,9 @@ export const REQUEST_STATUS = {
   CHO_SUPER_ADMIN_THU_HOI: 'Chờ supper admin thu hồi',
   THU_HOI: 'Thu hồi',
   BAN_NHAP: 'Bản nháp',
-  TU_CHOI: 'Từ chối'
+  TU_CHOI: 'Từ chối',
+  TU_CHOI_THAM_DINH: 'Từ chối thẩm định',
+  TU_CHOI_PHE_DUYET: 'Từ chối phê duyệt'
 } as const;
 
 export type RequestStatus = typeof REQUEST_STATUS[keyof typeof REQUEST_STATUS];
@@ -103,45 +104,84 @@ export const BAN_HANH_NOTIFY_DEFAULTS = {
   PRIORITY_FOLDER: '2. Quản Trị Theo Chức Năng'
 } as const;
 
-export const EXECUTION_HISTORY_STATUS = {
+/**
+ * Nguồn sự thật duy nhất cho cột `TrangThai_ThucHien` (list LichSuThucHien).
+ * Đúng 23 giá trị — khớp 1-1 với Choice values trên SharePoint List.
+ *
+ * Ops checklist (site owner, list `LichSuThucHien`) — web part không tự sửa schema:
+ * A1. `TrangThai_ThucHien`: Choice, Required, Allow Fill-in = No, đúng 23 giá trị dưới đây.
+ * A2. `NoiDung`: Multiple lines of text, Plain text, Append Changes = No, Required = No.
+ * A5. Versioning: Create a version each time you edit an item = Yes.
+ *
+ * Không thêm/sửa giá trị ở đây mà không đồng bộ Choice trên list.
+ */
+export const TRANG_THAI_THUC_HIEN = {
   TAO_BAN_NHAP: 'Tạo bản nháp',
   TAO_YEU_CAU: 'Tạo yêu cầu',
-  XAC_NHAN_GOP_Y: 'Xác nhận góp ý',
-  DONG_Y_GOP_Y: 'Đồng ý góp ý',
-  XAC_NHAN_THAM_DINH: 'Xác nhận thẩm định',
-  PHE_DUYET: 'Phê duyệt',
-  TU_CHOI: 'Từ chối',
-  NHAC_HAN: 'Nhắc hạn',
   CAP_NHAT_BAN_NHAP: 'Cập nhật bản nháp',
   CAP_NHAT_YEU_CAU: 'Cập nhật yêu cầu',
-  CAP_NHAT_NGUOI_THAM_GIA: 'Cập nhật người tham gia',
-  THEM_TAI_LIEU: 'Thêm tài liệu',
-  XOA_TAI_LIEU: 'Xóa tài liệu',
+  SUA_THONG_TIN: 'Sửa thông tin yêu cầu',
+  XAC_NHAN_GOP_Y: 'Xác nhận góp ý',
+  XAC_NHAN_THAM_DINH: 'Xác nhận thẩm định',
+  XAC_NHAN_PHE_DUYET: 'Xác nhận phê duyệt',
+  TU_CHOI_THAM_DINH: 'Từ chối thẩm định',
+  TU_CHOI_PHE_DUYET: 'Từ chối phê duyệt',
   CHUYEN_THAM_DINH: 'Chuyển thẩm định',
   CHUYEN_PHE_DUYET: 'Chuyển phê duyệt',
-  CHUYEN_CAP_SO: 'Chuyển cấp số'
+  CHUYEN_CAP_SO: 'Chuyển cấp số',
+  CAP_SO: 'Cấp số văn bản',
+  CHUAN_BI_BAN_HANH: 'Chuẩn bị ban hành',
+  BAN_HANH: 'Ban hành văn bản',
+  SUA_THONG_BAO: 'Sửa thông báo ban hành',
+  TRA_VE_BAN_HANH: 'Trả về ban hành',
+  CAP_NHAT_THAM_GIA: 'Cập nhật người tham gia',
+  NHAC_HAN: 'Nhắc hạn',
+  THEM_TAI_LIEU: 'Thêm tài liệu',
+  XOA_TAI_LIEU: 'Xoá tài liệu',
+  BINH_LUAN: 'Bình luận'
 } as const;
 
-export type ExecutionHistoryStatus = typeof EXECUTION_HISTORY_STATUS[keyof typeof EXECUTION_HISTORY_STATUS];
+export type TrangThaiThucHien = typeof TRANG_THAI_THUC_HIEN[keyof typeof TRANG_THAI_THUC_HIEN];
 
-export const EXECUTION_HISTORY_STATUS_LIST: ReadonlyArray<ExecutionHistoryStatus> = [
-  EXECUTION_HISTORY_STATUS.TAO_BAN_NHAP,
-  EXECUTION_HISTORY_STATUS.TAO_YEU_CAU,
-  EXECUTION_HISTORY_STATUS.XAC_NHAN_GOP_Y,
-  EXECUTION_HISTORY_STATUS.DONG_Y_GOP_Y,
-  EXECUTION_HISTORY_STATUS.XAC_NHAN_THAM_DINH,
-  EXECUTION_HISTORY_STATUS.PHE_DUYET,
-  EXECUTION_HISTORY_STATUS.TU_CHOI,
-  EXECUTION_HISTORY_STATUS.NHAC_HAN,
-  EXECUTION_HISTORY_STATUS.CAP_NHAT_BAN_NHAP,
-  EXECUTION_HISTORY_STATUS.CAP_NHAT_YEU_CAU,
-  EXECUTION_HISTORY_STATUS.CAP_NHAT_NGUOI_THAM_GIA,
-  EXECUTION_HISTORY_STATUS.THEM_TAI_LIEU,
-  EXECUTION_HISTORY_STATUS.XOA_TAI_LIEU,
-  EXECUTION_HISTORY_STATUS.CHUYEN_THAM_DINH,
-  EXECUTION_HISTORY_STATUS.CHUYEN_PHE_DUYET,
-  EXECUTION_HISTORY_STATUS.CHUYEN_CAP_SO
+export const TRANG_THAI_THUC_HIEN_VALUES: ReadonlyArray<TrangThaiThucHien> = [
+  TRANG_THAI_THUC_HIEN.TAO_BAN_NHAP,
+  TRANG_THAI_THUC_HIEN.TAO_YEU_CAU,
+  TRANG_THAI_THUC_HIEN.CAP_NHAT_BAN_NHAP,
+  TRANG_THAI_THUC_HIEN.CAP_NHAT_YEU_CAU,
+  TRANG_THAI_THUC_HIEN.SUA_THONG_TIN,
+  TRANG_THAI_THUC_HIEN.XAC_NHAN_GOP_Y,
+  TRANG_THAI_THUC_HIEN.XAC_NHAN_THAM_DINH,
+  TRANG_THAI_THUC_HIEN.XAC_NHAN_PHE_DUYET,
+  TRANG_THAI_THUC_HIEN.TU_CHOI_THAM_DINH,
+  TRANG_THAI_THUC_HIEN.TU_CHOI_PHE_DUYET,
+  TRANG_THAI_THUC_HIEN.CHUYEN_THAM_DINH,
+  TRANG_THAI_THUC_HIEN.CHUYEN_PHE_DUYET,
+  TRANG_THAI_THUC_HIEN.CHUYEN_CAP_SO,
+  TRANG_THAI_THUC_HIEN.CAP_SO,
+  TRANG_THAI_THUC_HIEN.CHUAN_BI_BAN_HANH,
+  TRANG_THAI_THUC_HIEN.BAN_HANH,
+  TRANG_THAI_THUC_HIEN.SUA_THONG_BAO,
+  TRANG_THAI_THUC_HIEN.TRA_VE_BAN_HANH,
+  TRANG_THAI_THUC_HIEN.CAP_NHAT_THAM_GIA,
+  TRANG_THAI_THUC_HIEN.NHAC_HAN,
+  TRANG_THAI_THUC_HIEN.THEM_TAI_LIEU,
+  TRANG_THAI_THUC_HIEN.XOA_TAI_LIEU,
+  TRANG_THAI_THUC_HIEN.BINH_LUAN
 ];
+
+/**
+ * Giá trị cũ còn trên list (không backfill). Chỉ dùng để đọc/style UI — không ghi.
+ */
+export const LEGACY_TRANG_THAI_THUC_HIEN = {
+  CAP_SO: 'Cấp số',
+  BAN_HANH: 'Ban hành',
+  DONG_Y_GOP_Y: 'Đồng ý góp ý',
+  PHE_DUYET: 'Phê duyệt',
+  TU_CHOI: 'Từ chối',
+  CAP_NHAT_NGUOI_THAM_GIA: 'Cập nhật người tham gia',
+  SUA_THONG_BAO: 'Sửa nội dung thông báo ban hành',
+  TRA_VE_BAN_HANH: 'Trả về admin ban hành'
+} as const;
 
 export const WORKFLOW_PARTICIPANT_STATUS = {
   CHUA_XAC_NHAN: 'Chưa xác nhận',
@@ -298,6 +338,8 @@ export function getWorkflowStepFromStatus(statusApproved?: string): number {
     case REQUEST_STATUS.BAN_NHAP:
       return 1;
     case REQUEST_STATUS.TU_CHOI:
+    case REQUEST_STATUS.TU_CHOI_THAM_DINH:
+    case REQUEST_STATUS.TU_CHOI_PHE_DUYET:
       return 1;
     case REQUEST_STATUS.DANG_GOP_Y:
       return 2;

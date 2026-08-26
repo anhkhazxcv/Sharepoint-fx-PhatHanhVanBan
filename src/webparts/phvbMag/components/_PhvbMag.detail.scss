@@ -21,7 +21,7 @@
   display: flex;
   flex-direction: column;
   background-color: #FFFFFF;
-  border-radius: 14px;
+  border-radius: $radius-card;
   box-shadow: $shadow-lg;
   overflow: hidden;
   animation: folderPickerDialogIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
@@ -76,7 +76,7 @@
   padding: 8px 4px;
   background-color: #FFFFFF;
   border: 1px solid #E8DDD1;
-  border-radius: 10px;
+  border-radius: $radius-card;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -200,7 +200,7 @@
 
 .folderDocCard {
   border: 1px solid #E8DDD1;
-  border-radius: 10px;
+  border-radius: $radius-card;
   padding: 12px 14px;
   background-color: #FFFFFF;
   box-shadow: $shadow-sm;
@@ -345,7 +345,7 @@
 .confirmDialogContent {
   width: min(460px, calc(100vw - 40px));
   background-color: #FFFFFF;
-  border-radius: 12px;
+  border-radius: $radius-card;
   padding: 0;
   overflow: hidden;
   box-shadow: $shadow-lg;
@@ -361,7 +361,7 @@
   .formInput {
     padding: 8px 11px;
     border: 1.5px solid #E8E2D9;
-    border-radius: 8px;
+    border-radius: $radius-control;
     @include ty-input;
     outline: none;
     background-color: #FFFFFF;
@@ -499,7 +499,7 @@
   display: flex;
   flex-direction: column;
   background-color: #FFFFFF;
-  border-radius: 12px;
+  border-radius: $radius-card;
   overflow: hidden;
   box-shadow: $shadow-lg;
   animation: scaleUp 0.2s ease;
@@ -507,7 +507,7 @@
   .formInput {
     padding: 8px 11px;
     border: 1.5px solid #E8E2D9;
-    border-radius: 7px;
+    border-radius: $radius-control;
     @include ty-input;
     outline: none;
     background-color: #FFFFFF;
@@ -662,7 +662,7 @@
 .banHanhNotifyCancelBtn {
   background-color: #FFFFFF;
   border: 1.5px solid $color-error;
-  border-radius: 7px;
+  border-radius: $radius-control;
   padding: 7px 16px;
   color: $color-error;
   font-weight: 700;
@@ -681,7 +681,7 @@
 .banHanhNotifyReturnBtn {
   background-color: #FFFFFF;
   border: 1.5px solid #B45309;
-  border-radius: 7px;
+  border-radius: $radius-control;
   padding: 7px 16px;
   color: #B45309;
   font-weight: 700;
@@ -700,7 +700,7 @@
 .banHanhNotifySendBtn {
   background-color: $primary-color;
   border: none;
-  border-radius: 7px;
+  border-radius: $radius-control;
   padding: 7px 18px;
   color: #FFFFFF;
   font-weight: 700;
@@ -722,7 +722,7 @@
   display: flex;
   flex-direction: column;
   background-color: #FFFFFF;
-  border-radius: 12px;
+  border-radius: $radius-card;
   overflow: hidden;
   box-shadow: $shadow-lg;
   animation: scaleUp 0.2s ease;
@@ -766,7 +766,7 @@
 
 .remindDeadlineToolbarBtn {
   border: 1px solid #D9CFC4;
-  border-radius: 7px;
+  border-radius: $radius-control;
   padding: 5px 12px;
   background-color: #FFFFFF;
   color: $text-ink;
@@ -804,7 +804,7 @@
   width: 100%;
   padding: 8px 11px;
   border: 1.5px solid #E8E2D9;
-  border-radius: 7px;
+  border-radius: $radius-control;
   @include ty-input;
   outline: none;
   background-color: #FFFFFF;
@@ -857,7 +857,7 @@
   gap: 12px;
   padding: 10px 12px;
   border: 1.5px solid #EFE5DA;
-  border-radius: 10px;
+  border-radius: $radius-card;
   background-color: #FFFFFF;
   cursor: pointer;
   transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
@@ -948,7 +948,7 @@
 .remindDeadlineCancelBtn {
   background-color: #FFFFFF;
   border: 1.5px solid $color-error;
-  border-radius: 7px;
+  border-radius: $radius-control;
   padding: 7px 16px;
   color: $color-error;
   font-weight: 700;
@@ -967,7 +967,7 @@
 .remindDeadlineSendBtn {
   background-color: $primary-color;
   border: none;
-  border-radius: 7px;
+  border-radius: $radius-control;
   padding: 7px 18px;
   color: #FFFFFF;
   font-weight: 700;
@@ -989,7 +989,7 @@
   display: flex;
   flex-direction: column;
   background-color: #FFFFFF;
-  border-radius: 12px;
+  border-radius: $radius-card;
   padding: 0;
   overflow: hidden;
   box-shadow: $shadow-lg;
@@ -1002,7 +1002,7 @@
   display: flex;
   flex-direction: column;
   background-color: #FFFFFF;
-  border-radius: 16px;
+  border-radius: $radius-card;
   box-shadow: $shadow-lg;
   overflow: hidden;
   animation: scaleUp 0.2s ease;
@@ -1021,7 +1021,7 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: $radius-card;
   background-color: rgba(255, 255, 255, 0.16);
   color: #FFFFFF;
   flex-shrink: 0;
@@ -1069,7 +1069,7 @@
   align-items: center;
   padding: 14px 16px;
   border: 1px solid #E7DACB;
-  border-radius: 12px;
+  border-radius: $radius-card;
   background-color: #FFFFFF;
 }
 
@@ -1079,7 +1079,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: $radius-card;
   background-color: $bg-folders;
   flex-shrink: 0;
 }
@@ -1138,7 +1138,7 @@
   min-height: 38px;
   padding: 0 18px;
   border: 1px solid #E2D6C8;
-  border-radius: 10px;
+  border-radius: $radius-control;
   background-color: #FFFFFF;
   color: $text-ink2;
   font-size: $font-size-base2;
@@ -1262,7 +1262,7 @@
   gap: 12px;
   padding: 10px 12px;
   border: 1px solid rgba(139, 90, 57, 0.12);
-  border-radius: 10px;
+  border-radius: $radius-card;
   background-color: #FAF8F6;
 
   .btnTrash {
@@ -1620,9 +1620,15 @@ $detail-page-gap: 18px;
 }
 
 .detailActionEdit {
-  border: 1px solid rgba($color-info, 0.35);
-  background-color: $color-info-bg;
-  color: $color-info;
+  border: 1px solid #E2D6C8;
+  background-color: #FFFFFF;
+  color: $text-ink2;
+
+  &:hover {
+    background-color: #FBF8F4;
+    border-color: rgba(123, 76, 44, 0.28);
+    color: $primary-color;
+  }
 }
 
 .detailActionReject {
@@ -1643,7 +1649,7 @@ $detail-page-gap: 18px;
   padding: $space-3 $space-3;
   background-color: $surface-card;
   border: 1px solid $border-subtle;
-  border-radius: $radius-lg;
+  border-radius: $radius-card;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -1790,7 +1796,7 @@ $detail-page-gap: 18px;
   flex: 1 1 auto;
   background-color: #FFFFFF;
   border: 1px solid #E7DACB;
-  border-radius: 16px;
+  border-radius: $radius-card;
   overflow: hidden;
   min-height: 0;
   display: flex;
@@ -1825,6 +1831,19 @@ $detail-page-gap: 18px;
   border-bottom-color: $primary-color;
 }
 
+.detailTabCount {
+  display: inline-block;
+  margin-left: 6px;
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: $radius-pill;
+  background-color: $primary-color;
+  color: #FFFFFF;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-extrabold;
+  text-align: center;
+}
+
 .detailTabPanel {
   flex: 1 1 auto;
   min-height: 0;
@@ -1850,7 +1869,7 @@ $detail-page-gap: 18px;
   .formTextAreaSmall {
     padding: 8px 11px;
     border: 1.5px solid #E8E2D9;
-    border-radius: 7px;
+    border-radius: $radius-control;
     @include ty-input;
     outline: none;
     background-color: #FFFFFF;
@@ -1956,6 +1975,11 @@ $detail-page-gap: 18px;
   letter-spacing: $letter-spacing-label;
   color: $primary-color;
   text-transform: uppercase;
+
+  .required {
+    color: $color-error;
+    margin-left: 2px;
+  }
 }
 
 .detailInfoNoteBody {
@@ -1981,6 +2005,11 @@ $detail-page-gap: 18px;
   letter-spacing: $letter-spacing-label;
   color: $primary-color;
   text-transform: uppercase;
+
+  .required {
+    color: $color-error;
+    margin-left: 2px;
+  }
 }
 
 .detailInfoSummaryBody {
@@ -2005,6 +2034,11 @@ $detail-page-gap: 18px;
   letter-spacing: $letter-spacing-label;
   color: $text-ink3;
   text-transform: uppercase;
+
+  .required {
+    color: $color-error;
+    margin-left: 2px;
+  }
 }
 
 .detailFieldValue {
@@ -2066,7 +2100,7 @@ $detail-page-gap: 18px;
   border: 1px solid #D9D2C8;
   background: #fff;
   color: $text-ink2;
-  border-radius: 6px;
+  border-radius: $radius-control;
   padding: 6px 10px;
   font-size: $font-size-base;
   cursor: pointer;
@@ -2090,7 +2124,7 @@ $detail-page-gap: 18px;
   border: 1px solid #F5C2C0;
   background: #FFF5F5;
   color: $color-error;
-  border-radius: 6px;
+  border-radius: $radius-control;
   padding: 6px 10px;
   font-size: $font-size-base;
   cursor: pointer;
@@ -2120,6 +2154,7 @@ $detail-page-gap: 18px;
 
 .detailDocTable {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
 
   th,
@@ -2135,6 +2170,16 @@ $detail-page-gap: 18px;
     font-weight: $font-weight-bold;
     background-color: #FAFAF8;
   }
+}
+
+.detailDocNameCol {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailDocActionsCol {
+  width: 112px;
 }
 
 .detailDocActions {
@@ -2162,8 +2207,12 @@ $detail-page-gap: 18px;
 }
 
 .detailDocFolder {
+  width: 32%;
   color: $text-ink3;
   font-size: $font-size-md;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .detailDocLink {
@@ -2185,7 +2234,7 @@ $detail-page-gap: 18px;
 .detailHistoryItem {
   padding: $space-3 $space-4;
   border: 1px solid $border-subtle;
-  border-radius: $radius-sm;
+  border-radius: $radius-card;
   background-color: $bg-content;
   @include phvb-document-spine;
   padding-left: calc(#{$space-4} - #{$document-spine-width});
@@ -2194,9 +2243,39 @@ $detail-page-gap: 18px;
 .detailHistoryHeader {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   margin-bottom: 6px;
+}
+
+.detailHistoryAuthorName {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailHistoryAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #C89A72 0%, #8B5A39 100%);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: $font-weight-extrabold;
+  overflow: hidden;
+}
+
+.detailHistoryAvatarImage {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .detailHistoryDept {
@@ -2205,15 +2284,17 @@ $detail-page-gap: 18px;
 }
 
 .detailHistoryDate {
-  margin-left: auto;
   color: $text-ink3;
   font-size: $font-size-md;
 }
 
 .detailHistoryStatus {
   display: inline-flex;
+  flex-shrink: 0;
+  margin-left: auto;
   padding: 2px 8px;
-  border-radius: 20px;
+  border: 1px solid transparent;
+  border-radius: $radius-pill;
   font-size: $font-size-sm2;
   font-weight: $font-weight-bold;
 }
@@ -2246,6 +2327,48 @@ $detail-page-gap: 18px;
 .detailHistoryStatusArchived {
   background-color: $color-neutral-strong-bg;
   color: $color-neutral-strong;
+}
+
+.detailHistoryStatusBanNhap {
+  background-color: var(--st-ban-nhap-bg);
+  border-color: var(--st-ban-nhap-bd);
+  color: var(--st-ban-nhap-fg);
+}
+
+.detailHistoryStatusDangGopY {
+  background-color: var(--st-dang-gop-y-bg);
+  border-color: var(--st-dang-gop-y-bd);
+  color: var(--st-dang-gop-y-fg);
+}
+
+.detailHistoryStatusDangThamDinh {
+  background-color: var(--st-dang-tham-dinh-bg);
+  border-color: var(--st-dang-tham-dinh-bd);
+  color: var(--st-dang-tham-dinh-fg);
+}
+
+.detailHistoryStatusDangPheDuyet {
+  background-color: var(--st-dang-phe-duyet-bg);
+  border-color: var(--st-dang-phe-duyet-bd);
+  color: var(--st-dang-phe-duyet-fg);
+}
+
+.detailHistoryStatusChoCapSo {
+  background-color: var(--st-cho-cap-so-bg);
+  border-color: var(--st-cho-cap-so-bd);
+  color: var(--st-cho-cap-so-fg);
+}
+
+.detailHistoryStatusTuChoiThamDinh {
+  background-color: var(--st-tc-tham-dinh-bg);
+  border-color: var(--st-tc-tham-dinh-bd);
+  color: var(--st-tc-tham-dinh-fg);
+}
+
+.detailHistoryStatusTuChoiPheDuyet {
+  background-color: var(--st-tc-phe-duyet-bg);
+  border-color: var(--st-tc-phe-duyet-bd);
+  color: var(--st-tc-phe-duyet-fg);
 }
 
 .detailHistoryContent {
@@ -2330,7 +2453,7 @@ $detail-page-gap: 18px;
 .detailSidebarAccordion {
   background-color: $surface-card;
   border: 1px solid $border-subtle;
-  border-radius: $radius-lg;
+  border-radius: $radius-card;
   overflow: hidden;
   box-shadow: $shadow-card;
   flex-shrink: 0;
@@ -2415,7 +2538,7 @@ $detail-page-gap: 18px;
 .detailSidebarSection {
   background-color: #FFFFFF;
   border: 1px solid #E7DACB;
-  border-radius: 16px;
+  border-radius: $radius-card;
   padding: 16px;
 }
 
@@ -2447,28 +2570,6 @@ $detail-page-gap: 18px;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-}
-
-.detailWorkflowTabTitleRow {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-}
-
-.detailWorkflowTabTitle {
-  margin: 0;
-  font-size: $font-size-lg;
-  font-weight: $font-weight-extrabold;
-  color: $text-ink;
-}
-
-.detailWorkflowTabTitleSuffix {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-bold;
-  color: $text-ink3;
-  text-transform: uppercase;
-  letter-spacing: $letter-spacing-label;
 }
 
 .detailActivityFilterBar {
@@ -2520,7 +2621,7 @@ $detail-page-gap: 18px;
   gap: 10px 12px;
   align-items: center;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: $radius-card;
   border: 1px solid transparent;
 }
 
@@ -2546,9 +2647,11 @@ $detail-page-gap: 18px;
 }
 
 .detailWorkflowStepCardIcon {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .detailWorkflowStepCardIconDone {
@@ -2559,7 +2662,11 @@ $detail-page-gap: 18px;
   height: 32px;
   border-radius: 999px;
   background-color: #FFFFFF;
+  border: 2px solid $color-success;
   color: $color-success;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
+  overflow: hidden;
 }
 
 .detailWorkflowStepCardIconActive {
@@ -2570,9 +2677,11 @@ $detail-page-gap: 18px;
   height: 32px;
   border-radius: 999px;
   background-color: $primary-color;
+  border: 2px solid $primary-color;
   color: #FFFFFF;
   font-size: $font-size-sm;
   font-weight: $font-weight-extrabold;
+  overflow: hidden;
 }
 
 .detailWorkflowStepCardIconPending {
@@ -2583,10 +2692,11 @@ $detail-page-gap: 18px;
   height: 32px;
   border-radius: 999px;
   background-color: #FFFFFF;
-  border: 1px solid $border-subtle;
+  border: 2px solid $border-subtle;
   color: $text-muted;
   font-size: $font-size-sm;
   font-weight: $font-weight-bold;
+  overflow: hidden;
 }
 
 .detailWorkflowStepCardIconRejected {
@@ -2597,10 +2707,42 @@ $detail-page-gap: 18px;
   height: 32px;
   border-radius: 999px;
   background-color: #FFFFFF;
-  border: 1px solid rgba($color-error, 0.35);
+  border: 2px solid rgba($color-error, 0.6);
   color: $color-error;
   font-size: $font-size-sm;
   font-weight: $font-weight-extrabold;
+  overflow: hidden;
+}
+
+.detailWorkflowStepCardAvatarImage {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.detailWorkflowStepCardBadge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  box-shadow: 0 0 0 2px #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 0;
+}
+
+.detailWorkflowStepCardBadgeDone {
+  color: $color-success;
+}
+
+.detailWorkflowStepCardBadgeRejected {
+  color: $color-error;
 }
 
 .detailWorkflowStepCardMain {
@@ -2743,7 +2885,7 @@ $detail-page-gap: 18px;
     min-height: 72px;
     padding: 10px 12px;
     border: 1px solid #E7DACB;
-    border-radius: 10px;
+    border-radius: $radius-control;
     font-family: $font-family-base;
     font-size: $font-size-base;
     background-color: #FAFAF8;
@@ -2827,7 +2969,7 @@ $detail-page-gap: 18px;
   height: 28px;
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: $radius-control;
   background: transparent;
   color: #8B5A39;
   cursor: pointer;
@@ -2895,7 +3037,7 @@ $detail-page-gap: 18px;
 .detailErrorState {
   padding: 24px;
   border: 1px dashed #DDCFC1;
-  border-radius: 12px;
+  border-radius: $radius-card;
   background-color: rgba(255, 255, 255, 0.8);
   color: $text-ink2;
   text-align: center;

@@ -1,7 +1,13 @@
-import { DEFAULT_LIST_TITLE, EXECUTION_HISTORY_STATUS } from '../config/PhvbMag.configuration';
+import { DEFAULT_LIST_TITLE, TRANG_THAI_THUC_HIEN } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
-import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
+import { appendHistory } from './PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from './PhvbMag.error';
+import { sharePointRestNull, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
+import { joinWithLimit } from '../utils/PhvbMagHistoryText.utils';
+import {
+  buildRequestInfoChangedFieldLabels,
+  buildRequestInfoFieldsFromRelease
+} from '../utils/PhvbMagDetailInfoEdit.utils';
 import type { IRequestInfoFieldsInput } from '../utils/PhvbMagDetailInfoEdit.utils';
 import type { IPhvbDocumentContext, IPhvbLogContext, IVanBanItem } from '../models/PhvbMag.models';
 
@@ -18,6 +24,11 @@ export class PhvbDetailInfoEditService {
       throw new Error('Yêu cầu chưa có mã IdYeuCau.');
     }
 
+    const changedFieldLabels = buildRequestInfoChangedFieldLabels(
+      buildRequestInfoFieldsFromRelease(release),
+      input
+    );
+
     await phvbRepository.updateItem({
       ...context,
       logContext,
@@ -28,19 +39,24 @@ export class PhvbDetailInfoEditService {
         Title: input.tenVanBan.trim(),
         TenVanBan_ENG: input.tenVanBanEng.trim(),
         ThuMucBanHanh: input.folderLuuTru.trim(),
-        HieuLucTu: input.hieuLucTu,
-        HieuLucDen: input.hieuLucDen,
+        HieuLucTu: toSharePointDateOnlyIso(input.hieuLucTu) || sharePointRestNull(),
+        HieuLucDen: toSharePointDateOnlyIso(input.hieuLucDen) || sharePointRestNull(),
         IsSendMailNotify: input.isSendMailNotify,
         TomTatNoiDung: input.summary.trim(),
         GhiChuChoThamDinh: input.ghiChuThamDinh.trim()
       }
     });
 
-    await createExecutionHistoryRecord(
+    if (changedFieldLabels.length === 0) {
+      return;
+    }
+
+    await appendHistory(
       { ...context, logContext },
       {
         idYeuCau,
-        historyStatus: EXECUTION_HISTORY_STATUS.CAP_NHAT_YEU_CAU,
+        trangThaiThucHien: TRANG_THAI_THUC_HIEN.SUA_THONG_TIN,
+        noiDung: joinWithLimit(changedFieldLabels, { moreLabel: 'trường khác' }),
         department: release.KhoaPhongNguoiTao
       }
     );

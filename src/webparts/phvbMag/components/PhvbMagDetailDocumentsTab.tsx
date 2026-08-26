@@ -220,9 +220,9 @@ export function PhvbMagDetailDocumentsTab(props: IPhvbMagDetailDocumentsTabProps
                     />
                   </th>
                 ) : null}
-                <th>Tên file</th>
-                <th>Thư mục</th>
-                <th />
+                <th className={styles.detailDocNameCol}>Tên file</th>
+                <th className={styles.detailDocFolder}>Thư mục</th>
+                <th className={styles.detailDocActionsCol} />
               </tr>
             </thead>
             <tbody>
@@ -241,13 +241,13 @@ export function PhvbMagDetailDocumentsTab(props: IPhvbMagDetailDocumentsTabProps
                       />
                     </td>
                   ) : null}
-                  <td>
+                  <td className={styles.detailDocNameCol} title={file.name}>
                     <PhvbMagExternalLink href={file.fileUrl} className={styles.detailDocLink}>
                       {file.name}
                     </PhvbMagExternalLink>
                   </td>
-                  <td className={styles.detailDocFolder}>{file.folderPath || '---'}</td>
-                  <td className={styles.detailDocActions}>
+                  <td className={styles.detailDocFolder} title={file.folderPath || '---'}>{file.folderPath || '---'}</td>
+                  <td className={`${styles.detailDocActions} ${styles.detailDocActionsCol}`}>
                     {file.fileUrl ? (
                       <PhvbMagExternalLink href={file.fileUrl} className={styles.detailDocLink}>
                         Mở

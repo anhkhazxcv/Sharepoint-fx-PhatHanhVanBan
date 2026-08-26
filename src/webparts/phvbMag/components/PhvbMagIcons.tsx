@@ -1,5 +1,8 @@
 import * as React from 'react';
 import {
+  FaAdjust,
+  FaBan,
+  FaBars,
   FaBell,
   FaBookOpen,
   FaBookmark,
@@ -13,6 +16,7 @@ import {
   FaCopy,
   FaDownload,
   FaEdit,
+  FaEquals,
   FaEye,
   FaFile,
   FaFileAlt,
@@ -20,18 +24,23 @@ import {
   FaFire,
   FaFolder,
   FaFolderOpen,
+  FaGem,
   FaHome,
   FaLightbulb,
   FaListAlt,
   FaListOl,
+  FaMinus,
   FaPaperPlane,
   FaPlus,
   FaQuestionCircle,
+  FaRegCircle,
   FaSearch,
   FaStar,
   FaThumbtack,
   FaTimes,
+  FaTimesCircle,
   FaTrashAlt,
+  FaUndo,
   FaUpload,
   FaUser,
   FaUserCog
@@ -132,6 +141,10 @@ export function CloseIcon(props: IIconProps): React.ReactElement {
 
 export function SuccessIcon(props: IIconProps): React.ReactElement {
   return <FaCheckCircle className={props.className} style={props.style} aria-hidden />;
+}
+
+export function AvatarBadgeRejectedIcon(props: IIconProps): React.ReactElement {
+  return <FaTimesCircle className={props.className} style={props.style} aria-hidden />;
 }
 
 export function ModalCreateIcon(props: IIconProps): React.ReactElement {
@@ -252,6 +265,42 @@ export function WorkflowParticipantIcon(props: IIconProps): React.ReactElement {
 
 export function StepCompletedIcon(props: IIconProps): React.ReactElement {
   return <FaCheck className={props.className} style={props.style} aria-hidden />;
+}
+
+export function StatusDraftIcon(props: IIconProps): React.ReactElement {
+  return <FaAdjust className={props.className} style={props.style} aria-hidden />;
+}
+
+export function StatusRejectedIcon(props: IIconProps): React.ReactElement {
+  return <FaUndo className={props.className} style={props.style} aria-hidden />;
+}
+
+export function StatusGopYIcon(props: IIconProps): React.ReactElement {
+  return <FaMinus className={props.className} style={props.style} aria-hidden />;
+}
+
+export function StatusThamDinhIcon(props: IIconProps): React.ReactElement {
+  return <FaEquals className={props.className} style={props.style} aria-hidden />;
+}
+
+export function StatusPheDuyetIcon(props: IIconProps): React.ReactElement {
+  return <FaBars className={props.className} style={props.style} aria-hidden />;
+}
+
+export function StatusPendingIcon(props: IIconProps): React.ReactElement {
+  return <FaRegCircle className={props.className} style={props.style} aria-hidden />;
+}
+
+export function StatusNumberedIcon(props: IIconProps): React.ReactElement {
+  return <FaGem className={props.className} style={props.style} aria-hidden />;
+}
+
+export function StatusPublishedIcon(props: IIconProps): React.ReactElement {
+  return <FaCheck className={props.className} style={props.style} aria-hidden />;
+}
+
+export function StatusRevokedIcon(props: IIconProps): React.ReactElement {
+  return <FaBan className={props.className} style={props.style} aria-hidden />;
 }
 
 export function CreateActionIcon(props: IIconProps): React.ReactElement {

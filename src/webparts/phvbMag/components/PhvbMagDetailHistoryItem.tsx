@@ -1,8 +1,11 @@
 import * as React from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { LEGACY_TRANG_THAI_THUC_HIEN, TRANG_THAI_THUC_HIEN } from '../config/PhvbMag.configuration';
 import type { ICommentAttachmentItem, ILichSuThucHienItem } from '../models/PhvbMag.models';
 import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { getExecutionHistoryTone } from '../utils/PhvbMagStatusTone.utils';
+import { getWorkflowStepDisplayInitials } from '../utils/PhvbMagWorkflowTimeline.utils';
+import { usePhvbAvatarPhotoState } from '../hooks/usePhvbAvatarPhotoState';
 import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import styles from './PhvbMag.module.scss';
 
@@ -15,9 +18,29 @@ const HISTORY_STATUS_TONE_CLASS: Record<string, string> = {
   archived: styles.detailHistoryStatusArchived
 };
 
+const HISTORY_STATUS_STAGE_CLASS: Record<string, string> = {
+  [TRANG_THAI_THUC_HIEN.TAO_BAN_NHAP]: styles.detailHistoryStatusBanNhap,
+  [TRANG_THAI_THUC_HIEN.CAP_NHAT_BAN_NHAP]: styles.detailHistoryStatusBanNhap,
+  [TRANG_THAI_THUC_HIEN.XAC_NHAN_GOP_Y]: styles.detailHistoryStatusDangGopY,
+  [LEGACY_TRANG_THAI_THUC_HIEN.DONG_Y_GOP_Y]: styles.detailHistoryStatusDangGopY,
+  [TRANG_THAI_THUC_HIEN.XAC_NHAN_THAM_DINH]: styles.detailHistoryStatusDangThamDinh,
+  [TRANG_THAI_THUC_HIEN.CHUYEN_THAM_DINH]: styles.detailHistoryStatusDangThamDinh,
+  [TRANG_THAI_THUC_HIEN.XAC_NHAN_PHE_DUYET]: styles.detailHistoryStatusDangPheDuyet,
+  [LEGACY_TRANG_THAI_THUC_HIEN.PHE_DUYET]: styles.detailHistoryStatusDangPheDuyet,
+  [TRANG_THAI_THUC_HIEN.CHUYEN_PHE_DUYET]: styles.detailHistoryStatusDangPheDuyet,
+  [TRANG_THAI_THUC_HIEN.CHUYEN_CAP_SO]: styles.detailHistoryStatusChoCapSo,
+  [TRANG_THAI_THUC_HIEN.TU_CHOI_THAM_DINH]: styles.detailHistoryStatusTuChoiThamDinh,
+  [TRANG_THAI_THUC_HIEN.TU_CHOI_PHE_DUYET]: styles.detailHistoryStatusTuChoiPheDuyet
+};
+
+function resolveHistoryStatusClassName(action: string): string {
+  return HISTORY_STATUS_STAGE_CLASS[action] || HISTORY_STATUS_TONE_CLASS[getExecutionHistoryTone(action)];
+}
+
 interface IPhvbMagDetailHistoryItemProps {
   item: ILichSuThucHienItem;
   attachments?: ICommentAttachmentItem[];
+  photoUrl?: string;
 }
 
 function measureContentOverflow(
@@ -51,10 +74,11 @@ function measureContentOverflow(
 }
 
 export function PhvbMagDetailHistoryItem(props: IPhvbMagDetailHistoryItemProps): React.ReactElement {
-  const { item, attachments } = props;
+  const { item, attachments, photoUrl } = props;
   const contentRef = useRef<HTMLParagraphElement>(null);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [canExpand, setCanExpand] = useState<boolean>(false);
+  const { showPhoto, onImageError } = usePhvbAvatarPhotoState(photoUrl);
 
   // Only collapse when content identity changes. Do not reset canExpand here —
   // useLayoutEffect owns that, and resetting after measure used to wipe it permanently.
@@ -85,18 +109,32 @@ export function PhvbMagDetailHistoryItem(props: IPhvbMagDetailHistoryItemProps):
   return (
     <div className={styles.detailHistoryItem}>
       <div className={styles.detailHistoryHeader}>
-        <strong>{item.User_ThucHien || '---'}</strong>
-        <span className={styles.detailHistoryDate}>
-          {formatExecutionDateTime(item.Ngay_ThucHien || item.Created)}
+        <span className={styles.detailHistoryAvatar}>
+          {showPhoto ? (
+            <img
+              src={photoUrl}
+              alt={item.User_ThucHien || 'Người dùng'}
+              className={styles.detailHistoryAvatarImage}
+              onError={onImageError}
+            />
+          ) : (
+            <span aria-hidden="true">{getWorkflowStepDisplayInitials(item.User_ThucHien || '')}</span>
+          )}
+        </span>
+        <strong className={styles.detailHistoryAuthorName} title={item.User_ThucHien || '---'}>
+          {item.User_ThucHien || '---'}
+        </strong>
+        <span
+          className={[
+            styles.detailHistoryStatus,
+            resolveHistoryStatusClassName(item.TrangThai_ThucHien || '')
+          ].filter(Boolean).join(' ')}
+        >
+          {item.TrangThai_ThucHien || '---'}
         </span>
       </div>
-      <span
-        className={[
-          styles.detailHistoryStatus,
-          HISTORY_STATUS_TONE_CLASS[getExecutionHistoryTone(item.TrangThai_ThucHien || '')]
-        ].filter(Boolean).join(' ')}
-      >
-        {item.TrangThai_ThucHien || '---'}
+      <span className={styles.detailHistoryDate}>
+        {formatExecutionDateTime(item.Created)}
       </span>
       {item.NoiDung ? (
         <>

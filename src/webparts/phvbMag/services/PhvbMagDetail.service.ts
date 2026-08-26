@@ -30,7 +30,6 @@ const ALL_USER_SELECT_FIELDS: ReadonlyArray<string> = [
   'User_ThucHien',
   'Email_ThucHien',
   'PhongBan_ThucHien',
-  'Ngay_ThucHien',
   'TrangThai_ThucHien',
   'NoiDung',
   'Modified'
@@ -127,7 +126,7 @@ export function mergeWorkflowParticipants(
   const merged: IWorkflowParticipantItem[] = [];
 
   WORKFLOW_STAGE_ORDER.forEach(stage => {
-    const stageItems = grouped[stage].slice().sort((left, right) => compareByDateAsc(left.Ngay_ThucHien, right.Ngay_ThucHien));
+    const stageItems = grouped[stage].slice().sort((left, right) => compareByDateAsc(left.Modified, right.Modified));
     stageItems.forEach(item => merged.push(item));
   });
 
@@ -146,7 +145,7 @@ async function fetchListItemsByIdYeuCau(
     selectFields,
     filter: buildIdYeuCauFilter(idYeuCau),
     top: 500,
-    orderBy: 'Ngay_ThucHien asc'
+    orderBy: 'Modified asc'
   });
 
   return items as unknown as ILichSuThucHienItem[];

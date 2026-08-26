@@ -6,7 +6,7 @@
 
 @mixin phvb-btn-base {
   min-height: 36px;
-  border-radius: 8px;
+  border-radius: $radius-control;
   padding: 8px 20px;
   font-size: 13.5px;
   font-weight: 600;
@@ -49,7 +49,7 @@
   gap: 8px;
   background-color: #FFFFFF;
   border: 1px solid $border-color;
-  border-radius: 30px;
+  border-radius: $radius-pill;
   padding: 10px 20px;
   font-size: 13.5px;
   font-weight: 600;
@@ -70,7 +70,7 @@
   gap: 6px;
   background-color: $primary-color;
   border: none;
-  border-radius: 30px;
+  border-radius: $radius-pill;
   padding: 10px 22px;
   font-size: 13.5px;
   font-weight: 700;
@@ -186,7 +186,7 @@
   gap: $space-3;
   background-color: $surface-muted;
   border: 1px solid $border-subtle;
-  border-radius: $radius-md;
+  border-radius: $radius-card;
   color: $text-ink;
   font-size: $font-size-body;
   line-height: $line-height-body;

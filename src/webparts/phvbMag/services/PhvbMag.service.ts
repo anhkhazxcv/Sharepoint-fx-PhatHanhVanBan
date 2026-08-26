@@ -1,11 +1,12 @@
-import { hasSharePointSiteContext, REQUEST_STATUS, resolveListTitle, EXECUTION_HISTORY_STATUS, TAB_COUNTS_CACHE_STALE_MS, DMVL_DEFAULT_SO_VAN_BAN } from '../config/PhvbMag.configuration';
+import { hasSharePointSiteContext, REQUEST_STATUS, resolveListTitle, TRANG_THAI_THUC_HIEN, TAB_COUNTS_CACHE_STALE_MS, DMVL_DEFAULT_SO_VAN_BAN } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE, toRuntimeMessage } from './PhvbMag.error';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { phvbAttachmentService } from './PhvbMagAttachment.service';
-import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
+import { appendHistory } from './PhvbMagExecutionHistory.service';
 import { phvbWorkflowWriteService } from './PhvbMagWorkflowWrite.service';
 import { generateRequestReferenceId } from '../utils/PhvbMagRequestId.utils';
 import { sharePointRestNull, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
+import { joinWithLimit, resolveAttachmentDisplayNames } from '../utils/PhvbMagHistoryText.utils';
 import { sanitizeRequestInputForSave, getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
 import {
   IWorkflowStageParticipants,
@@ -537,27 +538,13 @@ export class PhvbDocumentsService {
   private resolveRemovedAttachmentNames(input: ICreateRequestInput): string[] {
     const removedIds = input.removedAttachmentIds || [];
     const allExisting = (input.existingTaiLieuAttachments || []).concat(input.existingBieuMauAttachments || []);
-    const names: string[] = [];
+    const matched = removedIds.map(id => allExisting.filter(item => item.id === id)[0] || { id, name: '' });
 
-    removedIds.forEach(id => {
-      let matchedName = '';
-      for (let index = 0; index < allExisting.length; index += 1) {
-        if (allExisting[index].id === id) {
-          matchedName = allExisting[index].name;
-          break;
-        }
-      }
-      names.push(matchedName || `ID ${id}`);
-    });
-
-    return names;
+    return resolveAttachmentDisplayNames(matched);
   }
 
   private resolveUploadedAttachmentNames(input: ICreateRequestInput): string[] {
-    const names: string[] = [];
-    input.taiLieuFiles.forEach(file => names.push(file.name));
-    input.bieuMauFiles.forEach(file => names.push(file.name));
-    return names;
+    return resolveAttachmentDisplayNames(input.taiLieuFiles.concat(input.bieuMauFiles));
   }
 
   private async syncAttachments(
@@ -571,12 +558,12 @@ export class PhvbDocumentsService {
     if (removedIds.length > 0) {
       const removedNames = this.resolveRemovedAttachmentNames(input);
       await phvbAttachmentService.deleteRequestFiles(options, removedIds);
-      await createExecutionHistoryRecord(
+      await appendHistory(
         { ...options, logContext: options.logContext },
         {
           idYeuCau: requestReferenceId,
-          historyStatus: EXECUTION_HISTORY_STATUS.XOA_TAI_LIEU,
-          noiDung: removedNames.join('; '),
+          trangThaiThucHien: TRANG_THAI_THUC_HIEN.XOA_TAI_LIEU,
+          noiDung: joinWithLimit(removedNames, { moreLabel: 'tệp khác' }),
           department: input.department || '',
           isComment: false
         }
@@ -591,12 +578,12 @@ export class PhvbDocumentsService {
         requestReferenceId,
         input
       });
-      await createExecutionHistoryRecord(
+      await appendHistory(
         { ...options, logContext: options.logContext },
         {
           idYeuCau: requestReferenceId,
-          historyStatus: EXECUTION_HISTORY_STATUS.THEM_TAI_LIEU,
-          noiDung: uploadedNames.join('; '),
+          trangThaiThucHien: TRANG_THAI_THUC_HIEN.THEM_TAI_LIEU,
+          noiDung: joinWithLimit(uploadedNames, { moreLabel: 'tệp khác' }),
           department: input.department || '',
           isComment: false
         }

@@ -1,18 +1,18 @@
 import {
   DEFAULT_LIST_TITLE,
   hasSharePointSiteContext,
-  REQUEST_STATUS
+  REQUEST_STATUS,
+  TRANG_THAI_THUC_HIEN
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { phvbRoleService } from './PhvbMagRole.service';
 import { phvbSendMailService } from './PhvbMagSendMail.service';
-import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
+import { appendHistory } from './PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from './PhvbMag.error';
 import { canAssignDocumentNumber } from '../utils/PhvbMagCapSo.utils';
+import { formatDateOnlyVi } from '../utils/PhvbMagDateTime.utils';
 import { buildXacNhanCapSoPayload, resolveSendMailDocumentInfoFromRelease, withSendMailSoVanBan } from '../utils/PhvbMagSendMail.utils';
 import type { IPhvbDocumentContext, IPhvbLogContext, IRequestDetailData } from '../models/PhvbMag.models';
-
-const CAP_SO_HISTORY_STATUS = 'Cấp số';
 
 export class PhvbCapSoService {
   public async assignDocumentNumber(
@@ -57,12 +57,12 @@ export class PhvbCapSoService {
       }
     });
 
-    await createExecutionHistoryRecord(
+    await appendHistory(
       { ...context, logContext },
       {
         idYeuCau,
-        historyStatus: CAP_SO_HISTORY_STATUS,
-        noiDung: normalizedNumber,
+        trangThaiThucHien: TRANG_THAI_THUC_HIEN.CAP_SO,
+        noiDung: `Số ${normalizedNumber} ngày ${formatDateOnlyVi(new Date().toISOString())}`,
         department: detail.release.KhoaPhongNguoiTao,
         isComment: false
       }

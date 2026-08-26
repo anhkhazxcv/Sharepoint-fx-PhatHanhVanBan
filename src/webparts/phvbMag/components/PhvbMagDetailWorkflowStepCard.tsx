@@ -5,11 +5,13 @@ import {
   getWorkflowStepDisplayInitials,
   resolveWorkflowStepStatusChip
 } from '../utils/PhvbMagWorkflowTimeline.utils';
-import { SuccessIcon } from './PhvbMagIcons';
+import { usePhvbAvatarPhotoState } from '../hooks/usePhvbAvatarPhotoState';
+import { AvatarBadgeRejectedIcon, SuccessIcon } from './PhvbMagIcons';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagDetailWorkflowStepCardProps {
   step: IWorkflowTimelineStep;
+  photoUrl?: string;
   isCurrent: boolean;
   onBehalfParticipant?: IAllUserWorkflowItem;
   canRejectOnBehalf?: boolean;
@@ -21,6 +23,7 @@ interface IPhvbMagDetailWorkflowStepCardProps {
 export function PhvbMagDetailWorkflowStepCard(props: IPhvbMagDetailWorkflowStepCardProps): React.ReactElement {
   const {
     step,
+    photoUrl,
     isCurrent,
     onBehalfParticipant,
     canRejectOnBehalf = false,
@@ -37,30 +40,48 @@ export function PhvbMagDetailWorkflowStepCard(props: IPhvbMagDetailWorkflowStepC
           ? styles.detailWorkflowStepCardActive
           : styles.detailWorkflowStepCardPending;
 
+  const avatarCircleClass =
+    step.statusTone === 'rejected'
+      ? styles.detailWorkflowStepCardIconRejected
+      : step.statusTone === 'done'
+        ? styles.detailWorkflowStepCardIconDone
+        : step.statusTone === 'active'
+          ? styles.detailWorkflowStepCardIconActive
+          : styles.detailWorkflowStepCardIconPending;
+
+  const { showPhoto, onImageError } = usePhvbAvatarPhotoState(photoUrl);
   const statusChip = resolveWorkflowStepStatusChip(step);
   const title = `${step.stageLabel} - ${step.name}`;
 
   return (
     <div className={[styles.detailWorkflowStepCard, toneClass].filter(Boolean).join(' ')}>
       <div className={styles.detailWorkflowStepCardIcon}>
+        <span className={avatarCircleClass}>
+          {showPhoto ? (
+            <img
+              src={photoUrl}
+              alt={step.name}
+              className={styles.detailWorkflowStepCardAvatarImage}
+              onError={onImageError}
+            />
+          ) : (
+            <span aria-hidden="true">{getWorkflowStepDisplayInitials(step.name)}</span>
+          )}
+        </span>
         {step.statusTone === 'done' ? (
-          <span className={styles.detailWorkflowStepCardIconDone} aria-hidden="true">
+          <span
+            className={[styles.detailWorkflowStepCardBadge, styles.detailWorkflowStepCardBadgeDone].join(' ')}
+            aria-hidden="true"
+          >
             <SuccessIcon />
           </span>
         ) : null}
         {step.statusTone === 'rejected' ? (
-          <span className={styles.detailWorkflowStepCardIconRejected} aria-hidden="true">
-            {getWorkflowStepDisplayInitials(step.name)}
-          </span>
-        ) : null}
-        {step.statusTone === 'active' ? (
-          <span className={styles.detailWorkflowStepCardIconActive} aria-hidden="true">
-            {getWorkflowStepDisplayInitials(step.name)}
-          </span>
-        ) : null}
-        {step.statusTone === 'pending' ? (
-          <span className={styles.detailWorkflowStepCardIconPending} aria-hidden="true">
-            {step.stepNumber}
+          <span
+            className={[styles.detailWorkflowStepCardBadge, styles.detailWorkflowStepCardBadgeRejected].join(' ')}
+            aria-hidden="true"
+          >
+            <AvatarBadgeRejectedIcon />
           </span>
         ) : null}
       </div>

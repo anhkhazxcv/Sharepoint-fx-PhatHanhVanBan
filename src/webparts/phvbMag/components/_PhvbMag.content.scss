@@ -75,7 +75,7 @@
         input {
           background-color: #FFFFFF;
           border: 1px solid $border-color;
-          border-radius: 30px;
+          border-radius: $radius-control;
           padding: 10px 16px 10px 40px;
           font-size: 13.5px;
           width: 260px;
@@ -103,7 +103,7 @@
       .btnDmvl {
         background-color: $primary-color;
         border: none;
-        border-radius: 30px;
+        border-radius: $radius-pill;
         padding: 10px 20px;
         font-size: 13.5px;
         font-weight: 700;
@@ -154,7 +154,7 @@
         font-size: 11px;
         font-weight: 700;
         padding: 4px 10px;
-        border-radius: 20px;
+        border-radius: $radius-pill;
       }
     }
 
@@ -172,7 +172,7 @@
         color: $text-main;
         cursor: pointer;
         padding: 6px 12px;
-        border-radius: 6px;
+        border-radius: $radius-control;
         transition: all 0.15s ease;
 
         &:hover {
@@ -194,7 +194,7 @@
         width: 280px;
         background-color: #FFFFFF;
         border: 1px solid $border-color;
-        border-radius: 12px;
+        border-radius: $radius-card;
         padding: 16px;
         box-shadow: $shadow-lg;
         z-index: 100;
@@ -216,7 +216,7 @@
           select {
             padding: 8px 10px;
             border: 1px solid $border-color;
-            border-radius: 6px;
+            border-radius: $radius-control;
             font-size: 13px;
             outline: none;
             width: 100%;
@@ -254,7 +254,7 @@
             color: #FFFFFF;
             font-size: 12.5px;
             font-weight: 700;
-            border-radius: 6px;
+            border-radius: $radius-control;
             padding: 6px 16px;
             cursor: pointer;
             transition: background 0.15s ease;
@@ -275,7 +275,7 @@
     flex: 1 1 auto;
     min-height: 0;
     background-color: #FFFFFF;
-    border-radius: 16px;
+    border-radius: $radius-card;
     border: 1px solid $border-color;
     box-shadow: $shadow-sm;
     display: flex;
@@ -385,7 +385,7 @@
           font-size: 12px;
           font-weight: 600;
           padding: 4px 12px;
-          border-radius: 12px;
+          border-radius: $radius-pill;
           display: inline-block;
         }
       }
@@ -405,7 +405,7 @@
 .badge {
   @include ty-badge;
   padding: 2px 8px;
-  border-radius: 20px;
+  border-radius: $radius-pill;
   display: inline-block;
   text-align: center;
 }
@@ -574,7 +574,7 @@
       gap: 12px;
       padding: 12px 18px;
       background-color: $bg-folders;
-      border-radius: 10px;
+      border-radius: $radius-card;
       border: 1px dashed rgba(123, 76, 44, 0.15);
 
       .label {
@@ -587,7 +587,7 @@
         font-size: 12px;
         font-weight: 700;
         padding: 4px 10px;
-        border-radius: 6px;
+        border-radius: $radius-pill;
 
         &.statusApproved {
           background-color: #E2ECE5;
@@ -712,7 +712,7 @@
     .btnSecondary {
       background-color: #FFFFFF;
       border: 1px solid $border-color;
-      border-radius: 8px;
+      border-radius: $radius-control;
       padding: 10px 20px;
       font-size: 13.5px;
       font-weight: 600;
@@ -728,7 +728,7 @@
     .btnPrimaryLink {
       background-color: $primary-color;
       border: none;
-      border-radius: 8px;
+      border-radius: $radius-control;
       padding: 10px 20px;
       font-size: 13.5px;
       font-weight: 700;

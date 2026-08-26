@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { TAB_LABELS } from '../config/PhvbMag.configuration';
+import { usePhvbAvatarPhotoState } from '../hooks/usePhvbAvatarPhotoState';
 import type { ITabCounts, TabType } from '../models/PhvbMag.models';
 import styles from './PhvbMag.module.scss';
 import {
@@ -30,6 +31,7 @@ interface IPhvbMagSidebarProps {
   onToggleCollapse: () => void;
   userDisplayName: string;
   userDepartment?: string;
+  userPhotoUrl?: string;
   showCapSoTab?: boolean;
   showQLVanBanTab?: boolean;
 }
@@ -106,6 +108,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
     onToggleCollapse,
     userDisplayName,
     userDepartment,
+    userPhotoUrl,
     showCapSoTab = false,
     showQLVanBanTab = false
   } = props;
@@ -113,6 +116,7 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
     ? userDisplayName.split(' ').pop()?.substring(0, 2).toUpperCase()
     : 'MG';
   const showAdminGroup = showCapSoTab || showQLVanBanTab;
+  const { showPhoto, onImageError } = usePhvbAvatarPhotoState(userPhotoUrl);
 
   return (
     <aside className={[styles.sidebar, isCollapsed ? styles.sidebarCollapsed : ''].filter(Boolean).join(' ')}>
@@ -257,7 +261,16 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
       <div className={styles.sidebarBottom}>
         <div className={styles.sidebarFooter} title={userDisplayName || 'Người dùng'}>
           <div className={styles.userAvatar}>
-            <span>{initials || 'MG'}</span>
+            {showPhoto ? (
+              <img
+                src={userPhotoUrl}
+                alt={userDisplayName || 'Người dùng'}
+                className={styles.userAvatarImage}
+                onError={onImageError}
+              />
+            ) : (
+              <span>{initials || 'MG'}</span>
+            )}
           </div>
           {!isCollapsed && (
             <div className={styles.userInfo}>

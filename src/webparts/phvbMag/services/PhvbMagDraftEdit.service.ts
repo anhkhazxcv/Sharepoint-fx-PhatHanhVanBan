@@ -49,7 +49,6 @@ async function fetchAllUserItems(context: IPhvbSiteContext, idYeuCau: string, li
     'User_ThucHien',
     'Email_ThucHien',
     'PhongBan_ThucHien',
-    'Ngay_ThucHien',
     'TrangThai_ThucHien',
     'NoiDung'
   ];

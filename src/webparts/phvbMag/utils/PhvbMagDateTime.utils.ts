@@ -113,11 +113,6 @@ export function toSharePointDateOnlyFieldValue(value?: string | Date): string {
   return parsed ? `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}` : '';
 }
 
-/** REST DateTime with time (Ngay_ThucHien). */
-export function toSharePointDateTimeIso(date: Date = new Date()): string {
-  return date.toISOString();
-}
-
 export function formatDateOnlyVi(value?: string): string {
   const parsed = parseDateOnlyToLocalMidnight(value);
 

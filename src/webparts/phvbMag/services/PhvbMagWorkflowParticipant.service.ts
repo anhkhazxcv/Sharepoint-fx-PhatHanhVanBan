@@ -1,7 +1,6 @@
-import { DEFAULT_LIST_TITLE, EXECUTION_HISTORY_STATUS } from '../config/PhvbMag.configuration';
+import { DEFAULT_LIST_TITLE, TRANG_THAI_THUC_HIEN } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
-import { createExecutionHistoryRecord } from './PhvbMagExecutionHistory.service';
-import { toSharePointDateTimeIso } from '../utils/PhvbMagDateTime.utils';
+import { appendHistory } from './PhvbMagExecutionHistory.service';
 import {
   buildFinalStageEmails,
   buildParticipantChangesSummary,
@@ -49,7 +48,6 @@ export class PhvbWorkflowParticipantService {
     }
 
     const visibleStages = getVisibleParticipantStages(options.detail.release.LoaiYeuCau);
-    const performedAt = toSharePointDateTimeIso();
     const directoryMap = buildDirectoryUserMap(options.directoryUsers);
     const participantById = new Map<number, (typeof options.detail.workflowParticipants)[number]>();
 
@@ -116,7 +114,7 @@ export class PhvbWorkflowParticipantService {
         await phvbRepository.createItem({
           ...options,
           listTitle: stageConfig.listTitle,
-          payload: buildAllUserPayload(requestReferenceId, resolvedUser, performedAt)
+          payload: buildAllUserPayload(requestReferenceId, resolvedUser)
         });
 
         existingEmails.add(normalizedEmail);
@@ -145,11 +143,11 @@ export class PhvbWorkflowParticipantService {
     );
 
     if (changeSummary) {
-      await createExecutionHistoryRecord(
+      await appendHistory(
         { ...options, logContext: options.logContext },
         {
           idYeuCau: requestReferenceId,
-          historyStatus: EXECUTION_HISTORY_STATUS.CAP_NHAT_NGUOI_THAM_GIA,
+          trangThaiThucHien: TRANG_THAI_THUC_HIEN.CAP_NHAT_THAM_GIA,
           noiDung: changeSummary,
           department: options.detail.release.KhoaPhongNguoiTao,
           isComment: false
