@@ -2,7 +2,7 @@ import { DEFAULT_LIST_TITLE, TRANG_THAI_THUC_HIEN } from '../config/PhvbMag.conf
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { appendHistory } from './PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from './PhvbMag.error';
-import { sharePointRestNull, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
+import { buildDateOnlyCorrectionFormValues, sharePointRestNull, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
 import { joinWithLimit } from '../utils/PhvbMagHistoryText.utils';
 import {
   buildRequestInfoChangedFieldLabels,
@@ -43,9 +43,28 @@ export class PhvbDetailInfoEditService {
         HieuLucDen: toSharePointDateOnlyIso(input.hieuLucDen) || sharePointRestNull(),
         IsSendMailNotify: input.isSendMailNotify,
         TomTatNoiDung: input.summary.trim(),
-        GhiChuChoThamDinh: input.ghiChuThamDinh.trim()
+        GhiChuChoThamDinh: input.ghiChuThamDinh.trim(),
+        LienHe: input.lienHe.trim()
       }
     });
+
+    const dateCorrections = buildDateOnlyCorrectionFormValues(
+      {
+        HieuLucTu: toSharePointDateOnlyIso(input.hieuLucTu),
+        HieuLucDen: toSharePointDateOnlyIso(input.hieuLucDen)
+      },
+      ['HieuLucTu', 'HieuLucDen']
+    );
+
+    if (dateCorrections.length > 0) {
+      await phvbRepository.updateItemFieldValues({
+        ...context,
+        logContext,
+        listTitle: DEFAULT_LIST_TITLE,
+        itemId: release.Id,
+        formValues: dateCorrections
+      });
+    }
 
     if (changedFieldLabels.length === 0) {
       return;

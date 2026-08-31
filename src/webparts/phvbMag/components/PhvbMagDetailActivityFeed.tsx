@@ -30,8 +30,8 @@ interface IPhvbMagDetailActivityFeedProps {
 
 const ACTIVITY_FILTERS: ReadonlyArray<{ key: ActivityFilter; label: string }> = [
   { key: 'all', label: 'Tất cả' },
-  { key: 'discussion', label: 'Trao đổi' },
-  { key: 'activity', label: 'Hoạt động' }
+  { key: 'discussion', label: 'Bình luận' },
+  { key: 'activity', label: 'Nhật ký hoạt động' }
 ];
 
 function getItemTimestamp(item: ILichSuThucHienItem): number {
@@ -153,7 +153,7 @@ function ActivityCommentComposer(props: IActivityCommentComposerProps): React.Re
       return;
     }
 
-    if (event.ctrlKey || event.metaKey) {
+    if (event.altKey || event.shiftKey) {
       event.preventDefault();
       const textarea = textareaRef.current;
 
@@ -320,7 +320,7 @@ export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps
 
   return (
     <PhvbMagSidebarAccordion
-      title="Trao đổi & hoạt động"
+      title="Bình luận & nhật ký hoạt động"
       badge={totalCount}
       fillHeight
       defaultOpen

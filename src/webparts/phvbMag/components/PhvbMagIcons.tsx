@@ -229,6 +229,16 @@ export function RemoveTagIcon(props: IIconProps): React.ReactElement {
   );
 }
 
+export function FieldErrorIcon(props: IIconProps): React.ReactElement {
+  return (
+    <FaTimesCircle
+      className={props.className}
+      style={mergeStyle(props, { width: 12, height: 12 })}
+      aria-hidden
+    />
+  );
+}
+
 export function DeleteFileIcon(props: IIconProps): React.ReactElement {
   return <FaTrashAlt className={props.className} style={props.style} aria-hidden />;
 }

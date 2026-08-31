@@ -902,10 +902,8 @@
 
 @media (max-width: 900px) {
   .phvbContainer {
-    height: var(--phvb-available-height, 100vh);
-    height: var(--phvb-available-height, 100dvh);
-    max-height: var(--phvb-available-height, 100vh);
-    max-height: var(--phvb-available-height, 100dvh);
+    height: var(--phvb-available-height, auto);
+    max-height: var(--phvb-available-height, none);
     overflow: hidden;
   }
 

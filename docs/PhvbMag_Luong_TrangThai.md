@@ -86,6 +86,6 @@ flowchart TD
 | | Viết mới | Điều chỉnh |
 |---|----------|------------|
 | **Mục đích** | Ban hành văn bản mới | Cập nhật văn bản đã ban hành |
-| **Tài liệu đính kèm** | Bắt buộc có bản soạn thảo | Không bắt buộc |
+| **Tài liệu đính kèm** | Bắt buộc có bản soạn thảo | Bắt buộc có bản soạn thảo |
 | **Thư mục ban hành** | Tạo mới | Dựa trên văn bản cũ đã ban hành |
 | **Khi ban hành** | Đăng bản mới lên hệ thống | Lưu trữ bản cũ, đăng bản điều chỉnh |

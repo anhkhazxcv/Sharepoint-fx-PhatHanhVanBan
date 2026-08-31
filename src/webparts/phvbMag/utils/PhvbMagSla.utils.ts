@@ -241,7 +241,7 @@ export function validateWorkflowDeadlines(options: {
   if (!result.isValid && !result.message) {
     result.message = skipGopY || skipThamDinh
       ? 'Vui lòng kiểm tra deadline người phê duyệt.'
-      : 'Deadline luồng xét duyệt phải theo thứ tự: Người góp ý < Người thẩm định < Người phê duyệt.';
+      : 'Deadline luồng thẩm định phải theo thứ tự: Người góp ý < Người thẩm định < Người phê duyệt.';
   }
 
   return result;

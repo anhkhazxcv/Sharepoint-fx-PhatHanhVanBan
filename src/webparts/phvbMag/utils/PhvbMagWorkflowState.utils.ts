@@ -159,19 +159,6 @@ export function resolveDocumentStatusAfterSkippingEmptyStages(
   return resolveNextDocumentStatusAfterStageComplete(currentStage, participants, loaiYeuCau);
 }
 
-export function resolveApproveActionLabel(stage: WorkflowDocumentStage): string {
-  switch (stage) {
-    case 'gopy':
-      return 'Xác nhận góp ý';
-    case 'thamdinh':
-      return 'Xác nhận thẩm định';
-    case 'pheduyet':
-      return 'Phê duyệt';
-    default:
-      return 'Phê duyệt';
-  }
-}
-
 export function resolveHistoryStatusForApprove(stage: WorkflowStage): TrangThaiThucHien {
   switch (stage) {
     case 'gopy':

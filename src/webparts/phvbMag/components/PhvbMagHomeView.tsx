@@ -186,17 +186,11 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
               ) : null}
             </form>
           </div>
-          <div className={styles.homeHeroStats}>
-            <div className={styles.homeHeroStat}>
-              <div className={styles.homeHeroStatValue}>{homeData.folderCount}</div>
-              <div className={styles.homeHeroStatLabel}>Mới ban hành ({homeData.windowDays} ngày)</div>
-            </div>
-          </div>
         </section>
 
         {!isGuideDismissed ? (
           <PhvbMagSectionShell
-            title="Bạn mới dùng hệ thống? Xem hướng dẫn & biểu mẫu"
+            title="Hướng dẫn sử dụng hệ thống"
             icon={<SidebarHelpIcon className={styles.homeGuideIcon} />}
             action={(
               <div className={styles.homeGuideActions}>
@@ -218,7 +212,7 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
               </div>
             )}
           >
-            <p className={styles.homeGuideSub}>Hiểu rõ quy trình · Chọn đúng loại văn bản · Dùng đúng cách</p>
+            <p className={styles.homeGuideSub}>Văn bản hỗ trợ thực hiện theo quy trình, lựa chọn loại văn bản và quy cách ban hành.</p>
           </PhvbMagSectionShell>
         ) : null}
 
@@ -252,34 +246,8 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
           </PhvbMagSectionShell>
         ) : null}
 
-        <PhvbMagSectionShell title="Văn bản của bạn">
-          <div className={styles.homeLibraryPreviewGrid}>
-            <PhvbMagHomeLibraryPreviewColumn
-              icon={<SidebarSavedIcon className={styles.homeSectionIcon} />}
-              title={TAB_LABELS.DaLuu}
-              viewAllPath="/tab/DaLuu"
-              emptyMessage="Chưa có văn bản nào được lưu."
-              isLoading={isLoadingLibraryPreview}
-              items={savedHomePreviewItems}
-              onNavigate={path => navigate(path)}
-            />
-
-            <div className={styles.homeLibraryPreviewDivider} aria-hidden="true" />
-
-            <PhvbMagHomeLibraryPreviewColumn
-              icon={<SidebarRecentViewsIcon className={styles.homeSectionIcon} />}
-              title={TAB_LABELS.XemGanDay}
-              viewAllPath="/tab/XemGanDay"
-              emptyMessage="Chưa có văn bản nào được xem gần đây."
-              isLoading={isLoadingLibraryPreview}
-              items={recentHomePreviewItems}
-              onNavigate={path => navigate(path)}
-            />
-          </div>
-        </PhvbMagSectionShell>
-
         <PhvbMagSectionShell
-          title={`Mới ban hành (${homeData.windowDays} ngày)`}
+          title={TAB_LABELS.MoiBanHanh}
           icon={<HomeCategoryIcon className={styles.homeSectionIcon} />}
           action={(
             <button
@@ -332,6 +300,32 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
           ) : null}
         </PhvbMagSectionShell>
 
+        <PhvbMagSectionShell title="Văn bản của bạn">
+          <div className={styles.homeLibraryPreviewGrid}>
+            <PhvbMagHomeLibraryPreviewColumn
+              icon={<SidebarSavedIcon className={styles.homeSectionIcon} />}
+              title={TAB_LABELS.DaLuu}
+              viewAllPath="/tab/DaLuu"
+              emptyMessage="Chưa có văn bản nào được lưu."
+              isLoading={isLoadingLibraryPreview}
+              items={savedHomePreviewItems}
+              onNavigate={path => navigate(path)}
+            />
+
+            <div className={styles.homeLibraryPreviewDivider} aria-hidden="true" />
+
+            <PhvbMagHomeLibraryPreviewColumn
+              icon={<SidebarRecentViewsIcon className={styles.homeSectionIcon} />}
+              title={TAB_LABELS.XemGanDay}
+              viewAllPath="/tab/XemGanDay"
+              emptyMessage="Chưa có văn bản nào được xem gần đây."
+              isLoading={isLoadingLibraryPreview}
+              items={recentHomePreviewItems}
+              onNavigate={path => navigate(path)}
+            />
+          </div>
+        </PhvbMagSectionShell>
+
         <PhvbMagSectionShell
           title="Đọc nhiều nhất"
           icon={<HomeTrendingIcon className={styles.homeSectionIcon} />}
@@ -345,7 +339,7 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
             </button>
           )}
         >
-          <PhvbMagLoadingOverlay isOpen={homeData.isLoadingMostViewed} message="Đang tải văn bản đọc nhiều..." />
+          <PhvbMagLoadingOverlay isOpen={homeData.isLoadingMostViewed} message="Đang tải..." />
 
           {!homeData.isLoadingMostViewed && homeData.mostViewedErrorMessage ? (
             <PhvbMagEmptyState message={homeData.mostViewedErrorMessage} role="alert" />

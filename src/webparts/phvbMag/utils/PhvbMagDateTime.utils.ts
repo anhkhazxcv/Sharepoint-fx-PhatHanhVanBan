@@ -113,6 +113,38 @@ export function toSharePointDateOnlyFieldValue(value?: string | Date): string {
   return parsed ? `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}` : '';
 }
 
+export interface IDateOnlyFormValue {
+  FieldName: string;
+  FieldValue: string;
+}
+
+/**
+ * Từ 1 payload đã có sẵn các field ngày dạng ISO lỗi (toSharePointDateOnlyIso) hoặc null,
+ * build lại danh sách formValues đúng (M/d/yyyy) để gọi ValidateUpdateListItem ghi đè.
+ * Field nào không phải string (undefined/null — đã bị clear ở payload chính) thì bỏ qua,
+ * vì việc clear bằng null qua PATCH/POST thường không bị lỗi timezone.
+ */
+export function buildDateOnlyCorrectionFormValues(
+  payload: Record<string, string | boolean | number | undefined>,
+  fieldNames: ReadonlyArray<string>
+): IDateOnlyFormValue[] {
+  const values: IDateOnlyFormValue[] = [];
+
+  fieldNames.forEach(fieldName => {
+    const rawValue = payload[fieldName];
+    if (typeof rawValue !== 'string' || !rawValue) {
+      return;
+    }
+
+    const fieldValue = toSharePointDateOnlyFieldValue(rawValue);
+    if (fieldValue) {
+      values.push({ FieldName: fieldName, FieldValue: fieldValue });
+    }
+  });
+
+  return values;
+}
+
 export function formatDateOnlyVi(value?: string): string {
   const parsed = parseDateOnlyToLocalMidnight(value);
 

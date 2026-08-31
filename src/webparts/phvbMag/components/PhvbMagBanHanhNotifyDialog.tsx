@@ -198,7 +198,7 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
               disabled={isBusy || isAwaitingDraft}
               onClick={onReturnToAdmin}
             >
-              Trả về admin
+              Từ chối
             </button>
           ) : null}
           <button
@@ -215,7 +215,7 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
       {!isAwaitingDraft ? (
         <>
           <div className={styles.workflowActionDialogComment}>
-            <label htmlFor="phvb-ban-hanh-recipient">Nơi nhận:</label>
+            <label htmlFor="phvb-ban-hanh-recipient">Người nhận:</label>
             <input
               id="phvb-ban-hanh-recipient"
               type="text"

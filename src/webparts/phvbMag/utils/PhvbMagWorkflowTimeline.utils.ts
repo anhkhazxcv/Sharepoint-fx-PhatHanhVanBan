@@ -1,8 +1,9 @@
-import { WORKFLOW_PARTICIPANT_STATUS } from '../config/PhvbMag.configuration';
+import { REQUEST_STATUS, WORKFLOW_PARTICIPANT_STATUS } from '../config/PhvbMag.configuration';
 import type { IVanBanItem, IWorkflowParticipantItem, WorkflowStage } from '../models/PhvbMag.models';
+import { resolveWorkflowStageFromStatus } from './PhvbMagWorkflowState.utils';
 import { formatExecutionDateTime } from './PhvbMagDateTime.utils';
 
-export type WorkflowStepTone = 'done' | 'active' | 'pending' | 'rejected';
+export type WorkflowStepTone = 'done' | 'active' | 'pending' | 'rejected' | 'skipped';
 
 export interface IWorkflowTimelineStep {
   id: string;
@@ -133,6 +134,10 @@ export function resolveWorkflowStepStatusChip(step: IWorkflowTimelineStep): stri
     return 'Chờ';
   }
 
+  if (step.statusTone === 'skipped') {
+    return 'Đã kết thúc';
+  }
+
   if (step.id === 'draft-creator') {
     return step.status || 'Hoàn thành';
   }
@@ -160,31 +165,49 @@ export function getWorkflowStepDisplayInitials(name: string): string {
   return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
 }
 
-function markCurrentPendingStep(steps: IWorkflowTimelineStep[]): void {
+const WORKFLOW_STAGE_ORDER: WorkflowStage[] = ['gopy', 'thamdinh', 'pheduyet'];
+
+/**
+ * Vị trí của giai đoạn hiện tại (theo StatusApproved thật của yêu cầu) trong
+ * WORKFLOW_STAGE_ORDER. -1: chưa bắt đầu duyệt (Bản nháp). 0-2: đang ở đúng 1
+ * trong 3 giai đoạn. WORKFLOW_STAGE_ORDER.length: đã đi qua/đóng cả 3 giai đoạn
+ * (Chờ cấp số, Đã cấp số, Ban hành, Từ chối, Thu hồi,...).
+ */
+function resolveWorkflowStageProgressIndex(statusApproved?: string): number {
+  const stage = resolveWorkflowStageFromStatus(statusApproved);
+
+  if (stage !== 'none') {
+    return WORKFLOW_STAGE_ORDER.indexOf(stage);
+  }
+
+  return (statusApproved || '').trim() === REQUEST_STATUS.BAN_NHAP ? -1 : WORKFLOW_STAGE_ORDER.length;
+}
+
+function markCurrentPendingStep(steps: IWorkflowTimelineStep[], statusApproved?: string): void {
   const hasRejectedStep = steps.some(step => step.statusTone === 'rejected');
 
   if (hasRejectedStep) {
     return;
   }
 
-  let currentStage: WorkflowStage | undefined;
-
-  for (let index = 0; index < steps.length; index += 1) {
-    const step = steps[index];
-
-    if (step.stage !== undefined && (step.statusTone === 'pending' || step.statusTone === 'active')) {
-      currentStage = step.stage;
-      break;
-    }
-  }
-
-  if (currentStage === undefined) {
-    return;
-  }
+  const currentStage = resolveWorkflowStageFromStatus(statusApproved);
+  const progressIndex = resolveWorkflowStageProgressIndex(statusApproved);
 
   steps.forEach(step => {
-    if (step.stage === currentStage && step.statusTone === 'pending') {
+    if (step.stage === undefined || step.statusTone !== 'pending') {
+      return;
+    }
+
+    if (step.stage === currentStage) {
       step.statusTone = 'active';
+      return;
+    }
+
+    // Giai đoạn của step đã đóng lại (yêu cầu đã đi tiếp hoặc đã kết thúc) nhưng
+    // participant chưa từng xác nhận — vd. Góp ý không bắt buộc bị bỏ qua khi
+    // chuyển sang Thẩm định.
+    if (WORKFLOW_STAGE_ORDER.indexOf(step.stage) < progressIndex) {
+      step.statusTone = 'skipped';
     }
   });
 }
@@ -229,7 +252,7 @@ export function buildWorkflowTimelineSteps(
       });
   });
 
-  markCurrentPendingStep(steps);
+  markCurrentPendingStep(steps, release.StatusApproved);
 
   return steps;
 }
@@ -264,5 +287,5 @@ export function findCurrentWorkflowStepIndex(steps: IWorkflowTimelineStep[]): nu
     return pendingIndex;
   }
 
-  return steps.length - 1;
+  return -1;
 }

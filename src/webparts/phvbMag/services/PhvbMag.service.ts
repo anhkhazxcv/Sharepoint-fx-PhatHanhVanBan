@@ -5,7 +5,7 @@ import { phvbAttachmentService } from './PhvbMagAttachment.service';
 import { appendHistory } from './PhvbMagExecutionHistory.service';
 import { phvbWorkflowWriteService } from './PhvbMagWorkflowWrite.service';
 import { generateRequestReferenceId } from '../utils/PhvbMagRequestId.utils';
-import { sharePointRestNull, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
+import { buildDateOnlyCorrectionFormValues, sharePointRestNull, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
 import { joinWithLimit, resolveAttachmentDisplayNames } from '../utils/PhvbMagHistoryText.utils';
 import { sanitizeRequestInputForSave, getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
 import {
@@ -124,6 +124,15 @@ const OPTIONAL_DATETIME_FIELDS: ReadonlyArray<'HieuLucDen' | 'Date_GopY' | 'Date
   'Date_PheDuyet'
 ];
 
+const DATE_ONLY_CORRECTION_FIELDS: ReadonlyArray<string> = [
+  'NgayPhatHanh',
+  'HieuLucTu',
+  'HieuLucDen',
+  'Date_GopY',
+  'Date_ThamDinh',
+  'Date_PheDuyet'
+];
+
 function escapeODataValue(value: string): string {
   return value.replace(/'/g, "''");
 }
@@ -133,13 +142,7 @@ function getUserScopedFilter(tab: TabType, userEmail: string): string | undefine
 
   switch (tab) {
     case 'YeuCauCuaToi':
-      return normalizedEmail
-        ? `EmailNguoiTao eq '${normalizedEmail}' and StatusApproved ne '${escapeODataValue(REQUEST_STATUS.BAN_NHAP)}'`
-        : 'Id eq 0';
-    case 'BanNhap':
-      return normalizedEmail
-        ? `StatusApproved eq '${escapeODataValue(REQUEST_STATUS.BAN_NHAP)}' and EmailNguoiTao eq '${normalizedEmail}'`
-        : 'Id eq 0';
+      return normalizedEmail ? `EmailNguoiTao eq '${normalizedEmail}'` : 'Id eq 0';
     case 'CapSo':
       return `StatusApproved eq '${escapeODataValue(REQUEST_STATUS.CHO_CAP_SO)}'`;
     default:
@@ -190,9 +193,7 @@ function isItemInTabForCount(item: IVanBanItem, tab: TabType, userEmail: string)
     case 'ViecCanLam':
       return isTodoItemForUser(item, userEmail);
     case 'YeuCauCuaToi':
-      return isCreatorEmailMatch(item, userEmail) && status !== REQUEST_STATUS.BAN_NHAP;
-    case 'BanNhap':
-      return isCreatorEmailMatch(item, userEmail) && status === REQUEST_STATUS.BAN_NHAP;
+      return isCreatorEmailMatch(item, userEmail);
     case 'CapSo':
       return status === REQUEST_STATUS.CHO_CAP_SO;
     default:
@@ -204,7 +205,6 @@ function countItemsByTab(items: IVanBanItem[], userEmail: string): ITabCounts {
   const counts: ITabCounts = {
     viecCanLam: 0,
     yeuCauCuaToi: 0,
-    banNhap: 0,
     capSo: 0,
     qlVanBan: items.length,
     admin: items.length
@@ -217,10 +217,6 @@ function countItemsByTab(items: IVanBanItem[], userEmail: string): ITabCounts {
 
     if (isItemInTabForCount(item, 'YeuCauCuaToi', userEmail)) {
       counts.yeuCauCuaToi += 1;
-    }
-
-    if (isItemInTabForCount(item, 'BanNhap', userEmail)) {
-      counts.banNhap += 1;
     }
 
     if (isItemInTabForCount(item, 'CapSo', userEmail)) {
@@ -363,7 +359,7 @@ function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenc
     Title: input.title,
     Tenvanban: input.title,
     SoVanBan: isDmvlFlow ? DMVL_DEFAULT_SO_VAN_BAN : (input.code || ''),
-    LoaiYeuCau: isDmvlFlow ? 'Viết mới' : requestType,
+    LoaiYeuCau: isDmvlFlow ? 'Tạo mới' : requestType,
     KhoaPhongNguoiTao: input.department || '',
     PheDuyet: isDmvlFlow ? '' : input.approvalUsers.join('; '),
     NgayPhatHanh: todayIso,
@@ -372,9 +368,7 @@ function mapCreateRequestPayload(options: ICreateRequestOptions, requestReferenc
     TomTatNoiDung: input.summary,
     NguoiTao: options.userDisplayName || '',
     EmailNguoiTao: options.userEmail || '',
-    LienHe: isDmvlFlow
-      ? ((input.contact || '').trim() || options.userDisplayName || options.userEmail || '')
-      : (input.contact || ''),
+    LienHe: (input.contact || '').trim() || options.userDisplayName || options.userEmail || '',
     StatusApproved: statusApproved,
     ThuMucBanHanh: input.folderLuuTru || input.folder,
     NoiLuuBanCung: input.noiLuu || '',
@@ -470,12 +464,24 @@ export class PhvbDocumentsService {
     }
 
     const requestReferenceId = generateRequestReferenceId();
+    const payload = omitUndefinedPayloadFields(mapCreateRequestPayload(options, requestReferenceId));
 
-    await phvbRepository.createItem({
+    const createdId = await phvbRepository.createItem({
       ...options,
       logContext: options.logContext,
-      payload: omitUndefinedPayloadFields(mapCreateRequestPayload(options, requestReferenceId))
+      payload
     });
+
+    const dateCorrections = buildDateOnlyCorrectionFormValues(payload, DATE_ONLY_CORRECTION_FIELDS);
+
+    if (dateCorrections.length > 0) {
+      await phvbRepository.updateItemFieldValues({
+        ...options,
+        logContext: options.logContext,
+        itemId: createdId,
+        formValues: dateCorrections
+      });
+    }
 
     if (duplicateFromIdYeuCau) {
       await this.copyDuplicatedAttachments(options, requestReferenceId);
@@ -529,6 +535,17 @@ export class PhvbDocumentsService {
       itemId: options.itemId,
       payload: updatePayload
     });
+
+    const dateCorrections = buildDateOnlyCorrectionFormValues(updatePayload, DATE_ONLY_CORRECTION_FIELDS);
+
+    if (dateCorrections.length > 0) {
+      await phvbRepository.updateItemFieldValues({
+        ...options,
+        logContext: options.logContext,
+        itemId: options.itemId,
+        formValues: dateCorrections
+      });
+    }
 
     await this.writeWorkflowAndAttachments(options, options.existingIdYeuCau, true);
 

@@ -59,14 +59,14 @@ const TABLE_COLUMNS: ReadonlyArray<ITableColumnDefinition> = [
   { key: 'index', label: '#', headerClassName: styles.requestTableIndexCol },
   { key: 'title', label: 'TÊN VĂN BẢN', sortKey: 'Tenvanban', headerClassName: styles.requestTitleCell },
   { key: 'code', label: 'MÃ HIỆU', sortKey: 'SoVanBan' },
-  { key: 'type', label: 'LOẠI YÊU CẦU', sortKey: 'LoaiYeuCau' },
+  { key: 'type', label: 'LOẠI TÁC VỤ', sortKey: 'LoaiYeuCau' },
   { key: 'department', label: 'PHÒNG BAN', sortKey: 'KhoaPhongNguoiTao' },
   { key: 'created', label: 'NGÀY TẠO', sortKey: 'Created' },
   { key: 'status', label: 'TRẠNG THÁI', sortKey: 'StatusApproved' }
 ];
 
 const LIST_TAB_CONFIG: Record<
-  'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'CapSo' | 'QLVanBan',
+  'ViecCanLam' | 'YeuCauCuaToi' | 'CapSo' | 'QLVanBan',
   {
     countSuffix: string;
     emptyMessage: string;
@@ -75,22 +75,17 @@ const LIST_TAB_CONFIG: Record<
 > = {
   ViecCanLam: {
     countSuffix: 'việc',
-    emptyMessage: 'Không có việc phù hợp với bộ lọc hiện tại.',
+    emptyMessage: 'Không có văn bản phù hợp với bộ lọc hiện tại.',
     showStatusMetrics: true
   },
   YeuCauCuaToi: {
     countSuffix: 'yêu cầu',
-    emptyMessage: 'Không có yêu cầu phù hợp với bộ lọc hiện tại.',
-    showStatusMetrics: false
-  },
-  BanNhap: {
-    countSuffix: 'bản nháp',
-    emptyMessage: 'Không có bản nháp phù hợp với bộ lọc hiện tại.',
+    emptyMessage: 'Không có văn bản phù hợp với bộ lọc hiện tại.',
     showStatusMetrics: false
   },
   CapSo: {
     countSuffix: 'hồ sơ',
-    emptyMessage: 'Không có hồ sơ phù hợp với bộ lọc hiện tại.',
+    emptyMessage: 'Không có văn bản phù hợp với bộ lọc hiện tại.',
     showStatusMetrics: false
   },
   QLVanBan: {
@@ -103,7 +98,6 @@ const LIST_TAB_CONFIG: Record<
 const LIST_TABLE_TABS: Array<keyof typeof LIST_TAB_CONFIG> = [
   'ViecCanLam',
   'YeuCauCuaToi',
-  'BanNhap',
   'CapSo',
   'QLVanBan'
 ];
@@ -280,7 +274,7 @@ function RequestTableToolbar(props: IRequestTableToolbarProps): React.ReactEleme
           onChange={status => updateFilter({ status })}
         />
         <RequestFilterSelect
-          label="Loại yêu cầu:"
+          label="Loại tác vụ:"
           value={filters.loaiYeuCau}
           options={filterOptions.loaiYeuCau}
           onChange={loaiYeuCau => updateFilter({ loaiYeuCau })}
@@ -292,7 +286,7 @@ function RequestTableToolbar(props: IRequestTableToolbarProps): React.ReactEleme
           onChange={department => updateFilter({ department })}
         />
         <RequestFilterSelect
-          label="Năm tạo yêu cầu:"
+          label="Thời gian tạo yêu cầu:"
           value={filters.requestCreatedYear}
           options={filterOptions.namTaoYeuCau}
           onChange={requestCreatedYear => updateFilter({ requestCreatedYear })}

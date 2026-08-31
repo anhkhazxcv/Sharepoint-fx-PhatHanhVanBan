@@ -105,7 +105,8 @@ export function PhvbMagDetailWorkflowStepCard(props: IPhvbMagDetailWorkflowStepC
             step.statusTone === 'rejected' ? styles.detailWorkflowStepCardStatusChipRejected : '',
             step.statusTone === 'done' ? styles.detailWorkflowStepCardStatusChipDone : '',
             step.statusTone === 'active' ? styles.detailWorkflowStepCardStatusChipActive : '',
-            step.statusTone === 'pending' ? styles.detailWorkflowStepCardStatusChipPending : ''
+            step.statusTone === 'pending' ? styles.detailWorkflowStepCardStatusChipPending : '',
+            step.statusTone === 'skipped' ? styles.detailWorkflowStepCardStatusChipSkipped : ''
           ].filter(Boolean).join(' ')}
         >
           {statusChip}

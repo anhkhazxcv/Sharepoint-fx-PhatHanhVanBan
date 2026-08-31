@@ -97,7 +97,7 @@ export function PhvbMagCreateTemplatePanel(props: IPhvbMagCreateTemplatePanelPro
       <div className={styles.createTemplatePanelHeader}>
         <p className={styles.createTemplatePanelHint}>
           <FormTemplateFileIcon style={{ width: 16, height: 16 }} />
-          <span>Tải biểu mẫu chuẩn MAG để soạn thảo rồi đính kèm bên dưới.</span>
+          <span>Tải biểu mẫu để soạn thảo, sau đó đính kèm văn bản tại đây.</span>
         </p>
         <button
           type="button"

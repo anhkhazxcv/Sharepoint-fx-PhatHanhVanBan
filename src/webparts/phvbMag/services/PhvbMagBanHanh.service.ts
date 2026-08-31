@@ -170,7 +170,7 @@ async function sendThongBaoLuuTruMail(
   logContext: IPhvbLogContext | undefined,
   auditLogger: ReturnType<typeof createBanHanhPublishAuditLogger>
 ): Promise<void> {
-  const mailPayload = buildThongBaoLuuTruPayload(context.userEmail, release);
+  const mailPayload = buildThongBaoLuuTruPayload(context.userDisplayName, release);
 
   if (!mailPayload) {
     return;
@@ -222,7 +222,7 @@ export async function publishIssuanceWithNotify(
     throw new Error('Chưa cấu hình endpoint gửi mail (endPointSendMail).');
   }
 
-  const publishResult = await phvbIssuancePublishService.publishVietMoi(
+  const publishResult = await phvbIssuancePublishService.publishTaoMoi(
     { ...context, logContext },
     detail.release,
     mainDocumentId as number,
@@ -333,7 +333,7 @@ export async function publishIssuanceWithNotify(
     }
   );
 
-  const mailPayload = buildXacNhanBanHanhPayload(context.userEmail, detail.release, resolvedBody);
+  const mailPayload = buildXacNhanBanHanhPayload(context.userDisplayName, detail.release, resolvedBody);
 
   if (!mailPayload) {
     throw new Error('Không tạo được nội dung email xác nhận ban hành.');
@@ -411,7 +411,7 @@ export class PhvbBanHanhService {
     }
 
     const documentInfo = assertBanHanhMailReady(context, roles, detail.release);
-    const mailPayload = buildYeuCauBanHanhPayload(context.userEmail, roles, documentInfo);
+    const mailPayload = buildYeuCauBanHanhPayload(context.userDisplayName, roles, documentInfo);
 
     if (!mailPayload) {
       throw new Error('Không tạo được nội dung email thông báo ban hành.');
@@ -539,7 +539,7 @@ export class PhvbBanHanhService {
 
     const documentInfo = assertReturnToAdminMailReady(context, roles, detail.release);
     const mailPayload = buildTraLaiAdminBanHanhPayload(
-      context.userEmail,
+      context.userDisplayName,
       roles,
       documentInfo,
       normalizedComment

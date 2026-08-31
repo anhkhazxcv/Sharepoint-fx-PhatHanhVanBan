@@ -67,7 +67,7 @@ function WorkflowPanelContent(props: {
   return (
     <div className={styles.detailWorkflowPanel}>
       {allSteps.length === 0 ? (
-        <p className={styles.detailWorkflowEmpty}>Chưa có dữ liệu quy trình phê duyệt.</p>
+        <p className={styles.detailWorkflowEmpty}>Chưa có dữ liệu luồng thẩm định.</p>
       ) : (
         <div className={styles.detailWorkflowStepList}>
           {allSteps.map((step, stepIndex) => (
@@ -261,7 +261,7 @@ export function PhvbMagDetailWorkflowSidebar(props: IPhvbMagDetailWorkflowSideba
 
   return (
     <PhvbMagSidebarAccordion
-      title="Quy trình phê duyệt"
+      title="Luồng thẩm định"
       titleSuffix={allSteps.length > 0 ? `· ${allSteps.length} BƯỚC` : undefined}
       fillHeight
       defaultOpen

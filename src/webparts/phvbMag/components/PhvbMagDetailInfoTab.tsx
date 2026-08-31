@@ -8,9 +8,10 @@ import {
   buildRequestInfoFieldsFromRelease,
   type IRequestInfoFieldsInput
 } from '../utils/PhvbMagDetailInfoEdit.utils';
-import { getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
+import { getRequestTypeFormRules, type RequestTypeValue } from '../utils/PhvbMagRequestForm.utils';
 import { FolderAccentIcon, FolderSelectIcon, NotePinIcon } from './PhvbMagIcons';
 import { PhvbMagFolderPickerDialog } from './PhvbMagFolderPickerDialog';
+import { PhvbMagDateOnlyField } from './primitives/PhvbMagDateOnlyField';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagDetailInfoTabProps {
@@ -46,7 +47,7 @@ function renderNoteBody(text: string): React.ReactNode {
 export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.ReactElement {
   const { release, siteContext, canEdit = false, isSaving = false, errorMessage, onSave } = props;
   const noteText = release.GhiChuChoThamDinh?.trim();
-  const requestType = (release.LoaiYeuCau || 'Viết mới') as 'Viết mới' | 'Điều chỉnh' | 'Thu hồi';
+  const requestType = release.LoaiYeuCau as RequestTypeValue;
   const formRules = getRequestTypeFormRules(requestType);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -143,7 +144,7 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
             />
           </div>
         ) : (
-          renderField('TÊN VĂN BẢN', release.Tenvanban)
+          renderField('TÊN VĂN BẢN', release.Tenvanban ? <strong>{release.Tenvanban}</strong> : undefined)
         )}
 
         {isEditing ? (
@@ -160,9 +161,31 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
         ) : (
           renderField('TÊN VĂN BẢN (TIẾNG ANH)', release.TenVanBan_ENG)
         )}
+      </div>
 
-        {renderField('LOẠI YÊU CẦU', release.LoaiYeuCau)}
-        {renderField('MÃ YÊU CẦU', release.IdYeuCau ? <strong>{release.IdYeuCau}</strong> : '---')}
+      <section className={styles.detailInfoNoteCallout} aria-label="Ghi chú cho cấp thẩm định / phê duyệt">
+        <div className={styles.detailInfoNoteHeader}>
+          <NotePinIcon className={styles.detailInfoNoteIcon} />
+          <span className={styles.detailInfoNoteTitle}>
+            GHI CHÚ CHO CẤP THẨM ĐỊNH / PHÊ DUYỆT {isEditing && formRules.requireGhiChuThamDinh ? <span className={styles.required}>*</span> : null}
+          </span>
+        </div>
+        {isEditing ? (
+          <textarea
+            rows={3}
+            value={draft.ghiChuThamDinh}
+            onChange={event => setDraft(previous => ({ ...previous, ghiChuThamDinh: event.target.value }))}
+            className={styles.formTextAreaSmall}
+          />
+        ) : (
+          <div className={styles.detailInfoNoteBody}>
+            {noteText ? renderNoteBody(noteText) : <span className={styles.detailPlaceholder}>Không có ghi chú.</span>}
+          </div>
+        )}
+      </section>
+
+      <div className={styles.detailInfoGrid}>
+        {renderField('LOẠI TÁC VỤ', release.LoaiYeuCau)}
 
         {isEditing ? (
           <div className={styles.detailField}>
@@ -193,12 +216,10 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
         {isEditing ? (
           <div className={styles.detailField}>
             <label htmlFor="phvb-detail-info-hieu-luc-tu" className={styles.detailFieldLabel}>NGÀY HIỆU LỰC <span className={styles.required}>*</span></label>
-            <input
+            <PhvbMagDateOnlyField
               id="phvb-detail-info-hieu-luc-tu"
-              type="date"
               value={draft.hieuLucTu}
-              onChange={event => setDraft(previous => ({ ...previous, hieuLucTu: event.target.value }))}
-              className={styles.formInput}
+              onChange={value => setDraft(previous => ({ ...previous, hieuLucTu: value }))}
             />
           </div>
         ) : (
@@ -208,24 +229,35 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
         {isEditing ? (
           <div className={styles.detailField}>
             <label htmlFor="phvb-detail-info-hieu-luc-den" className={styles.detailFieldLabel}>NGÀY HẾT HIỆU LỰC</label>
-            <input
+            <PhvbMagDateOnlyField
               id="phvb-detail-info-hieu-luc-den"
-              type="date"
               value={draft.hieuLucDen}
-              onChange={event => setDraft(previous => ({ ...previous, hieuLucDen: event.target.value }))}
-              className={styles.formInput}
+              onChange={value => setDraft(previous => ({ ...previous, hieuLucDen: value }))}
             />
           </div>
         ) : (
           renderField('NGÀY HẾT HIỆU LỰC', formatDateOnlyVi(release.HieuLucDen))
         )}
 
-        {renderField('LOẠI SLA', release.Loai_SLA)}
         {renderField('SỐ VĂN BẢN', release.SoVanBan || <span className={styles.detailPlaceholder}>Chưa cấp số</span>)}
-        {renderField('NGƯỜI LIÊN HỆ', release.LienHe || <span className={styles.detailPlaceholder}>Chưa có</span>)}
+
+        {isEditing ? (
+          <div className={styles.detailField}>
+            <label htmlFor="phvb-detail-info-lien-he" className={styles.detailFieldLabel}>ĐẦU MỐI LIÊN HỆ</label>
+            <input
+              id="phvb-detail-info-lien-he"
+              type="text"
+              value={draft.lienHe}
+              onChange={event => setDraft(previous => ({ ...previous, lienHe: event.target.value }))}
+              className={styles.formInput}
+            />
+          </div>
+        ) : (
+          renderField('ĐẦU MỐI LIÊN HỆ', release.LienHe || <span className={styles.detailPlaceholder}>Chưa có</span>)
+        )}
 
         <div className={styles.detailField}>
-          <span className={styles.detailFieldLabel}>THÔNG BÁO USER</span>
+          <span className={styles.detailFieldLabel}>KÊNH THÔNG BÁO</span>
           <div className={styles.detailFieldValue}>
             <label className={styles.detailCheckboxReadonly}>
               <input
@@ -235,7 +267,7 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
                 disabled={!isEditing}
                 onChange={event => setDraft(previous => ({ ...previous, isSendMailNotify: event.target.checked }))}
               />
-              <span>Gửi thông báo email</span>
+              <span>Email</span>
             </label>
           </div>
         </div>
@@ -255,27 +287,6 @@ export function PhvbMagDetailInfoTab(props: IPhvbMagDetailInfoTabProps): React.R
         ) : (
           <div className={styles.detailInfoSummaryBody}>
             {release.TomTatNoiDung?.trim() || <span className={styles.detailPlaceholder}>Không có tóm tắt.</span>}
-          </div>
-        )}
-      </section>
-
-      <section className={styles.detailInfoNoteCallout} aria-label="Ghi chú cho cấp TĐ / PD">
-        <div className={styles.detailInfoNoteHeader}>
-          <NotePinIcon className={styles.detailInfoNoteIcon} />
-          <span className={styles.detailInfoNoteTitle}>
-            GHI CHÚ CHO CẤP TĐ / PD {isEditing && formRules.requireGhiChuThamDinh ? <span className={styles.required}>*</span> : null}
-          </span>
-        </div>
-        {isEditing ? (
-          <textarea
-            rows={3}
-            value={draft.ghiChuThamDinh}
-            onChange={event => setDraft(previous => ({ ...previous, ghiChuThamDinh: event.target.value }))}
-            className={styles.formTextAreaSmall}
-          />
-        ) : (
-          <div className={styles.detailInfoNoteBody}>
-            {noteText ? renderNoteBody(noteText) : <span className={styles.detailPlaceholder}>Không có ghi chú.</span>}
           </div>
         )}
       </section>

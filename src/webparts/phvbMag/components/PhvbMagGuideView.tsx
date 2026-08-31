@@ -2,19 +2,21 @@ import * as React from 'react';
 import { GUIDE_VIEW_SUBTITLE } from '../config/PhvbMag.configuration';
 import type { IPhvbSiteContext } from '../models/PhvbMag.models';
 import { usePhvbGuide } from '../hooks/usePhvbGuide';
-import { DownloadIcon } from './PhvbMagIcons';
+import { CreateActionIcon, DownloadIcon } from './PhvbMagIcons';
 import { PhvbMagEmptyState } from './PhvbMagEmptyState';
-import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import { PhvbMagPageHeader } from './PhvbMagPageHeader';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagGuideViewProps {
   siteContext: IPhvbSiteContext;
+  canCreate: boolean;
+  onOpenTemplate: () => void;
+  onOpenCreate: () => void;
 }
 
 export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElement {
-  const { siteContext } = props;
+  const { siteContext, canCreate, onOpenTemplate, onOpenCreate } = props;
   const guide = usePhvbGuide(siteContext);
   const iframeTitle = 'Hướng dẫn';
 
@@ -25,26 +27,20 @@ export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElem
         title="Hướng dẫn"
         subtitle={GUIDE_VIEW_SUBTITLE}
         className={styles.contentHeader}
-        headerActions={guide.pdfUrl ? (
-          <div className={styles.recentHeaderActions}>
-            <PhvbMagExternalLink
-              href={guide.pdfUrl}
-              className={[styles.btnHeaderOutline, styles.recentHeaderLinkBtn].join(' ')}
-            >
-              Mở tab mới
-            </PhvbMagExternalLink>
-            <PhvbMagExternalLink
-              href={guide.pdfUrl}
-              mode="download"
-              downloadFileName="SoTayHuongDan.pdf"
-              className={[styles.btnHeaderPrimary, styles.recentHeaderLinkBtn].join(' ')}
-              aria-label="Tải xuống sổ tay hướng dẫn"
-            >
+        headerActions={(
+          <div className={styles.headerActions}>
+            <button type="button" className={styles.btnTemplate} onClick={onOpenTemplate}>
               <DownloadIcon className={styles.iconSizeSm} />
-              <span>Tải xuống</span>
-            </PhvbMagExternalLink>
+              <span>Template</span>
+            </button>
+            <button type="button" className={styles.btnCreate} onClick={onOpenCreate} disabled={!canCreate}>
+              <span className={styles.btnCreateContent}>
+                <CreateActionIcon />
+                Tạo yêu cầu
+              </span>
+            </button>
           </div>
-        ) : undefined}
+        )}
       />
 
       <div className={[styles.recentBody, styles.guidePdfBody].join(' ')}>

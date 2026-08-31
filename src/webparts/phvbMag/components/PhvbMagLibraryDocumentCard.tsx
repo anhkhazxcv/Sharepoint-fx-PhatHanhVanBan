@@ -90,7 +90,7 @@ function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps
               className={styles.libraryDocumentStatusEffective}
               data-status={effectiveStatus === 'expired' ? 'expired' : 'effective'}
             >
-              {effectiveStatus === 'effective' ? 'Còn hiệu lực' : 'Hết hiệu lực'}
+              {effectiveStatus === 'effective' ? 'Đang hiệu lực' : 'Hết hiệu lực'}
             </span>
             <PhvbMagSaveBookmarkButton document={document} showBookmark={showBookmark} />
             {canShowDownload ? (
@@ -129,7 +129,7 @@ export function buildLibraryEffectiveMeta(document: IBanHanhLibraryItem, effecti
   return (
     <>
       <span className={styles.libraryDocumentContact}>
-        <strong>Người liên hệ:</strong> {contactPerson}
+        <strong>Đầu mối liên hệ:</strong> {contactPerson}
       </span>
       <span className={styles.libraryDocumentEffectiveDate}>
         <strong>Ngày hiệu lực:</strong> {effectiveDate}

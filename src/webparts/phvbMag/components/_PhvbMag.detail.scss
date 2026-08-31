@@ -1986,6 +1986,8 @@ $detail-page-gap: 18px;
   font-size: $font-size-base2;
   line-height: $line-height-relaxed;
   color: $text-ink;
+  white-space: pre-wrap;
+  word-break: break-word;
 
   strong {
     font-weight: $font-weight-bold;
@@ -2016,6 +2018,8 @@ $detail-page-gap: 18px;
   font-size: $font-size-base2;
   line-height: $line-height-relaxed;
   color: $text-ink;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .detailField {
@@ -2847,6 +2851,12 @@ $detail-page-gap: 18px;
   background-color: #FFFFFF;
   color: $color-error;
   border: 1px solid rgba($color-error, 0.35);
+}
+
+.detailWorkflowStepCardStatusChipSkipped {
+  background-color: $surface-muted;
+  color: $text-muted;
+  border: 1px solid $border-subtle;
 }
 
 .detailWorkflowHint {

@@ -15,6 +15,7 @@ export interface IRequestInfoFieldsInput {
   isSendMailNotify: boolean;
   summary: string;
   ghiChuThamDinh: string;
+  lienHe: string;
 }
 
 export function canEditRequestInfoFields(
@@ -40,7 +41,8 @@ export function buildRequestInfoFieldsFromRelease(release: IVanBanItem): IReques
     hieuLucDen: toInputDateValue(release.HieuLucDen),
     isSendMailNotify: release.IsSendMailNotify === true,
     summary: release.TomTatNoiDung || '',
-    ghiChuThamDinh: release.GhiChuChoThamDinh || ''
+    ghiChuThamDinh: release.GhiChuChoThamDinh || '',
+    lienHe: release.LienHe || ''
   };
 }
 
@@ -51,9 +53,10 @@ const REQUEST_INFO_FIELD_LABELS: Record<keyof IRequestInfoFieldsInput, string> =
   folderLuuTru: 'Thư mục',
   hieuLucTu: 'Ngày hiệu lực',
   hieuLucDen: 'Ngày hết hiệu lực',
-  isSendMailNotify: 'Gửi thông báo email',
+  isSendMailNotify: 'Email',
   summary: 'Tóm tắt nội dung',
-  ghiChuThamDinh: 'Ghi chú cho cấp TĐ/PD'
+  ghiChuThamDinh: 'Ghi chú cho cấp thẩm định / phê duyệt',
+  lienHe: 'Đầu mối liên hệ'
 };
 
 /** Danh sách nhãn field đã đổi giá trị, dùng để build NoiDung log "Sửa thông tin yêu cầu". */

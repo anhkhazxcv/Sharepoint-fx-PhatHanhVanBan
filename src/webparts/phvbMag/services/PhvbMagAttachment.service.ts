@@ -194,7 +194,7 @@ export class PhvbAttachmentService {
       return;
     }
 
-    const details = await response.text();
+    const details = await response.clone().text();
     if (response.status === 409 || /already exists/i.test(details)) {
       return;
     }

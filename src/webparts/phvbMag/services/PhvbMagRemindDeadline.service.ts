@@ -60,7 +60,7 @@ export class PhvbRemindDeadlineService {
 
     const documentInfo = resolveRemindDeadlineDocumentInfo(detail.release);
     const mailPayload = buildRemindDeadlinePayload(
-      options.userEmail,
+      options.userDisplayName,
       selectedEmails,
       remindContext,
       documentInfo

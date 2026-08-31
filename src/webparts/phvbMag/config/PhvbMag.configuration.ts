@@ -193,16 +193,15 @@ export const WORKFLOW_PARTICIPANT_STATUS = {
 
 export const TAB_LABELS: Record<TabType, string> = {
   TrangChu: 'Trang chủ',
-  ViecCanLam: 'Việc cần làm',
-  YeuCauCuaToi: 'Yêu cầu của tôi',
-  BanNhap: 'Bản nháp',
+  ViecCanLam: 'Văn bản chờ thẩm định',
+  YeuCauCuaToi: 'Khởi tạo văn bản',
   ThuVienTaiLieu: 'Thư viện tài liệu',
-  MoiBanHanh: 'Mới ban hành',
+  MoiBanHanh: 'Ban hành gần đây',
   DaLuu: 'Đã lưu',
   XemGanDay: 'Xem gần đây',
   CapSo: 'DC cấp số',
   QLVanBan: 'QL văn bản',
-  HuongDan: 'Hướng dẫn sử dụng hệ thống và biểu mẫu'
+  HuongDan: 'Hướng dẫn sử dụng hệ thống'
 };
 
 export const DOCUMENT_COUNT_SUFFIX = 'tài liệu';
@@ -217,7 +216,7 @@ export const WORKFLOW_FILTER_NAM_TAO_YEU_CAU_LABEL = 'workflowFilterNamTaoYeuCau
 export const GUIDE_PDF_URL_LABEL = 'urlSoTayHuongDan';
 
 /** Subtitle trên tab Hướng dẫn (header view). */
-export const GUIDE_VIEW_SUBTITLE = 'Hướng dẫn sử dụng hệ thống và biểu mẫu';
+export const GUIDE_VIEW_SUBTITLE = 'Hướng dẫn sử dụng hệ thống';
 
 export interface ISlaOption {
   value: string;
@@ -231,19 +230,19 @@ export const SLA_OPTIONS: ReadonlyArray<ISlaOption> = [
     value: 'Văn bản nội khối',
     label: 'Văn bản nội khối',
     totalDays: 3,
-    description: 'Thời hạn xử lý là 3 ngày.'
+    description: 'Thời gian đề xuất xử lý là 3 ngày'
   },
   {
     value: 'Văn bản Liên khối',
     label: 'Văn bản Liên khối',
     totalDays: 7,
-    description: 'Thời hạn xử lý là 7 ngày.'
+    description: 'Thời gian đề xuất xử lý là 7 ngày'
   },
   {
     value: 'SLA ngoại lệ',
     label: 'SLA ngoại lệ',
     totalDays: 21,
-    description: 'Thời hạn xử lý là 21 ngày.'
+    description: 'Thời gian đề xuất xử lý là 21 ngày'
   }
 ];
 
@@ -261,7 +260,7 @@ export const DEFAULT_REQUEST_FORM: ICreateRequestInput = {
   noiLuu: '',
 
   // New fields default values:
-  requestType: 'Viết mới',
+  requestType: 'Tạo mới',
   titleEn: '',
   folderLuuTru: '',
   taiLieuFiles: [],
@@ -338,9 +337,11 @@ export function getWorkflowStepFromStatus(statusApproved?: string): number {
     case REQUEST_STATUS.BAN_NHAP:
       return 1;
     case REQUEST_STATUS.TU_CHOI:
-    case REQUEST_STATUS.TU_CHOI_THAM_DINH:
-    case REQUEST_STATUS.TU_CHOI_PHE_DUYET:
       return 1;
+    case REQUEST_STATUS.TU_CHOI_THAM_DINH:
+      return 3;
+    case REQUEST_STATUS.TU_CHOI_PHE_DUYET:
+      return 4;
     case REQUEST_STATUS.DANG_GOP_Y:
       return 2;
     case REQUEST_STATUS.DANG_THAM_DINH:

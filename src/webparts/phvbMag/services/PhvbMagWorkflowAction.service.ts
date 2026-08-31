@@ -176,7 +176,7 @@ async function sendApproveWorkflowMails(
   const documentInfo = resolveSendMailDocumentInfoFromRelease(options.detail.release);
   const creatorEmail = (options.detail.release.EmailNguoiTao || '').trim();
   const xacNhanPayload = buildXacNhanPayloadForStage(
-    options.userEmail,
+    options.userDisplayName,
     stage,
     creatorEmail,
     SEND_MAIL_APPROVAL_STATUS.DA_XAC_NHAN,
@@ -195,7 +195,7 @@ async function sendRejectWorkflowMail(
   const documentInfo = resolveSendMailDocumentInfoFromRelease(options.detail.release);
   const creatorEmail = (options.detail.release.EmailNguoiTao || '').trim();
   const rejectPayload = buildXacNhanPayloadForStage(
-    options.userEmail,
+    options.userDisplayName,
     stage,
     creatorEmail,
     SEND_MAIL_APPROVAL_STATUS.DA_TU_CHOI,

@@ -1,15 +1,11 @@
 import * as React from 'react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import type { IAttachmentLibraryItem, ICreateRequestInput, IPhvbDirectoryUser, IPhvbSiteContext, ISelectedBanHanhFolder, SaveRequestMode } from '../models/PhvbMag.models';
-import { DRAFT_DOCUMENT_ACCEPT, FORM_ATTACHMENT_ACCEPT, ISSUANCE_LIBRARY_TITLE, SLA_OPTIONS } from '../config/PhvbMag.configuration';
+import { DRAFT_DOCUMENT_ACCEPT, FORM_ATTACHMENT_ACCEPT, ISSUANCE_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
 import { getParentStoragePathAfterLibrary, getStoragePathAfterLibrary } from '../utils/PhvbMagBanHanh.tree';
 import {
   calculateWorkflowDeadlines,
-  getSlaMaxDeadline,
-  getTodayInputDate,
-  shiftInputDate,
-  validateWorkflowDeadlines,
-  type IDeadlineValidationResult
+  getTodayInputDate
 } from '../utils/PhvbMagSla.utils';
 import {
   collectAttachmentRemovalIds,
@@ -18,9 +14,17 @@ import {
   getRequestTypeFormRules,
   getRevokeExcludedFormFields,
   isRevokeRequestType,
-  sanitizeRequestInputForSave,
-  shouldSkipGopYStage
+  sanitizeRequestInputForSave
 } from '../utils/PhvbMagRequestForm.utils';
+import {
+  CREATE_REQUEST_FIELD_IDS,
+  focusCreateRequestField,
+  getFieldErrorMessage,
+  getVisibleFieldErrors,
+  validateCreateRequestForm,
+  type CreateRequestFieldKey,
+  type ICreateRequestFieldError
+} from '../utils/PhvbMagCreateRequestValidation.utils';
 import { resolveDmvlFolderStoragePath } from '../utils/PhvbMagDmvl.utils';
 import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 import styles from './PhvbMag.module.scss';
@@ -28,6 +32,7 @@ import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import {
   DeleteFileIcon,
   DocumentFileIcon,
+  FieldErrorIcon,
   FolderAccentIcon,
   FolderSelectIcon,
   FormTemplateFileIcon,
@@ -40,7 +45,9 @@ import {
 } from './PhvbMagIcons';
 import { PhvbMagCreateTemplatePanel } from './PhvbMagCreateTemplatePanel';
 import { PhvbMagFolderPickerDialog } from './PhvbMagFolderPickerDialog';
+import { PhvbMagDateOnlyField } from './primitives/PhvbMagDateOnlyField';
 import { PhvbMagDialog } from './primitives/PhvbMagDialog';
+import { formatExecutionDate, parseExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 
 interface IPhvbMagCreateModalProps {
   isOpen: boolean;
@@ -66,15 +73,26 @@ interface IUserPickerProps {
   onChange: (emails: string[]) => void;
   approvers: ReadonlyArray<IPhvbDirectoryUser>;
   placeholder?: string;
-  deadlineValue?: string;
-  onDeadlineChange?: (date: string) => void;
-  deadlineMin?: string;
-  deadlineMax?: string;
-  deadlineError?: string;
+  peopleError?: string;
+  peopleInputId?: string;
+  peopleDescribedBy?: string;
+  onPeopleBlur?: () => void;
   isLoading?: boolean;
 }
 
-// Highly polished, tag-based autocomplete user picker component
+function CreateFieldError(props: { id: string; message?: string }): React.ReactElement {
+  if (!props.message) {
+    return <></>;
+  }
+
+  return (
+    <p id={props.id} className={styles.fieldErrorRow} role="alert">
+      <FieldErrorIcon className={styles.fieldErrorIcon} />
+      <span>{props.message}</span>
+    </p>
+  );
+}
+
 function UserTagPicker(props: IUserPickerProps): React.ReactElement {
   const {
     label,
@@ -83,11 +101,10 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
     onChange,
     approvers,
     placeholder,
-    deadlineValue,
-    onDeadlineChange,
-    deadlineMin,
-    deadlineMax,
-    deadlineError,
+    peopleError,
+    peopleInputId,
+    peopleDescribedBy,
+    onPeopleBlur,
     isLoading
   } = props;
   const [query, setQuery] = useState('');
@@ -109,18 +126,6 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
     });
   }, [approvers, selectedEmails, query]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent): void => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
   const handleSelect = (email: string): void => {
     onChange([...selectedEmails, email]);
     setQuery('');
@@ -131,14 +136,24 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
     onChange(selectedEmails.filter(e => e !== email));
   };
 
+  const handleContainerBlur = (event: React.FocusEvent<HTMLDivElement>): void => {
+    const nextTarget = event.relatedTarget as Node | null;
+    if (containerRef.current && nextTarget && containerRef.current.contains(nextTarget)) {
+      return;
+    }
+
+    setIsOpen(false);
+    onPeopleBlur?.();
+  };
+
   return (
-    <div className={`${styles.formGroup} ${styles.userPickerContainer}`} ref={containerRef}>
-      <label className={styles.fieldLabel}>
+    <div className={`${styles.formGroup} ${styles.userPickerContainer}`} ref={containerRef} onBlur={handleContainerBlur}>
+      <label className={styles.fieldLabel} htmlFor={peopleInputId}>
         {label}
         {required && <span className={styles.required}>*</span>}
       </label>
       
-      <div className={styles.userPickerInputWrapper}>
+      <div className={`${styles.userPickerInputWrapper} ${peopleError ? styles.userPickerInputInvalid : ''}`}>
         <div className={styles.tagsContainer}>
           {selectedEmails.map(email => {
             const user = approvers.filter((a: IPhvbDirectoryUser) => a.email === email)[0];
@@ -154,6 +169,7 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
           })}
           
           <input
+            id={peopleInputId}
             type="text"
             placeholder={selectedEmails.length === 0 ? (placeholder || "Nhập tên hoặc email...") : "+ Thêm..."}
             value={query}
@@ -163,6 +179,8 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
             }}
             onFocus={() => setIsOpen(true)}
             className={styles.userPickerInput}
+            aria-invalid={Boolean(peopleError)}
+            aria-describedby={peopleDescribedBy}
           />
         </div>
 
@@ -177,6 +195,7 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
                 <div
                   key={user.id}
                   className={styles.suggestionItem}
+                  onMouseDown={event => event.preventDefault()}
                   onClick={() => handleSelect(user.email)}
                 >
                   <div className={styles.suggestionName}>{user.displayName}</div>
@@ -189,23 +208,7 @@ function UserTagPicker(props: IUserPickerProps): React.ReactElement {
           </div>
         )}
       </div>
-
-      {onDeadlineChange && (
-        <div>
-          <div className={styles.deadlineRow}>
-            <span className={styles.deadlineLabel}>Deadline:</span>
-            <input
-              type="date"
-              value={deadlineValue || ''}
-              min={deadlineMin}
-              max={deadlineMax}
-              onChange={e => onDeadlineChange(e.target.value)}
-              className={`${styles.deadlineInput} ${deadlineError ? styles.deadlineInputInvalid : ''}`}
-            />
-          </div>
-          {deadlineError && <p className={styles.deadlineError}>{deadlineError}</p>}
-        </div>
-      )}
+      <CreateFieldError id={`${peopleInputId}-error`} message={peopleError} />
     </div>
   );
 }
@@ -234,9 +237,10 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
   const [existingBieuMau, setExistingBieuMau] = useState<IAttachmentLibraryItem[]>([]);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<number[]>([]);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
-  const [deadlineErrors, setDeadlineErrors] = useState<IDeadlineValidationResult>({ isValid: true });
-  const [submitError, setSubmitError] = useState<string | undefined>(undefined);
-  const [folderError, setFolderError] = useState<string | undefined>(undefined);
+  const [touchedFields, setTouchedFields] = useState<ReadonlySet<CreateRequestFieldKey>>(new Set());
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [systemError, setSystemError] = useState<string | undefined>(undefined);
+  const [fileRejectError, setFileRejectError] = useState<{ field: CreateRequestFieldKey; message: string } | undefined>(undefined);
   const [isDmvlFolderLoading, setIsDmvlFolderLoading] = useState(false);
 
   // Refs and Drag-over states for Drag-and-Drop files
@@ -269,17 +273,11 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
       setExistingTaiLieu(nextExistingTaiLieu);
       setExistingBieuMau(nextExistingBieuMau);
       setRemovedAttachmentIds(nextRemovedAttachmentIds);
-      setDeadlineErrors(validateWorkflowDeadlines({
-        deadlineGopY: nextValues.deadlineGopY,
-        deadlineThamDinh: nextValues.deadlineThamDinh,
-        deadlinePheDuyet: nextValues.deadlinePheDuyet,
-        loaiSla: nextValues.loaiSla,
-        skipGopY: shouldSkipGopYStage(nextValues),
-        skipThamDinh: !openRules.includeGopYThamDinhWorkflow
-      }));
       setShowFolderPicker(false);
-      setSubmitError(undefined);
-      setFolderError(undefined);
+      setTouchedFields(new Set());
+      setHasAttemptedSubmit(false);
+      setSystemError(undefined);
+      setFileRejectError(undefined);
     }
   }, [defaultValues, isOpen, isEditMode, isDmvlMode, initialExistingTaiLieu, initialExistingBieuMau]);
 
@@ -292,7 +290,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
 
     const loadDmvlFolder = async (): Promise<void> => {
       setIsDmvlFolderLoading(true);
-      setFolderError(undefined);
+      setSystemError(undefined);
 
       try {
         const storagePath = await runBusy('Đang tải thư mục DMVL...', async () => {
@@ -305,7 +303,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
 
         setFormValues(previousState => ({
           ...previousState,
-          requestType: 'Viết mới',
+          requestType: 'Tạo mới',
           folderLuuTru: storagePath,
           folder: storagePath
         }));
@@ -314,7 +312,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
           return;
         }
 
-        setFolderError(error instanceof Error ? error.message : 'Không tải được thư mục DMVL.');
+        setSystemError(error instanceof Error ? error.message : 'Không tải được thư mục DMVL.');
       } finally {
         if (isMounted) {
           setIsDmvlFolderLoading(false);
@@ -328,6 +326,49 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
       isMounted = false;
     };
   }, [isOpen, isDmvlMode, runBusy, siteContext]);
+
+  const formRules = isDmvlMode ? getDmvlFormRules() : getRequestTypeFormRules(formValues.requestType);
+  const allErrors = useMemo(() => {
+    return validateCreateRequestForm(formValues, {
+      rules: formRules,
+      existingTaiLieu,
+      existingBieuMau,
+      mode: 'submit',
+      isDmvl: isDmvlMode
+    });
+  }, [existingBieuMau, existingTaiLieu, formRules, formValues, isDmvlMode]);
+  const visibleErrors = useMemo(() => {
+    return getVisibleFieldErrors(allErrors, {
+      touched: touchedFields,
+      hasAttemptedSubmit
+    });
+  }, [allErrors, hasAttemptedSubmit, touchedFields]);
+
+  const markFieldTouched = (field: CreateRequestFieldKey): void => {
+    setTouchedFields(previous => {
+      if (previous.has(field)) {
+        return previous;
+      }
+
+      const next = new Set<CreateRequestFieldKey>();
+      previous.forEach(item => next.add(item));
+      next.add(field);
+      return next;
+    });
+  };
+
+  const fieldError = (field: CreateRequestFieldKey): string | undefined => {
+    return getFieldErrorMessage(visibleErrors, field);
+  };
+
+  const revealSubmitErrors = (errors: ReadonlyArray<ICreateRequestFieldError>): void => {
+    setHasAttemptedSubmit(true);
+    if (errors.length > 0) {
+      window.setTimeout(() => {
+        focusCreateRequestField(errors[0].field);
+      }, 0);
+    }
+  };
 
   if (!isOpen) {
     return <></>;
@@ -395,19 +436,16 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     );
 
     if (duplicateName) {
-      const otherGroupLabel = field === 'taiLieuFiles' ? 'Biểu mẫu đính kèm' : 'Tài liệu soạn thảo';
-      setSubmitError(`Tên file "${duplicateName}" đã tồn tại ở nhóm ${otherGroupLabel}. Vui lòng đổi tên file hoặc chọn file khác.`);
+      const otherGroupLabel = field === 'taiLieuFiles' ? 'Biểu mẫu cần ban hành' : 'Tài liệu soạn thảo';
+      markFieldTouched(field);
+      setFileRejectError({
+        field,
+        message: `Tên file "${duplicateName}" đã tồn tại ở nhóm ${otherGroupLabel}. Vui lòng đổi tên file hoặc chọn file khác.`
+      });
       return true;
     }
 
     return false;
-  };
-
-  const getSubmitCrossGroupDuplicateFileName = (): string | undefined => {
-    const taiLieuNames = [...formValues.taiLieuFiles.map(file => file.name), ...existingTaiLieu.map(item => item.name)];
-    const bieuMauNames = [...formValues.bieuMauFiles.map(file => file.name), ...existingBieuMau.map(item => item.name)];
-
-    return findDuplicateAttachmentGroupFileName(taiLieuNames, bieuMauNames);
   };
 
   const handleFileInputChange = (
@@ -421,6 +459,8 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
       }
 
       const currentFiles = field === 'taiLieuFiles' ? formValues.taiLieuFiles : formValues.bieuMauFiles;
+      setFileRejectError(undefined);
+      markFieldTouched(field);
       updateField(field, appendFiles(currentFiles, event.target.files));
     }
 
@@ -445,6 +485,8 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
       }
 
       const currentFiles = field === 'taiLieuFiles' ? formValues.taiLieuFiles : formValues.bieuMauFiles;
+      setFileRejectError(undefined);
+      markFieldTouched(field);
       updateField(field, appendFiles(currentFiles, event.dataTransfer.files));
     }
   };
@@ -456,6 +498,7 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
   ): void => {
     event.stopPropagation();
     const currentFiles = field === 'taiLieuFiles' ? formValues.taiLieuFiles : formValues.bieuMauFiles;
+    markFieldTouched(field);
     updateField(
       field,
       currentFiles.filter((_, index) => index !== fileIndex)
@@ -467,16 +510,12 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
   };
 
   const formatExistingFileMeta = (attachment: IAttachmentLibraryItem): string => {
-    if (!attachment.modified) {
+    const parsedDate = parseExecutionDateTime(attachment.modified);
+    if (!parsedDate) {
       return 'Đã lưu trên SharePoint';
     }
 
-    const modifiedDate = new Date(attachment.modified);
-    if (isNaN(modifiedDate.getTime())) {
-      return 'Đã lưu trên SharePoint';
-    }
-
-    return `Đã lưu • ${modifiedDate.toLocaleDateString('vi-VN')}`;
+    return `Đã lưu • ${formatExecutionDate(attachment.modified)}`;
   };
 
   const buildSubmitPayload = (): ICreateRequestInput => sanitizeRequestInputForSave({
@@ -486,9 +525,18 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     removedAttachmentIds: removedAttachmentIds.slice()
   });
 
-  const formRules = isDmvlMode ? getDmvlFormRules() : getRequestTypeFormRules(formValues.requestType);
   const hasTaiLieuAttachments = formValues.taiLieuFiles.length > 0 || existingTaiLieu.length > 0;
   const requiresTaiLieuAttachments = formRules.requireTaiLieuSoanThao;
+  const folderFieldError = fieldError('folderLuuTru') || (isDmvlMode ? systemError : undefined);
+  const titleFieldError = fieldError('title');
+  const hieuLucTuError = fieldError('hieuLucTu');
+  const summaryFieldError = fieldError('summary');
+  const taiLieuFieldError = fieldError('taiLieuFiles')
+    || (fileRejectError && fileRejectError.field === 'taiLieuFiles' ? fileRejectError.message : undefined);
+  const bieuMauFieldError = fieldError('bieuMauFiles')
+    || (fileRejectError && fileRejectError.field === 'bieuMauFiles' ? fileRejectError.message : undefined);
+  const ghiChuFieldError = fieldError('ghiChuThamDinh');
+  const bannerError = externalSubmitError || (!isDmvlMode ? systemError : undefined);
 
   const handleRemoveExistingAttachment = (
     attachment: IAttachmentLibraryItem,
@@ -496,6 +544,8 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     event: React.MouseEvent<HTMLButtonElement>
   ): void => {
     event.stopPropagation();
+
+    markFieldTouched(field === 'taiLieu' ? 'taiLieuFiles' : 'bieuMauFiles');
 
     if (field === 'taiLieu') {
       setExistingTaiLieu(previousState => previousState.filter(item => item.id !== attachment.id));
@@ -512,57 +562,12 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     });
   };
 
-  const runDeadlineValidation = (values: ICreateRequestInput): IDeadlineValidationResult => {
-    const rules = getRequestTypeFormRules(values.requestType);
-
-    return validateWorkflowDeadlines({
-      deadlineGopY: values.deadlineGopY,
-      deadlineThamDinh: values.deadlineThamDinh,
-      deadlinePheDuyet: values.deadlinePheDuyet,
-      loaiSla: values.loaiSla,
-      skipGopY: shouldSkipGopYStage(values),
-      skipThamDinh: !rules.includeGopYThamDinhWorkflow
-    });
-  };
-
-  const handleDeadlineChange = (
-    field: 'deadlineGopY' | 'deadlineThamDinh' | 'deadlinePheDuyet',
-    date: string
-  ): void => {
-    const nextState = {
-      ...formValues,
-      [field]: date
-    };
-    setFormValues(nextState);
-    setDeadlineErrors(runDeadlineValidation(nextState));
-  };
-
-  const handleSlaChange = (loaiSla: string): void => {
-    const deadlines = calculateWorkflowDeadlines(loaiSla);
-    const nextState = {
-      ...formValues,
-      loaiSla,
-      ...deadlines
-    };
-    setFormValues(nextState);
-    setDeadlineErrors(runDeadlineValidation(nextState));
-  };
-
-  const slaMaxDeadline = getSlaMaxDeadline(formValues.loaiSla);
-  const todayInputDate = getTodayInputDate();
-  const skipGopYStage = shouldSkipGopYStage(formValues);
-  const gopYMaxDate = shiftInputDate(formValues.deadlineThamDinh || '', -1) || slaMaxDeadline;
-  const thamDinhMinDate = skipGopYStage
-    ? todayInputDate
-    : shiftInputDate(formValues.deadlineGopY || '', 1) || todayInputDate;
-  const thamDinhMaxDate = shiftInputDate(formValues.deadlinePheDuyet || '', -1) || slaMaxDeadline;
-  const pheDuyetMinDate = formRules.includeGopYThamDinhWorkflow
-    ? shiftInputDate(formValues.deadlineThamDinh || '', 1) || todayInputDate
-    : todayInputDate;
 
   const handleRequestTypeChange = (type: ICreateRequestInput['requestType']): void => {
-    setFolderError(undefined);
-    setSubmitError(undefined);
+    setTouchedFields(new Set());
+    setHasAttemptedSubmit(false);
+    setSystemError(undefined);
+    setFileRejectError(undefined);
 
     if (isRevokeRequestType(type)) {
       setRemovedAttachmentIds(previousRemovedIds =>
@@ -596,30 +601,20 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
 
       return nextState;
     });
-
-    setDeadlineErrors({ isValid: true });
   };
 
   const isAdjustOrRevokeRequest = formValues.requestType === 'Điều chỉnh' || isRevokeRequestType(formValues.requestType);
   const isRevoke = isRevokeRequestType(formValues.requestType);
-  const isIssueNotify = !isRevoke;
-
-  const validateIssuanceFolder = (): boolean => {
-    if (!formValues.folderLuuTru.trim()) {
-      setFolderError('Vui lòng chọn thư mục ban hành.');
-      return false;
-    }
-
-    setFolderError(undefined);
-    return true;
-  };
 
   const handleFolderConfirm = (folder: ISelectedBanHanhFolder): void => {
     const storagePath = isAdjustOrRevokeRequest
       ? getParentStoragePathAfterLibrary(folder.serverRelativePath, ISSUANCE_LIBRARY_TITLE)
       : folder.storagePath || getStoragePathAfterLibrary(folder.serverRelativePath, ISSUANCE_LIBRARY_TITLE);
 
-    setFolderError(undefined);
+    markFieldTouched('folderLuuTru');
+    if (isAdjustOrRevokeRequest) {
+      markFieldTouched('title');
+    }
     setFormValues(previousState => ({
       ...previousState,
       folderLuuTru: storagePath,
@@ -630,20 +625,16 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
   };
 
   const handleDmvlBanHanhClick = async (): Promise<void> => {
-    setSubmitError(undefined);
+    const errors = validateCreateRequestForm(formValues, {
+      rules: formRules,
+      existingTaiLieu,
+      existingBieuMau,
+      mode: 'submit',
+      isDmvl: true
+    });
 
-    if (!validateIssuanceFolder()) {
-      return;
-    }
-
-    const dmvlDuplicateFileName = getSubmitCrossGroupDuplicateFileName();
-    if (dmvlDuplicateFileName) {
-      setSubmitError(`Tên file "${dmvlDuplicateFileName}" bị trùng giữa Tài liệu soạn thảo và Biểu mẫu đính kèm. Vui lòng đổi tên hoặc xóa bớt.`);
-      return;
-    }
-
-    if (requiresTaiLieuAttachments && !hasTaiLieuAttachments) {
-      setSubmitError('Vui lòng đính kèm ít nhất một tài liệu soạn thảo trước khi ban hành.');
+    if (errors.length > 0) {
+      revealSubmitErrors(errors);
       return;
     }
 
@@ -655,7 +646,9 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
 
     if (isSuccess) {
       setFormValues({ ...defaultValues });
-      setSubmitError(undefined);
+      setHasAttemptedSubmit(false);
+      setTouchedFields(new Set());
+      setSystemError(undefined);
     }
   };
 
@@ -665,68 +658,52 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     if (isDmvlMode) {
       return;
     }
-    setSubmitError(undefined);
 
-    if (!validateIssuanceFolder()) {
-      return;
-    }
+    const errors = validateCreateRequestForm(formValues, {
+      rules: formRules,
+      existingTaiLieu,
+      existingBieuMau,
+      mode: 'submit',
+      isDmvl: false
+    });
 
-    const duplicateFileName = getSubmitCrossGroupDuplicateFileName();
-    if (duplicateFileName) {
-      setSubmitError(`Tên file "${duplicateFileName}" bị trùng giữa Tài liệu soạn thảo và Biểu mẫu đính kèm. Vui lòng đổi tên hoặc xóa bớt.`);
-      return;
-    }
-
-    if (requiresTaiLieuAttachments && !hasTaiLieuAttachments) {
-      setSubmitError('Vui lòng đính kèm ít nhất một tài liệu soạn thảo trước khi gửi yêu cầu.');
-      return;
-    }
-
-    if (formRules.requireNguoiGopY && formValues.nguoiGopY.length === 0) {
-      setSubmitError('Vui lòng chọn ít nhất một người góp ý.');
-      return;
-    }
-
-    if (formRules.requireNguoiThamDinh && formValues.nguoiThamDinh.length === 0) {
-      setSubmitError('Vui lòng chọn ít nhất một người thẩm định.');
-      return;
-    }
-
-    if (formRules.requireGhiChuThamDinh && !formValues.ghiChuThamDinh?.trim()) {
-      setSubmitError('Vui lòng nhập ghi chú cho cấp thẩm định / phê duyệt.');
-      return;
-    }
-
-    if (formValues.approvalUsers.length === 0) {
-      setSubmitError('Vui lòng chọn ít nhất một người phê duyệt.');
-      return;
-    }
-
-    const validation = runDeadlineValidation(formValues);
-    setDeadlineErrors(validation);
-
-    if (!validation.isValid) {
+    if (errors.length > 0) {
+      revealSubmitErrors(errors);
       return;
     }
 
     const isSuccess = await onSubmit(buildSubmitPayload(), 'submit');
     if (isSuccess) {
       setFormValues({ ...defaultValues });
-      setSubmitError(undefined);
+      setHasAttemptedSubmit(false);
+      setTouchedFields(new Set());
+      setSystemError(undefined);
     }
   };
 
   const handleSaveDraft = async (): Promise<void> => {
-    setSubmitError(undefined);
-    setDeadlineErrors({ isValid: true });
+    const errors = validateCreateRequestForm(formValues, {
+      rules: formRules,
+      existingTaiLieu,
+      existingBieuMau,
+      mode: 'draft',
+      isDmvl: false
+    });
 
-    if (!validateIssuanceFolder()) {
+    if (errors.length > 0) {
+      errors.forEach(error => markFieldTouched(error.field));
+      window.setTimeout(() => {
+        focusCreateRequestField(errors[0].field);
+      }, 0);
       return;
     }
 
     const isSuccess = await onSubmit(buildSubmitPayload(), 'draft');
     if (isSuccess) {
       setFormValues({ ...defaultValues });
+      setHasAttemptedSubmit(false);
+      setTouchedFields(new Set());
+      setSystemError(undefined);
     }
   };
 
@@ -761,9 +738,11 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 type="button"
                 className={styles.btnSubmit}
                 onClick={handleDmvlBanHanhClick}
-                disabled={isSaving || isDmvlFolderLoading || Boolean(folderError)}
+                disabled={isSaving}
               >
-                Ban hành
+                {hasAttemptedSubmit && allErrors.length > 0
+                  ? `Ban hành (${allErrors.length} lỗi)`
+                  : 'Ban hành'}
               </button>
             ) : (
               <>
@@ -783,7 +762,9 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   disabled={isSaving}
                 >
                   <span className={styles.submitButtonContent}>
-                    Gửi yêu cầu
+                    {hasAttemptedSubmit && allErrors.length > 0
+                      ? `Gửi yêu cầu (${allErrors.length} lỗi)`
+                      : 'Gửi yêu cầu'}
                     <SubmitRequestIcon />
                   </span>
                 </button>
@@ -792,21 +773,46 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
           </>
         )}
       >
-        <form id={createModalFormId} onSubmit={handleSubmit} className={styles.formContainer}>
+        <form id={createModalFormId} onSubmit={handleSubmit} className={styles.formContainer} noValidate>
           <div className={styles.modalBody}>
-            {/* LOẠI YÊU CẦU + THÔNG BÁO EMAIL */}
-            <div className={styles.formRowTwoCol}>
+            {hasAttemptedSubmit && allErrors.length > 0 ? (
+              <div className={styles.createValidationSummary} role="alert">
+                <p className={styles.createValidationSummaryTitle}>
+                  {`Còn ${allErrors.length} mục cần hoàn thiện`}
+                </p>
+                <ul className={styles.createValidationSummaryList}>
+                  {allErrors.map((error, errorIndex) => (
+                    <li key={`${error.field}-${errorIndex}`}>
+                      <button
+                        type="button"
+                        className={styles.createValidationSummaryItem}
+                        onClick={() => focusCreateRequestField(error.field)}
+                      >
+                        {error.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {bannerError ? (
+              <div className={styles.createValidationSummary} role="alert">
+                <p className={styles.createValidationSummaryTitle}>{bannerError}</p>
+              </div>
+            ) : null}
+            {/* LOẠI TÁC VỤ */}
+            <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>LOẠI YÊU CẦU</label>
+                <label className={styles.fieldLabel}>LOẠI TÁC VỤ</label>
                 {isDmvlMode ? (
                   <div className={styles.requestTypeGroup}>
                     <button type="button" className={`${styles.requestTypeBtn} ${styles.requestTypeBtnActive}`} disabled>
-                      Viết mới
+                      Tạo mới
                     </button>
                   </div>
                 ) : (
                   <div className={styles.requestTypeGroup}>
-                    {(['Viết mới', 'Điều chỉnh'] as const).map(type => (
+                    {(['Tạo mới', 'Điều chỉnh'] as const).map(type => (
                       <button
                         key={type}
                         type="button"
@@ -819,43 +825,22 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   </div>
                 )}
               </div>
-
-              {!isDmvlMode ? (
-              <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>THÔNG BÁO EMAIL</label>
-                <div
-                  className={`${styles.createEmailNotifyBox} ${isIssueNotify ? styles.createEmailNotifyBoxIssue : styles.createEmailNotifyBoxRevoke}`}
-                >
-                  <label className={styles.createEmailNotifyRow}>
-                    <input
-                      type="checkbox"
-                      checked={isIssueNotify ? true : Boolean(formValues.isSendMailNotify)}
-                      onChange={event => updateField('isSendMailNotify', event.target.checked)}
-                      disabled={isIssueNotify}
-                    />
-                    <span className={styles.createEmailNotifyLabel}>
-                      {isIssueNotify ? 'Thông báo khi ban hành (bắt buộc)' : 'Gửi thông báo thu hồi đến CBNV'}
-                    </span>
-                  </label>
-                  {!isIssueNotify}
-                </div>
-              </div>
-              ) : null}
             </div>
 
             {/* THƯ MỤC BAN HÀNH */}
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>
+                <label className={styles.fieldLabel} htmlFor={CREATE_REQUEST_FIELD_IDS.folderLuuTru}>
                   THƯ MỤC BAN HÀNH <span className={styles.required}>*</span>
                 </label>
                 <div className={styles.folderInputWrapper}>
-                  <div className={`${styles.folderInputLeft} ${folderError ? styles.folderInputInvalid : ''}`}>
+                  <div className={`${styles.folderInputLeft} ${folderFieldError ? styles.folderInputInvalid : ''}`}>
                     <FolderAccentIcon />
                     <input
+                      id={CREATE_REQUEST_FIELD_IDS.folderLuuTru}
                       type="text"
                       readOnly
-                      placeholder={isDmvlMode ? 'Đang tải thư mục DMVL...' : 'Chọn thư mục ban hành...'}
+                      placeholder={isDmvlMode ? (isDmvlFolderLoading ? 'Đang tải thư mục DMVL...' : 'Thư mục DMVL') : 'Chọn thư mục ban hành...'}
                       value={formValues.folderLuuTru}
                       className={styles.folderInputText}
                       onClick={() => {
@@ -863,8 +848,9 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                           setShowFolderPicker(true);
                         }
                       }}
-                      aria-invalid={Boolean(folderError)}
-                      aria-describedby={folderError ? 'folderLuuTruError' : undefined}
+                      onBlur={() => markFieldTouched('folderLuuTru')}
+                      aria-invalid={Boolean(folderFieldError)}
+                      aria-describedby={folderFieldError ? `${CREATE_REQUEST_FIELD_IDS.folderLuuTru}-error` : undefined}
                     />
                   </div>
                   {!isDmvlMode ? (
@@ -878,28 +864,30 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   </button>
                   ) : null}
                 </div>
-                {folderError && (
-                  <p id="folderLuuTruError" className={styles.deadlineError}>{folderError}</p>
-                )}
+                <CreateFieldError id={`${CREATE_REQUEST_FIELD_IDS.folderLuuTru}-error`} message={folderFieldError} />
               </div>
             </div>
 
             {/* TÊN VĂN BẢN (TIẾNG VIỆT) */}
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>
+                <label className={styles.fieldLabel} htmlFor={CREATE_REQUEST_FIELD_IDS.title}>
                   TÊN VĂN BẢN (TIẾNG VIỆT) <span className={styles.required}>*</span>
                 </label>
                 <input
+                  id={CREATE_REQUEST_FIELD_IDS.title}
                   type="text"
                   placeholder={isAdjustOrRevokeRequest ? 'Chọn thư mục ban hành để tự điền...' : 'Nhập tên đầy đủ...'}
                   value={formValues.title}
                   onChange={event => handleTitleChange(event.target.value)}
+                  onBlur={() => markFieldTouched('title')}
                   readOnly={isAdjustOrRevokeRequest}
                   disabled={isAdjustOrRevokeRequest}
-                  required
-                  className={styles.formInput}
+                  className={`${styles.formInput} ${titleFieldError ? styles.formInputInvalid : ''}`}
+                  aria-invalid={Boolean(titleFieldError)}
+                  aria-describedby={titleFieldError ? `${CREATE_REQUEST_FIELD_IDS.title}-error` : undefined}
                 />
+                <CreateFieldError id={`${CREATE_REQUEST_FIELD_IDS.title}-error`} message={titleFieldError} />
               </div>
             </div>
 
@@ -922,72 +910,82 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
             {/* NGÀY HIỆU LỰC & NGÀY HẾT HIỆU LỰC */}
             <div className={styles.formRowTwoCol}>
               <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>
+                <label className={styles.fieldLabel} htmlFor={CREATE_REQUEST_FIELD_IDS.hieuLucTu}>
                   NGÀY HIỆU LỰC <span className={styles.required}>*</span>
                 </label>
-                <input
-                  type="date"
+                <PhvbMagDateOnlyField
+                  id={CREATE_REQUEST_FIELD_IDS.hieuLucTu}
                   value={formValues.hieuLucTu}
-                  onChange={event => updateField('hieuLucTu', event.target.value)}
-                  required
-                  className={styles.formInput}
+                  onChange={value => updateField('hieuLucTu', value)}
+                  onBlur={() => markFieldTouched('hieuLucTu')}
+                  isInvalid={Boolean(hieuLucTuError)}
+                  ariaDescribedBy={hieuLucTuError ? `${CREATE_REQUEST_FIELD_IDS.hieuLucTu}-error` : undefined}
                 />
+                <CreateFieldError id={`${CREATE_REQUEST_FIELD_IDS.hieuLucTu}-error`} message={hieuLucTuError} />
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>NGÀY HẾT HIỆU LỰC</label>
-                <input
-                  type="date"
+                <label className={styles.fieldLabel} htmlFor="phvb-create-hieu-luc-den">NGÀY HẾT HIỆU LỰC</label>
+                <PhvbMagDateOnlyField
+                  id="phvb-create-hieu-luc-den"
                   value={formValues.hieuLucDen}
-                  onChange={event => updateField('hieuLucDen', event.target.value)}
-                  className={styles.formInput}
+                  onChange={value => updateField('hieuLucDen', value)}
                 />
               </div>
             </div>
 
-            {/* LÝ DO PHÁT HÀNH / TÓM TẤT NỘI DUNG */}
+            {/* LÝ DO BAN HÀNH / TÓM TẮT NỘI DUNG */}
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
                 <label className={styles.fieldLabel}>
-                  LÝ DO PHÁT HÀNH / TÓM TẤT NỘI DUNG <span className={styles.required}>*</span>
+                  LÝ DO BAN HÀNH / TÓM TẮT NỘI DUNG <span className={styles.required}>*</span>
                 </label>
                 {!isRevoke && (
                   <div className={styles.createSummaryHintCallout}>
                     <SummaryHintIcon className={styles.createSummaryHintIcon} />
                     <p className={styles.createSummaryHintText}>
-                      Đây là nội dung mô tả được hiển thị trên Intranet. Ghi chú nội bộ cho cấp thẩm định/phê duyệt vui lòng điền ở phần Ghi chú cho cấp TĐ/PD bên dưới.
+                      Đây là nội dung mô tả được hiển thị trên Intranet. Ghi chú nội bộ cho cấp thẩm định/phê duyệt vui lòng điền ở phần Ghi chú cho cấp thẩm định / phê duyệt bên dưới.
                     </p>
                   </div>
                 )}
                 <textarea
+                  id={CREATE_REQUEST_FIELD_IDS.summary}
                   rows={4}
                   placeholder={isRevokeRequestType(formValues.requestType)
                     ? 'Nêu rõ lý do thu hồi văn bản...'
                     : 'Mục đích, bối cảnh và nội dung chính của văn bản...'}
                   value={formValues.summary}
                   onChange={event => updateField('summary', event.target.value)}
-                  required
-                  className={styles.formTextArea}
+                  onBlur={() => markFieldTouched('summary')}
+                  className={`${styles.formTextArea} ${summaryFieldError ? styles.formInputInvalid : ''}`}
+                  aria-invalid={Boolean(summaryFieldError)}
+                  aria-describedby={summaryFieldError ? `${CREATE_REQUEST_FIELD_IDS.summary}-error` : undefined}
                 />
+                <CreateFieldError id={`${CREATE_REQUEST_FIELD_IDS.summary}-error`} message={summaryFieldError} />
               </div>
             </div>
 
             {formRules.showTaiLieuSoanThao && (
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>
-                  TÀI LIỆU SOẠN THẢO {!hasTaiLieuAttachments && <span className={styles.required}>*</span>}
+                <label className={styles.fieldLabel} htmlFor={CREATE_REQUEST_FIELD_IDS.taiLieuFiles}>
+                  TÀI LIỆU SOẠN THẢO {requiresTaiLieuAttachments && !hasTaiLieuAttachments && <span className={styles.required}>*</span>}
                 </label>
                 <span className={styles.fieldSubtitle}>File văn bản chính cần phát hành (.docx, .pdf, .xlsx, .xls)</span>
 
                 <PhvbMagCreateTemplatePanel isActive={isOpen} siteContext={siteContext} />
 
                 <div
-                  className={`${styles.dragDropZone} ${isDragging1 ? styles.dragDropActive : ''} ${hasTaiLieuAttachments ? styles.dragDropHasFile : ''}`}
+                  id={CREATE_REQUEST_FIELD_IDS.taiLieuFiles}
+                  tabIndex={0}
+                  className={`${styles.dragDropZone} ${isDragging1 ? styles.dragDropActive : ''} ${hasTaiLieuAttachments ? styles.dragDropHasFile : ''} ${taiLieuFieldError ? styles.dragDropInvalid : ''}`}
                   onDragOver={(e) => { e.preventDefault(); setIsDragging1(true); }}
                   onDragLeave={() => setIsDragging1(false)}
                   onDrop={event => handleDropFiles(event, 'taiLieuFiles')}
                   onClick={() => openFilePicker(file1Ref)}
+                  onBlur={() => markFieldTouched('taiLieuFiles')}
+                  aria-invalid={Boolean(taiLieuFieldError)}
+                  aria-describedby={taiLieuFieldError ? `${CREATE_REQUEST_FIELD_IDS.taiLieuFiles}-error` : undefined}
                 >
                   <input
                     type="file"
@@ -1052,24 +1050,29 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                     </div>
                   )}
                 </div>
+                <CreateFieldError id={`${CREATE_REQUEST_FIELD_IDS.taiLieuFiles}-error`} message={taiLieuFieldError} />
               </div>
             </div>
             )}
-
             {formRules.showBieuMauDinhKem && (
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>BIỂU MẪU ĐÍNH KÈM</label>
+                <label className={styles.fieldLabel} htmlFor={CREATE_REQUEST_FIELD_IDS.bieuMauFiles}>BIỂU MẪU CẦN BAN HÀNH</label>
                 <span className={styles.fieldSubtitle}>
                   CBNV có thể tải được biểu mẫu về để sử dụng sau khi ban hành
                 </span>
 
                 <div
-                  className={`${styles.dragDropZone} ${isDragging2 ? styles.dragDropActive : ''} ${existingBieuMau.length > 0 || formValues.bieuMauFiles.length > 0 ? styles.dragDropHasFile : ''}`}
+                  id={CREATE_REQUEST_FIELD_IDS.bieuMauFiles}
+                  tabIndex={0}
+                  className={`${styles.dragDropZone} ${isDragging2 ? styles.dragDropActive : ''} ${existingBieuMau.length > 0 || formValues.bieuMauFiles.length > 0 ? styles.dragDropHasFile : ''} ${bieuMauFieldError ? styles.dragDropInvalid : ''}`}
                   onDragOver={(e) => { e.preventDefault(); setIsDragging2(true); }}
                   onDragLeave={() => setIsDragging2(false)}
                   onDrop={event => handleDropFiles(event, 'bieuMauFiles')}
                   onClick={() => openFilePicker(file2Ref)}
+                  onBlur={() => markFieldTouched('bieuMauFiles')}
+                  aria-invalid={Boolean(bieuMauFieldError)}
+                  aria-describedby={bieuMauFieldError ? `${CREATE_REQUEST_FIELD_IDS.bieuMauFiles}-error` : undefined}
                 >
                   <input
                     type="file"
@@ -1134,56 +1137,36 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                     </div>
                   )}
                 </div>
+                <CreateFieldError id={`${CREATE_REQUEST_FIELD_IDS.bieuMauFiles}-error`} message={bieuMauFieldError} />
               </div>
             </div>
             )}
 
             {!isDmvlMode ? (
             <>
-            {/* LOẠI SLA */}
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label className={styles.fieldLabel}>
-                  LOẠI SLA <span className={styles.required}>*</span>
-                </label>
-                <select
-                  value={formValues.loaiSla}
-                  onChange={event => handleSlaChange(event.target.value)}
-                  required
-                  className={styles.formSelect}
-                >
-                  <option value="">Chọn loại SLA...</option>
-                  {SLA_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value} title={option.description}>
-                      {option.label}: {option.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* LUỒNG XÉT DUYỆT SECTION */}
+            {/* LUỒNG THẨM ĐỊNH SECTION */}
             <div className={styles.workflowSection}>
-              <h4 className={styles.workflowSectionTitle}>LUỒNG XÉT DUYỆT</h4>
-
-              {!deadlineErrors.isValid && deadlineErrors.message && (
-                <p className={styles.deadlineError}>{deadlineErrors.message}</p>
-              )}
+              <h4 className={styles.workflowSectionTitle}>LUỒNG THẨM ĐỊNH</h4>
 
               {formRules.showGhiChuThamDinh && (
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
-                  <label className={styles.fieldLabel}>
-                    GHI CHÚ CHO CẤP TĐ / PD
+                  <label className={styles.fieldLabel} htmlFor={CREATE_REQUEST_FIELD_IDS.ghiChuThamDinh}>
+                    GHI CHÚ CHO CẤP THẨM ĐỊNH / PHÊ DUYỆT
                     {formRules.requireGhiChuThamDinh && <span className={styles.required}>*</span>}
                   </label>
                   <textarea
+                    id={CREATE_REQUEST_FIELD_IDS.ghiChuThamDinh}
                     rows={2}
                     placeholder="Điểm cần chú ý, yêu cầu đặc biệt khi thẩm định / phê duyệt..."
                     value={formValues.ghiChuThamDinh}
                     onChange={event => updateField('ghiChuThamDinh', event.target.value)}
-                    className={styles.formTextAreaSmall}
+                    onBlur={() => markFieldTouched('ghiChuThamDinh')}
+                    className={`${styles.formTextAreaSmall} ${ghiChuFieldError ? styles.formInputInvalid : ''}`}
+                    aria-invalid={Boolean(ghiChuFieldError)}
+                    aria-describedby={ghiChuFieldError ? `${CREATE_REQUEST_FIELD_IDS.ghiChuThamDinh}-error` : undefined}
                   />
+                  <CreateFieldError id={`${CREATE_REQUEST_FIELD_IDS.ghiChuThamDinh}-error`} message={ghiChuFieldError} />
                 </div>
               </div>
               )}
@@ -1196,20 +1179,15 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   required={formRules.requireNguoiGopY}
                   selectedEmails={formValues.nguoiGopY}
                   onChange={emails => {
-                    const nextState = {
-                      ...formValues,
-                      nguoiGopY: emails
-                    };
-                    setFormValues(nextState);
-                    setDeadlineErrors(runDeadlineValidation(nextState));
+                    markFieldTouched('nguoiGopY');
+                    updateField('nguoiGopY', emails);
                   }}
                   approvers={approvers}
-                  deadlineValue={formValues.deadlineGopY}
-                  onDeadlineChange={date => handleDeadlineChange('deadlineGopY', date)}
-                  deadlineMin={todayInputDate}
-                  deadlineMax={gopYMaxDate}
-                  deadlineError={deadlineErrors.deadlineGopY}
-                  placeholder="+ Thêm người góp ý..."
+                  peopleError={fieldError('nguoiGopY')}
+                  peopleInputId={CREATE_REQUEST_FIELD_IDS.nguoiGopY}
+                  peopleDescribedBy={fieldError('nguoiGopY') ? `${CREATE_REQUEST_FIELD_IDS.nguoiGopY}-error` : undefined}
+                  onPeopleBlur={() => markFieldTouched('nguoiGopY')}
+                  placeholder="Nhập tên hoặc email..."
                   isLoading={isLoadingApprovers}
                 />
                 )}
@@ -1219,13 +1197,15 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   label="NGƯỜI THẨM ĐỊNH"
                   required={formRules.requireNguoiThamDinh}
                   selectedEmails={formValues.nguoiThamDinh}
-                  onChange={emails => updateField('nguoiThamDinh', emails)}
+                  onChange={emails => {
+                    markFieldTouched('nguoiThamDinh');
+                    updateField('nguoiThamDinh', emails);
+                  }}
                   approvers={approvers}
-                  deadlineValue={formValues.deadlineThamDinh}
-                  onDeadlineChange={date => handleDeadlineChange('deadlineThamDinh', date)}
-                  deadlineMin={thamDinhMinDate}
-                  deadlineMax={thamDinhMaxDate}
-                  deadlineError={deadlineErrors.deadlineThamDinh}
+                  peopleError={fieldError('nguoiThamDinh')}
+                  peopleInputId={CREATE_REQUEST_FIELD_IDS.nguoiThamDinh}
+                  peopleDescribedBy={fieldError('nguoiThamDinh') ? `${CREATE_REQUEST_FIELD_IDS.nguoiThamDinh}-error` : undefined}
+                  onPeopleBlur={() => markFieldTouched('nguoiThamDinh')}
                   placeholder="Nhập tên hoặc email..."
                   isLoading={isLoadingApprovers}
                 />
@@ -1238,13 +1218,15 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                   label="NGƯỜI PHÊ DUYỆT"
                   required
                   selectedEmails={formValues.approvalUsers}
-                  onChange={emails => updateField('approvalUsers', emails)}
+                  onChange={emails => {
+                    markFieldTouched('approvalUsers');
+                    updateField('approvalUsers', emails);
+                  }}
                   approvers={approvers}
-                  deadlineValue={formValues.deadlinePheDuyet}
-                  onDeadlineChange={date => handleDeadlineChange('deadlinePheDuyet', date)}
-                  deadlineMin={pheDuyetMinDate}
-                  deadlineMax={slaMaxDeadline}
-                  deadlineError={deadlineErrors.deadlinePheDuyet}
+                  peopleError={fieldError('approvalUsers')}
+                  peopleInputId={CREATE_REQUEST_FIELD_IDS.approvalUsers}
+                  peopleDescribedBy={fieldError('approvalUsers') ? `${CREATE_REQUEST_FIELD_IDS.approvalUsers}-error` : undefined}
+                  onPeopleBlur={() => markFieldTouched('approvalUsers')}
                   placeholder="Nhập tên hoặc email..."
                   isLoading={isLoadingApprovers}
                 />
@@ -1253,10 +1235,6 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
             </>
             ) : null}
           </div>
-
-          {(submitError || externalSubmitError) && (
-            <p className={styles.submitError} role="alert">{submitError || externalSubmitError}</p>
-          )}
         </form>
       </PhvbMagDialog>
 

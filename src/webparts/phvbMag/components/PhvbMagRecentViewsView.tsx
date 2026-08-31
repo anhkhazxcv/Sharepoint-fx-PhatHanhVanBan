@@ -63,7 +63,7 @@ export function PhvbMagRecentViewsView(props: IPhvbMagRecentViewsViewProps): Rea
     <PhvbMagLibraryListPageShell
       eyebrow="Thư viện"
       title={TAB_LABELS.XemGanDay}
-      subtitle={`Văn bản bạn đã mở gần đây. Chỉ hiển thị ${RECENT_VIEWS_TOP} văn bản xem gần nhất.`}
+      subtitle={`Danh sách các văn bản đã xem gần đây. Hệ thống hiển thị tối đa ${RECENT_VIEWS_TOP} văn bản được truy cập gần nhất.`}
       count={recentCount}
       countSuffix={DOCUMENT_COUNT_SUFFIX}
       isLoading={isLoadingRecentView}

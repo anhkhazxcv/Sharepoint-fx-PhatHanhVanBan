@@ -87,7 +87,7 @@ export function canRemoveWorkflowParticipant(status?: string): boolean {
 }
 
 export function getVisibleParticipantStages(loaiYeuCau?: string): WorkflowStage[] {
-  const requestType = (loaiYeuCau || 'Viết mới') as RequestTypeValue;
+  const requestType = loaiYeuCau as RequestTypeValue;
   const formRules = getRequestTypeFormRules(requestType);
 
   if (!formRules.includeGopYThamDinhWorkflow) {

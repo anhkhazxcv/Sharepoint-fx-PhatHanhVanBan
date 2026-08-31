@@ -1,8 +1,6 @@
 import { cloneDefaultRequestForm, REQUEST_STATUS } from '../config/PhvbMag.configuration';
 import type { IAllUserWorkflowItem, ICreateRequestInput, IPhvbDirectoryUser, IVanBanItem } from '../models/PhvbMag.models';
 
-const REQUEST_TYPE_VALUES: ReadonlyArray<ICreateRequestInput['requestType']> = ['Viết mới', 'Điều chỉnh', 'Thu hồi'];
-
 export function isDraftStatus(status?: string): boolean {
   return (status || '').trim() === REQUEST_STATUS.BAN_NHAP;
 }
@@ -90,8 +88,7 @@ export function toInputDateValue(value?: string): string {
 }
 
 function resolveRequestType(value?: string): ICreateRequestInput['requestType'] {
-  const normalized = (value || '').trim() as ICreateRequestInput['requestType'];
-  return REQUEST_TYPE_VALUES.indexOf(normalized) > -1 ? normalized : 'Viết mới';
+  return (value || '').trim() as ICreateRequestInput['requestType'];
 }
 
 export interface IMapDraftFormOptions {

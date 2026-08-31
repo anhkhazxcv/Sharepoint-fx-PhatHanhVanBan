@@ -184,7 +184,7 @@ export function resolveTabForSendMailType(
     case SEND_MAIL_TYPE.XAC_NHAN_GOP_Y:
     case SEND_MAIL_TYPE.XAC_NHAN_THAM_DINH:
     case SEND_MAIL_TYPE.XAC_NHAN_PHE_DUYET:
-      return approvalStatus === SEND_MAIL_APPROVAL_STATUS.DA_TU_CHOI ? 'BanNhap' : 'YeuCauCuaToi';
+      return 'YeuCauCuaToi';
 
     case SEND_MAIL_TYPE.YEU_CAU_CAP_SO:
       return 'CapSo';

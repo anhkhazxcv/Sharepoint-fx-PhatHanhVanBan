@@ -197,7 +197,7 @@ export class PhvbWorkflowWriteService {
         options.requestReferenceId
       );
       const mailPayload = buildYeuCauPayloadForStage(
-        options.creatorEmail,
+        options.creatorDisplayName,
         activeStage,
         getParticipantEmailsFromInput(activeStage, options.input),
         documentInfo

@@ -314,7 +314,6 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
             <span className={styles.detailBreadcrumbSep}>&gt;</span>
             <span className={styles.detailBreadcrumbCurrent}>{title}</span>
           </nav>
-          <h1 className={styles.detailTitle}>{title}</h1>
         </div>
 
         <div className={styles.detailHeaderActionsArea}>
@@ -410,7 +409,7 @@ export const PhvbMagDetailHeader = forwardRef<HTMLDivElement, IPhvbMagDetailHead
                   disabled={isBusy}
                   onClick={() => onDuplicate?.()}
                 >
-                  Nhân bản
+                  Tạo bản sao
                 </button>
               ) : null}
 

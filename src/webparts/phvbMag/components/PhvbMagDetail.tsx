@@ -101,7 +101,7 @@ interface IPhvbMagDetailProps {
 const DETAIL_TABS: ReadonlyArray<{ key: DetailTabKey; label: string }> = [
   { key: 'info', label: 'Thông tin' },
   { key: 'documents', label: 'Tài liệu' },
-  { key: 'workflow', label: 'Quy trình phê duyệt' }
+  { key: 'workflow', label: 'Luồng thẩm định' }
 ];
 
 export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
@@ -177,7 +177,7 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
   const title = data.release.Tenvanban || data.release.IdYeuCau || 'Chi tiết văn bản';
   const canDuplicate = canDuplicateRelease(data.release.StatusApproved);
   const isFullIssuancePublish =
-    (data.release.LoaiYeuCau || '').trim() === 'Viết mới' ||
+    (data.release.LoaiYeuCau || '').trim() === 'Tạo mới' ||
     (data.release.LoaiYeuCau || '').trim() === 'Điều chỉnh';
   const requireMainDocument =
     isFullIssuancePublish && (banHanhNotifyMode === 'prepare' || banHanhNotifyMode === 'edit');

@@ -32,7 +32,7 @@ const STANDARD_FORM_RULES: IRequestTypeFormRules = {
 
 const ADJUST_FORM_RULES: IRequestTypeFormRules = {
   ...STANDARD_FORM_RULES,
-  requireTaiLieuSoanThao: false
+  requireTaiLieuSoanThao: true
 };
 
 const DMVL_FORM_RULES: IRequestTypeFormRules = {

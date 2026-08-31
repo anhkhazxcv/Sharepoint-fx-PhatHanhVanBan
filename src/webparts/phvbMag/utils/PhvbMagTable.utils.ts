@@ -38,10 +38,10 @@ export interface IWorkflowMetricCard {
 }
 
 const WORKFLOW_BUCKET_LABELS: Record<WorkflowBucketKey, string> = {
-  gopY: 'Cần góp ý',
-  thamDinh: 'Cần thẩm định',
-  pheDuyet: 'Cần phê duyệt',
-  choBanHanh: 'Chờ ban hành'
+  gopY: 'VB chờ góp ý',
+  thamDinh: 'VB chờ thẩm định',
+  pheDuyet: 'VB chờ phê duyệt',
+  choBanHanh: 'VB chờ ban hành'
 };
 
 const WORKFLOW_BUCKET_ORDER: WorkflowBucketKey[] = ['gopY', 'thamDinh', 'pheDuyet', 'choBanHanh'];

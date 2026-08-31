@@ -99,7 +99,7 @@ export function usePhvbDetailDocuments(
     );
 
     if (duplicateName) {
-      const otherGroupLabel = kind === 'form' ? 'Tài liệu soạn thảo' : 'Biểu mẫu đính kèm';
+      const otherGroupLabel = kind === 'form' ? 'Tài liệu soạn thảo' : 'Biểu mẫu cần ban hành';
       setErrorMessage(`Tên file "${duplicateName}" đã tồn tại ở nhóm ${otherGroupLabel}. Vui lòng đổi tên file hoặc chọn file khác.`);
       return false;
     }

@@ -4,6 +4,7 @@ import { DEFAULT_LIST_PAGE_SIZE, escapeODataValue, MAX_LIST_FETCH_TOP, normalize
 import { ensureSharePointResponseOk, type IApiLogParams, tryAcrossCandidateSites } from '../infrastructure/SharePointHttp.utils';
 import { SharePointRequestError } from '../services/PhvbMag.error';
 import { phvbLogService, serializeLogPayload } from '../services/PhvbMagLog.service';
+import { assertValidateUpdateSucceeded } from '../utils/PhvbMagSharePoint.utils';
 import type { IPhvbLogContext, IPhvbSiteContext, IVanBanItem } from '../models/PhvbMag.models';
 
 export interface IFetchPhvbItemsQuery extends IPhvbSiteContext {
@@ -38,6 +39,13 @@ export interface IDeletePhvbItemCommand extends IPhvbSiteContext {
   logContext?: IPhvbLogContext;
 }
 
+export interface IUpdateItemFieldValuesCommand extends IPhvbSiteContext {
+  listTitle?: string;
+  itemId: number;
+  formValues: ReadonlyArray<{ FieldName: string; FieldValue: string }>;
+  logContext?: IPhvbLogContext;
+}
+
 export interface IFetchPhvbCountQuery extends IPhvbSiteContext {
   filter?: string;
   logContext?: IPhvbLogContext;
@@ -49,6 +57,7 @@ export interface IPhvbRepository {
   fetchCount(query: IFetchPhvbCountQuery): Promise<number>;
   createItem(command: ICreatePhvbItemCommand): Promise<number>;
   updateItem(command: IUpdatePhvbItemCommand): Promise<void>;
+  updateItemFieldValues(command: IUpdateItemFieldValuesCommand): Promise<void>;
   deleteItem(command: IDeletePhvbItemCommand): Promise<void>;
 }
 
@@ -181,6 +190,30 @@ async function runPatchRequestWithFallback(siteUrl: string, command: IUpdatePhvb
   }
 
   throw new Error('SharePoint update payload is empty after removing unsupported fields.');
+}
+
+async function runValidateUpdateListItemRequest(siteUrl: string, command: IUpdateItemFieldValuesCommand): Promise<void> {
+  const requestUrl = `${getItemsEndpoint(siteUrl, command.listTitle)}(${command.itemId})/ValidateUpdateListItem`;
+  const response = await command.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
+    body: JSON.stringify({
+      formValues: command.formValues,
+      bNewDocumentUpdate: false
+    }),
+    headers: {
+      accept: 'application/json;odata=nometadata',
+      'content-type': 'application/json;odata=nometadata',
+      'odata-version': ''
+    }
+  });
+
+  await ensureSharePointResponseOk(
+    response,
+    requestUrl,
+    buildRepositoryApiLogParams(command, 'SP_UPDATE', command.itemId, command.formValues.map(formValue => formValue.FieldName))
+  );
+
+  const payload = await response.json();
+  assertValidateUpdateSucceeded(payload);
 }
 
 async function readJson<T>(response: SPHttpClientResponse): Promise<T> {
@@ -386,6 +419,10 @@ export class SharePointPhvbRepository implements IPhvbRepository {
 
   public async updateItem(command: IUpdatePhvbItemCommand): Promise<void> {
     return tryAcrossCandidateSites(command, async (siteUrl: string) => runPatchRequestWithFallback(siteUrl, command));
+  }
+
+  public async updateItemFieldValues(command: IUpdateItemFieldValuesCommand): Promise<void> {
+    return tryAcrossCandidateSites(command, async (siteUrl: string) => runValidateUpdateListItemRequest(siteUrl, command));
   }
 
   public async deleteItem(command: IDeletePhvbItemCommand): Promise<void> {

@@ -16,7 +16,7 @@ import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagFolderPickerDialogProps {
   isOpen: boolean;
-  requestType: 'Viết mới' | 'Điều chỉnh' | 'Thu hồi';
+  requestType: 'Tạo mới' | 'Điều chỉnh' | 'Thu hồi';
   siteContext: IPhvbSiteContext;
   onClose: () => void;
   onConfirm: (folder: ISelectedBanHanhFolder) => void;

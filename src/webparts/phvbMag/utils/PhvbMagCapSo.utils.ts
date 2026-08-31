@@ -7,7 +7,7 @@ export function isRevokeRelease(release: Pick<IVanBanItem, 'LoaiYeuCau'>): boole
 
 export function isIssueOrAdjustRequest(loaiYeuCau?: string): boolean {
   const type = (loaiYeuCau || '').trim();
-  return type === 'Viết mới' || type === 'Điều chỉnh';
+  return type === 'Tạo mới' || type === 'Điều chỉnh';
 }
 
 export function canAssignDocumentNumber(release: IVanBanItem): boolean {

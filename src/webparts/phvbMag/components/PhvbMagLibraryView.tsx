@@ -178,7 +178,7 @@ function DocumentListItem(props: IDocumentListItemProps): React.ReactElement {
       metaContent={(
         <>
           <span className={styles.libraryDocumentContact}>
-            <strong>Người liên hệ:</strong> {contactPerson}
+            <strong>Đầu mối liên hệ:</strong> {contactPerson}
           </span>
           <span className={styles.libraryDocumentEffectiveDate}>
             <strong>Ngày hiệu lực:</strong> {effectiveDate}
@@ -471,7 +471,7 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
                       ? 'Không tìm thấy kết quả. Hãy thử từ khóa khác hoặc thoát tìm kiếm.'
                       : (library.selectedFolder
                         ? 'Không có tài liệu trong thư mục này.'
-                        : 'Chọn thư mục bên trái, hoặc tìm kiếm phía trên.')}
+                        : 'Vui lòng lựa chọn thư mục trong danh mục bên trái hoặc sử dụng chức năng tìm kiếm phía trên để tra cứu tài liệu.')}
                   />
                 )}
 

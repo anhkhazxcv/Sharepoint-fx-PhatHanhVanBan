@@ -667,7 +667,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
     ToastService.success(successMessage);
 
-    const targetTab = mode === 'draft' ? 'BanNhap' : activeTab;
+    const targetTab = mode === 'draft' ? 'YeuCauCuaToi' : activeTab;
     navigate(`/tab/${targetTab}`);
 
     return true;
@@ -754,7 +754,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
         {isDuplicateRoute && duplicateErrorMessage && !isDuplicateLoading && (
           <div className={styles.connectionBanner}>
-            <strong>Nhân bản yêu cầu:</strong>
+            <strong>Tạo bản sao yêu cầu:</strong>
             <span>{duplicateErrorMessage}</span>
           </div>
         )}
@@ -853,7 +853,12 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         ) : isLibraryTab ? (
           <PhvbMagLibraryView documentContext={documentContext} />
         ) : isGuideTab ? (
-          <PhvbMagGuideView siteContext={siteContext} />
+          <PhvbMagGuideView
+            siteContext={siteContext}
+            canCreate={Boolean(currentWebUrl || siteCollectionUrl || sourceSiteUrl)}
+            onOpenTemplate={() => setIsTemplateModalOpen(true)}
+            onOpenCreate={() => navigate('/tab/ViecCanLam/create')}
+          />
         ) : isHomeTab ? (
           <PhvbMagHomeView siteContext={siteContext} documentContext={documentContext} />
         ) : isRecentTab ? (
@@ -887,7 +892,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       </main>
 
       <PhvbMagLoadingOverlay isOpen={isEditRoute && isDraftLoading} message="Đang tải bản nháp..." />
-      <PhvbMagLoadingOverlay isOpen={isDuplicateRoute && isDuplicateLoading} message="Đang tải dữ liệu để nhân bản..." />
+      <PhvbMagLoadingOverlay isOpen={isDuplicateRoute && isDuplicateLoading} message="Đang tải dữ liệu để tạo bản sao..." />
 
       <PhvbMagTemplateModal
         isOpen={isTemplateModalOpen}

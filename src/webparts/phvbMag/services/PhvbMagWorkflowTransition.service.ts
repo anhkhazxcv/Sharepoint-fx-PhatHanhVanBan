@@ -52,7 +52,7 @@ async function sendTransitionMail(options: IWorkflowTransitionOptions, nextStatu
 
   if (nextStatus === REQUEST_STATUS.CHO_CAP_SO) {
     const roles = await phvbRoleService.loadRoles(options);
-    const capSoPayload = buildYeuCauCapSoPayload(options.userEmail, roles, documentInfo);
+    const capSoPayload = buildYeuCauCapSoPayload(options.userDisplayName, roles, documentInfo);
 
     if (capSoPayload) {
       await phvbSendMailService.sendMail(options, capSoPayload, options.logContext);
@@ -68,7 +68,7 @@ async function sendTransitionMail(options: IWorkflowTransitionOptions, nextStatu
   }
 
   const yeuCauPayload = buildYeuCauPayloadForStage(
-    options.userEmail,
+    options.userDisplayName,
     nextStage,
     getParticipantEmailsFromWorkflowItems(nextStage, options.detail.workflowParticipants),
     documentInfo

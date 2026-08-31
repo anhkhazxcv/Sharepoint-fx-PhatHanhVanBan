@@ -89,14 +89,14 @@ export function PhvbMagSavedDocumentsView(props: IPhvbMagSavedDocumentsViewProps
     <PhvbMagLibraryListPageShell
       eyebrow="Thư viện"
       title={TAB_LABELS.DaLuu}
-      subtitle="Văn bản bạn đã đánh dấu"
+      subtitle="Văn bản bạn đã lưu"
       count={savedCount}
       countSuffix={DOCUMENT_COUNT_SUFFIX}
       isLoading={isLoadingSavedView}
       loadingMessage="Đang tải văn bản đã lưu..."
       errorMessage={errorMessage}
       isEmpty={savedDisplayItems.length === 0}
-      emptyMessage="Chưa lưu văn bản nào. Hãy mở Thư viện tài liệu hoặc Mới ban hành để đánh dấu văn bản."
+      emptyMessage={"Danh sách lưu trữ đang trống. Vui lòng đánh dấu văn bản trong Thư viện tài liệu hoặc mục Ban hành để bổ sung vào danh sách."}
     >
       <PhvbMagLibraryPagedList
         items={savedDisplayItems}

@@ -49,7 +49,7 @@ function RecentDocumentCard(props: IRecentDocumentCardProps): React.ReactElement
             <strong>Ngày ban hành:</strong> {publishDate}
           </span>
           <span className={styles.libraryDocumentContact}>
-            <strong>Người liên hệ:</strong> {contactPerson}
+            <strong>Đầu mối liên hệ:</strong> {contactPerson}
           </span>
         </>
       )}

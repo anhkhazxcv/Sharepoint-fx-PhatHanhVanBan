@@ -298,7 +298,7 @@ export function PhvbMagDetailDocumentsTab(props: IPhvbMagDetailDocumentsTabProps
       />
 
       {renderSection('Tài liệu soạn thảo', 'draft', draftFiles, selectedDraftIds, setSelectedDraftIds)}
-      {renderSection('Biểu mẫu đính kèm', 'form', formFiles, selectedFormIds, setSelectedFormIds)}
+      {renderSection('Biểu mẫu cần ban hành', 'form', formFiles, selectedFormIds, setSelectedFormIds)}
 
       {errorMessage ? (
         <p className={styles.detailCommentError} role="alert">

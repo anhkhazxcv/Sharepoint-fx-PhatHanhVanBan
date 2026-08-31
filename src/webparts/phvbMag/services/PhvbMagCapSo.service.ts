@@ -73,7 +73,7 @@ export class PhvbCapSoService {
       resolveSendMailDocumentInfoFromRelease(detail.release),
       normalizedNumber
     );
-    const mailPayload = buildXacNhanCapSoPayload(context.userEmail, roles, documentInfo);
+    const mailPayload = buildXacNhanCapSoPayload(context.userDisplayName, roles, documentInfo);
 
     if (mailPayload) {
       await phvbSendMailService.sendMail(context, mailPayload, logContext);

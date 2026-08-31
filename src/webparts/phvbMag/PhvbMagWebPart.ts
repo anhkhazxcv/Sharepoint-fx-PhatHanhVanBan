@@ -33,10 +33,38 @@ export interface IPhvbMagWebPartProps {
 }
 
 const PHVB_MIN_SHELL_HEIGHT_PX = 200;
+// Bounded, self-terminating recheck schedule to catch SharePoint's own
+// minimal page chrome (suite header bar, tenant/MOTD banners) settling
+// shortly after this web part's first paint, which shifts our top offset
+// with no other trigger to recompute.
+const PHVB_SETTLE_RECHECK_DELAYS_MS = [100, 300, 600, 1000, 1600, 2500];
+
+// Tìm ancestor gần nhất có overflow cuộn thật (vd. contentScrollRegion của
+// SharePoint AppChrome shell) — đây mới là ranh giới đáy thật sự của không
+// gian dành cho web part, khác với viewport khi trang dùng layout kiểu này.
+function findScrollBoundaryAncestor(el: HTMLElement): HTMLElement | undefined {
+  let node = el.parentElement;
+  let depth = 0;
+
+  while (node && node !== document.body && depth < 12) {
+    const overflowY = window.getComputedStyle(node).overflowY;
+
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      return node;
+    }
+
+    node = node.parentElement;
+    depth += 1;
+  }
+
+  return undefined;
+}
 
 export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPartProps> {
   private _resizeObserver: ResizeObserver | undefined;
+  private _bodyResizeObserver: ResizeObserver | undefined;
   private _windowResizeHandler: (() => void) | undefined;
+  private _settleRecheckTimeouts: number[] = [];
 
   protected get propertiesMetadata(): IWebPartPropertiesMetadata {
     return {};
@@ -65,27 +93,69 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
   }
 
   private _setupAvailableHeightTracking(): void {
-    this._updateAvailableHeight();
+    this._recheckAvailableHeight();
 
     if (typeof ResizeObserver !== 'undefined') {
       this._resizeObserver = new ResizeObserver(() => {
-        this._updateAvailableHeight();
+        this._recheckAvailableHeight();
       });
       this._resizeObserver.observe(this.domElement);
+
+      // Catches page-chrome shifts (suite header bar, tenant/MOTD banners) that
+      // resize `document.body` without resizing `this.domElement` itself, at any
+      // point in the web part's lifetime — not just the initial settle window.
+      this._bodyResizeObserver = new ResizeObserver(() => {
+        this._recheckAvailableHeight();
+      });
+      this._bodyResizeObserver.observe(document.body);
     }
 
     this._windowResizeHandler = (): void => {
-      this._updateAvailableHeight();
+      this._recheckAvailableHeight();
     };
     window.addEventListener('resize', this._windowResizeHandler);
   }
 
-  private _updateAvailableHeight(): void {
-    const top = this.domElement.getBoundingClientRect().top;
-    const availableHeight = Math.max(PHVB_MIN_SHELL_HEIGHT_PX, Math.floor(window.innerHeight - top));
+  // Đo lại ngay + hẹn giờ đo thêm vài lần trong ~2.5s tới — dùng cho MỌI nguồn
+  // trigger (mount, resize, ResizeObserver), không chỉ lúc mount. Cần thiết vì
+  // khi kéo cửa sổ sang màn hình khác DPI scaling, layout/chrome xung quanh có
+  // thể chưa ổn định ngay tại thời điểm resize event bắn ra.
+  private _recheckAvailableHeight(): void {
+    this._updateAvailableHeight();
+    this._scheduleSettleRechecks();
+  }
 
-    this.domElement.style.height = `${availableHeight}px`;
-    this.domElement.style.setProperty('--phvb-available-height', `${availableHeight}px`);
+  private _scheduleSettleRechecks(): void {
+    this._clearSettleRecheckTimeouts();
+
+    PHVB_SETTLE_RECHECK_DELAYS_MS.forEach(delayMs => {
+      const timeoutId = window.setTimeout(() => this._updateAvailableHeight(), delayMs);
+      this._settleRecheckTimeouts.push(timeoutId);
+    });
+  }
+
+  private _clearSettleRecheckTimeouts(): void {
+    this._settleRecheckTimeouts.forEach(id => window.clearTimeout(id));
+    this._settleRecheckTimeouts = [];
+  }
+
+  private _updateAvailableHeight(): void {
+    try {
+      const top = this.domElement.getBoundingClientRect().top;
+      const boundary = findScrollBoundaryAncestor(this.domElement);
+      // Ưu tiên cạnh đáy của vùng cuộn thật (contentScrollRegion...) — chỉ
+      // fallback về window.innerHeight khi không có ancestor nào như vậy
+      // (trang layout kiểu cũ, không dùng AppChrome shell).
+      const bottomEdge = boundary ? boundary.getBoundingClientRect().bottom : window.innerHeight;
+      const availableHeight = Math.max(PHVB_MIN_SHELL_HEIGHT_PX, Math.floor(bottomEdge - top));
+
+      this.domElement.style.height = `${availableHeight}px`;
+      this.domElement.style.setProperty('--phvb-available-height', `${availableHeight}px`);
+    } catch {
+      // Defensive: never leave the element stranded on a stale/bad inline
+      // height. The CSS fallback (auto/none) degrades safely if this never
+      // successfully runs.
+    }
   }
 
   private ensureTypographyFontLoaded(): void {
@@ -147,10 +217,15 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
     this._resizeObserver?.disconnect();
     this._resizeObserver = undefined;
 
+    this._bodyResizeObserver?.disconnect();
+    this._bodyResizeObserver = undefined;
+
     if (this._windowResizeHandler) {
       window.removeEventListener('resize', this._windowResizeHandler);
       this._windowResizeHandler = undefined;
     }
+
+    this._clearSettleRecheckTimeouts();
 
     ReactDom.unmountComponentAtNode(this.domElement);
   }

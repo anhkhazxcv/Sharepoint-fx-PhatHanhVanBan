@@ -135,11 +135,9 @@
   @include phvb-typography-vars;
   @include phvb-color-vars;
   display: flex;
-  height: var(--phvb-available-height, 100vh);
-  height: var(--phvb-available-height, 100dvh);
-  max-height: var(--phvb-available-height, 100vh);
-  max-height: var(--phvb-available-height, 100dvh);
-  min-height: 0;
+  height: var(--phvb-available-height, auto);
+  max-height: var(--phvb-available-height, none);
+  min-height: var(--phvb-available-height, 200px);
   background-color: $bg-content;
   font-family: $font-family-base;
   font-size: $font-size-body;

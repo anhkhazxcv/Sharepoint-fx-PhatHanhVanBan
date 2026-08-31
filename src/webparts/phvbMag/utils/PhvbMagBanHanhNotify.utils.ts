@@ -44,7 +44,7 @@ export function resolveHanhDong(loaiYeuCau?: string): string {
   const type = (loaiYeuCau || '').trim();
 
   switch (type) {
-    case 'Viết mới':
+    case 'Tạo mới':
       return 'ban hành';
     case 'Điều chỉnh':
       return 'điều chỉnh';
@@ -64,7 +64,7 @@ export function resolveBanHanhSubjectPrefix(loaiYeuCau?: string): string {
   const type = (loaiYeuCau || '').trim();
 
   switch (type) {
-    case 'Viết mới':
+    case 'Tạo mới':
       return 'Thông báo ban hành văn bản mới';
     case 'Điều chỉnh':
       return 'Thông báo điều chỉnh văn bản';

@@ -126,12 +126,11 @@ export interface IEditRequestContext {
   idYeuCau: string;
 }
 
-export type TabType = 'TrangChu' | 'ViecCanLam' | 'YeuCauCuaToi' | 'BanNhap' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'DaLuu' | 'XemGanDay' | 'CapSo' | 'QLVanBan' | 'HuongDan';
+export type TabType = 'TrangChu' | 'ViecCanLam' | 'YeuCauCuaToi' | 'ThuVienTaiLieu' | 'MoiBanHanh' | 'DaLuu' | 'XemGanDay' | 'CapSo' | 'QLVanBan' | 'HuongDan';
 
 export interface ITabCounts {
   viecCanLam: number;
   yeuCauCuaToi: number;
-  banNhap: number;
   capSo: number;
   qlVanBan: number;
   admin: number;
@@ -208,7 +207,7 @@ export interface ICreateRequestInput {
   noiLuu: string;
 
   // New fields for the redesigned UI dialog:
-  requestType: 'Viết mới' | 'Điều chỉnh' | 'Thu hồi';
+  requestType: 'Tạo mới' | 'Điều chỉnh' | 'Thu hồi';
   titleEn?: string;
   folderLuuTru: string;
   taiLieuFiles: File[];
@@ -436,7 +435,6 @@ export type UniqueItemField = 'LoaiYeuCau' | 'KhoaPhongNguoiTao';
 export const DEFAULT_TAB_COUNTS: ITabCounts = {
   viecCanLam: 0,
   yeuCauCuaToi: 0,
-  banNhap: 0,
   capSo: 0,
   qlVanBan: 0,
   admin: 0

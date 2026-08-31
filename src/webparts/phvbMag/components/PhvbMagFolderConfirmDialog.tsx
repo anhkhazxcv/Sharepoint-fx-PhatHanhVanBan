@@ -5,7 +5,7 @@ import { PhvbMagDialog } from './primitives/PhvbMagDialog';
 
 interface IPhvbMagFolderConfirmDialogProps {
   isOpen: boolean;
-  requestType: 'Viết mới' | 'Điều chỉnh' | 'Thu hồi';
+  requestType: 'Tạo mới' | 'Điều chỉnh' | 'Thu hồi';
   selectedFolder?: ISelectedBanHanhFolder;
   onCancel: () => void;
   onConfirm: () => void;
@@ -13,7 +13,7 @@ interface IPhvbMagFolderConfirmDialogProps {
 
 function buildConfirmMessage(requestType: IPhvbMagFolderConfirmDialogProps['requestType'], folderName: string): string {
   switch (requestType) {
-    case 'Viết mới':
+    case 'Tạo mới':
       return `Bạn sẽ ban hành văn bản vào thư mục "${folderName}". Bạn có chắc chắn?`;
     case 'Điều chỉnh':
       return `Bạn sẽ điều chỉnh văn bản "${folderName}". Bạn có chắc chắn?`;

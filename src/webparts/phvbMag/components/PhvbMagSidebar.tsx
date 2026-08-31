@@ -6,7 +6,6 @@ import styles from './PhvbMag.module.scss';
 import {
   SidebarAdminIcon,
   SidebarCollapseIcon,
-  SidebarDraftIcon,
   SidebarExpandIcon,
   SidebarHelpIcon,
   SidebarHomeIcon,
@@ -204,16 +203,6 @@ export function PhvbMagSidebar(props: IPhvbMagSidebarProps): React.ReactElement 
             onSelectTab={onSelectTab}
             badgeCount={counts.yeuCauCuaToi}
             icon={<SidebarMyRequestsIcon />}
-          />
-
-          <NavItem
-            tab="BanNhap"
-            label={TAB_LABELS.BanNhap}
-            activeTab={activeTab}
-            isCollapsed={isCollapsed}
-            onSelectTab={onSelectTab}
-            badgeCount={counts.banNhap}
-            icon={<SidebarDraftIcon />}
           />
 
           {!isCollapsed && showAdminGroup ? (

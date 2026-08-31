@@ -227,7 +227,7 @@ export class PhvbIssuancePublishService {
       return;
     }
 
-    const details = await response.text();
+    const details = await response.clone().text();
     if (response.status === 409 || /already exists/i.test(details)) {
       return;
     }
@@ -738,7 +738,7 @@ export class PhvbIssuancePublishService {
     sourcePath: string,
     targetPath: string
   ): Promise<void> {
-    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderUrl)/moveto(newUrl=@newUrl,flags=1)?${buildODataParameterQuery({
+    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderUrl)/moveto(newUrl=@newUrl)?${buildODataParameterQuery({
       '@folderUrl': sourcePath,
       '@newUrl': targetPath
     })}`;
@@ -1089,7 +1089,7 @@ export class PhvbIssuancePublishService {
     return normalizedFilePath.substring(normalizedRoot.length + 1);
   }
 
-  public async publishVietMoi(
+  public async publishTaoMoi(
     context: IIssuancePublishContext,
     release: IVanBanItem,
     mainDocumentId: number,
@@ -1307,8 +1307,8 @@ export class PhvbIssuancePublishService {
 
 export const phvbIssuancePublishService = new PhvbIssuancePublishService();
 
-export function isVietMoiPublishRequest(release: IVanBanItem): boolean {
-  return (release.LoaiYeuCau || '').trim() === 'Viết mới';
+export function isTaoMoiPublishRequest(release: IVanBanItem): boolean {
+  return (release.LoaiYeuCau || '').trim() === 'Tạo mới';
 }
 
 export function isDieuChinhPublishRequest(release: IVanBanItem): boolean {
@@ -1316,7 +1316,7 @@ export function isDieuChinhPublishRequest(release: IVanBanItem): boolean {
 }
 
 export function isFullIssuancePublishRequest(release: IVanBanItem): boolean {
-  return isVietMoiPublishRequest(release) || isDieuChinhPublishRequest(release);
+  return isTaoMoiPublishRequest(release) || isDieuChinhPublishRequest(release);
 }
 
 export function parseStoredMainDocumentId(value: number | string | undefined): number | undefined {

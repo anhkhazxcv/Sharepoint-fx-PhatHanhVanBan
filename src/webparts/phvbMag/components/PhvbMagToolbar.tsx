@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { TabType } from '../models/PhvbMag.models';
-import { CreateActionIcon, SidebarNumberingIcon } from './PhvbMagIcons';
+import { CreateActionIcon, DownloadIcon, SidebarNumberingIcon } from './PhvbMagIcons';
 import { PhvbMagPageHeader } from './PhvbMagPageHeader';
 import styles from './PhvbMag.module.scss';
 
@@ -28,12 +28,13 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
             <button type="button" className={styles.btnDmvl} onClick={onOpenDmvl}>
               <span className={styles.btnDmvlContent}>
                 <SidebarNumberingIcon />
-                Trình DMVL
+                DMVL
               </span>
             </button>
           ) : null}
 
           <button type="button" className={styles.btnTemplate} onClick={onOpenTemplate}>
+            <DownloadIcon className={styles.iconSizeSm} />
             <span>Template</span>
           </button>
 

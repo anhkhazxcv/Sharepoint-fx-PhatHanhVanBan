@@ -120,8 +120,8 @@ export function resolveWorkflowActionContext(
   };
 
   return {
-    approveLabel: activeStage === 'none' ? 'Phê duyệt' : resolveApproveLabelForStage(activeStage),
-    rejectLabel: activeStage === 'none' ? 'Từ chối' : resolveRejectLabelForStage(activeStage),
+    approveLabel: activeStage === 'none' ? 'Đồng ý' : resolveApproveLabelForStage(activeStage),
+    rejectLabel: 'Từ chối',
     activeStage,
     pendingParticipant,
     pendingParticipants,
@@ -135,22 +135,11 @@ function resolveApproveLabelForStage(stage: WorkflowDocumentStage): string {
     case 'gopy':
       return 'Xác nhận góp ý';
     case 'thamdinh':
-      return 'Xác nhận thẩm định';
+      return 'Đồng ý';
     case 'pheduyet':
-      return 'Phê duyệt';
+      return 'Đồng ý';
     default:
-      return 'Phê duyệt';
-  }
-}
-
-function resolveRejectLabelForStage(stage: WorkflowDocumentStage): string {
-  switch (stage) {
-    case 'thamdinh':
-      return 'Từ chối thẩm định';
-    case 'pheduyet':
-      return 'Từ chối phê duyệt';
-    default:
-      return 'Từ chối';
+      return 'Đồng ý';
   }
 }
 
