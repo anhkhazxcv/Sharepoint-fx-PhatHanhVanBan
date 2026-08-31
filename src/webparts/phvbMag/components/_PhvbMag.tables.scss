@@ -183,14 +183,6 @@
   @include ty-stat-label;
 }
 
-.metricHint {
-  font-size: $font-size-md;
-  font-weight: $font-weight-regular;
-  line-height: $line-height-body;
-  color: $text-ink3;
-  margin-top: 2px;
-}
-
 .metricDanger .metricValue,
 .cardDanger {
   color: #B54033;

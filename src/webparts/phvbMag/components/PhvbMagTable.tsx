@@ -286,7 +286,7 @@ function RequestTableToolbar(props: IRequestTableToolbarProps): React.ReactEleme
           onChange={department => updateFilter({ department })}
         />
         <RequestFilterSelect
-          label="Thời gian tạo yêu cầu:"
+          label="Thời gian tạo:"
           value={filters.requestCreatedYear}
           options={filterOptions.namTaoYeuCau}
           onChange={requestCreatedYear => updateFilter({ requestCreatedYear })}
@@ -397,7 +397,6 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
             <article key={metric.key} className={[styles.metricCard, metricToneClassMap[metric.tone]].join(' ')}>
               <span className={styles.metricValue}>{metric.count}</span>
               <span className={styles.metricLabel}>{metric.label}</span>
-              <span className={styles.metricHint}>{metric.hint}</span>
             </article>
           ))}
         </div>

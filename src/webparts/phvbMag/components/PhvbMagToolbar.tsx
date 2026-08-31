@@ -41,7 +41,7 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
           <button type="button" className={styles.btnCreate} onClick={onOpenCreate} disabled={!canCreate}>
             <span className={styles.btnCreateContent}>
               <CreateActionIcon />
-              Tạo yêu cầu
+              Tạo văn bản
             </span>
           </button>
         </div>

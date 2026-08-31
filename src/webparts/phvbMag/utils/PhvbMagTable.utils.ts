@@ -33,7 +33,6 @@ export interface IWorkflowMetricCard {
   key: WorkflowBucketKey;
   count: number;
   label: string;
-  hint: string;
   tone: 'danger' | 'warning' | 'success' | 'info';
 }
 
@@ -117,7 +116,6 @@ export function getWorkflowMetricCards(items: IVanBanItem[]): IWorkflowMetricCar
     key,
     count: counts[key],
     label: WORKFLOW_BUCKET_LABELS[key],
-    hint: 'Việc cần xử lý',
     tone: toneMap[key]
   }));
 }
