@@ -3,7 +3,7 @@ import {
   ATTACHMENT_LIBRARY_TITLE,
   ISSUANCE_LIBRARY_TITLE
 } from '../config/PhvbMag.configuration';
-import { escapeODataValue, getCandidateSiteUrls, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
+import { escapeODataValue, getCandidateSiteUrls, normalizeSiteUrl, resolveSiteDateFieldOrder } from '../infrastructure/SharePointSite.utils';
 import { ensureSharePointResponseOk } from '../infrastructure/SharePointHttp.utils';
 import type { IAttachmentLibraryItem, IPhvbSiteContext, IVanBanItem } from '../models/PhvbMag.models';
 import { formatDateOnlyVi, toSharePointDateOnlyFieldValue, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
@@ -264,7 +264,7 @@ export class PhvbIssuancePublishService {
   ): Promise<ISharePointFileItem[]> {
     const filterValue = escapeODataValue(idYeuCau);
     const filter = `IDYeuCau eq '${filterValue}' and FSObjType eq 0`;
-    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items?$select=${ATTACHMENT_SELECT_FIELDS.join(',')}&$filter=${filter}&$top=500&$orderby=Modified desc`;
+    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items?$select=${ATTACHMENT_SELECT_FIELDS.join(',')}&$filter=${encodeURIComponent(filter)}&$top=500&$orderby=Modified desc`;
     const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
     await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_GET', ATTACHMENT_LIBRARY_TITLE);
     const data = await response.json() as { value?: ISharePointFileItem[] };
@@ -808,7 +808,8 @@ export class PhvbIssuancePublishService {
 
       // New version HieuLucTu = publish date; old version ends the day before.
       const expiredEndDate = dayBeforeLocal();
-      const expiredEndDateFieldValue = toSharePointDateOnlyFieldValue(expiredEndDate);
+      const dateFieldOrder = await resolveSiteDateFieldOrder(siteUrl, context.spHttpClient);
+      const expiredEndDateFieldValue = toSharePointDateOnlyFieldValue(expiredEndDate, dateFieldOrder);
       const expiredEndDateVi = formatDateOnlyVi(toSharePointDateOnlyIso(expiredEndDate));
       const stampResult = await this.stampExpiredArchiveHieuLucDen(
         siteUrl,
@@ -1184,7 +1185,8 @@ export class PhvbIssuancePublishService {
           throw new Error('Không tìm thấy file đính kèm để chuyển sang thư viện ban hành.');
         }
 
-        const metadataValues = buildIssuanceMetadataValues(release);
+        const metadataDateFieldOrder = await resolveSiteDateFieldOrder(siteUrl, context.spHttpClient);
+        const metadataValues = buildIssuanceMetadataValues(release, metadataDateFieldOrder);
         let mainFileServerRelativePath = '';
         const copiedFiles: Array<{ itemId: number; fileName: string; targetPath: string; listItemId: number }> = [];
         const formFiles: ISharePointFileItem[] = [];

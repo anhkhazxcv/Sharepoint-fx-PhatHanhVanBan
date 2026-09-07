@@ -1,5 +1,5 @@
 import type { TabType } from '../models/PhvbMag.models';
-import { buildLibraryFolderPath } from './PhvbMagLibrary.utils';
+import { buildLibraryFolderPath, buildPreviewSearch } from './PhvbMagLibrary.utils';
 
 export function resolveTabFromPathname(
   pathname: string,
@@ -26,4 +26,10 @@ export function buildYeuCauDetailUrl(tab: TabType, idYeuCau: string): string {
 export function buildLibraryFolderDeepLinkUrl(folderId: number): string {
   const baseUrl = window.location.href.split('#')[0];
   return `${baseUrl}#${buildLibraryFolderPath(folderId, 1)}`;
+}
+
+/** Shareable link that reopens the preview on top of the current browse state. */
+export function buildPreviewDeepLinkUrl(pathname: string, search: string, itemId: number): string {
+  const baseUrl = window.location.href.split('#')[0];
+  return `${baseUrl}#${pathname}${buildPreviewSearch(search, itemId)}`;
 }

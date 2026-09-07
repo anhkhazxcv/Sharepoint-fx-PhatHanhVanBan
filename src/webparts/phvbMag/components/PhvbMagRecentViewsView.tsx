@@ -1,11 +1,13 @@
 import * as React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { DOCUMENT_COUNT_SUFFIX, RECENT_VIEWS_TOP, TAB_LABELS } from '../config/PhvbMag.configuration';
 import type {
+  IBanHanhLibraryItem,
   IPhvbDocumentContext,
   IRecentViewDisplayItem
 } from '../models/PhvbMag.models';
 import { usePhvbRecentViews } from '../context/PhvbMagRecentViews.context';
+import { usePhvbRegisterPreviewDocuments } from '../context/PhvbMagDocumentPreview.context';
 import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
 import { PhvbMagLibraryListPageShell } from './PhvbMagLibraryListPageShell';
@@ -54,6 +56,13 @@ function RecentViewCard(props: { item: IRecentViewDisplayItem }): React.ReactEle
 
 export function PhvbMagRecentViewsView(props: IPhvbMagRecentViewsViewProps): React.ReactElement {
   const { loadRecentView, recentCount, isLoadingRecentView, errorMessage, recentDisplayItems } = usePhvbRecentViews();
+
+  usePhvbRegisterPreviewDocuments(useMemo(
+    () => recentDisplayItems
+      .filter(item => item.isAccessible && item.document)
+      .map(item => item.document as IBanHanhLibraryItem),
+    [recentDisplayItems]
+  ));
 
   useEffect(() => {
     loadRecentView().catch(() => undefined);

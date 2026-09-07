@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   hasSharePointSiteContext,
   resolveIssuanceLibraryTitle
@@ -18,6 +18,7 @@ interface IUsePhvbHomeDataOptions {
   enabled?: boolean;
   maxFolders?: number;
   includeMostViewed?: boolean;
+  autoLoadRecent?: boolean;
 }
 
 interface IUsePhvbHomeDataResult {
@@ -27,9 +28,9 @@ interface IUsePhvbHomeDataResult {
   itemCount: number;
   mostViewed: IBanHanhLibraryItem[];
   isLoadingRecent: boolean;
-  isLoadingMostViewed: boolean;
   errorMessage?: string;
   mostViewedErrorMessage?: string;
+  loadRecentPublished: () => Promise<void>;
 }
 
 export function usePhvbHomeData(options: IUsePhvbHomeDataOptions): IUsePhvbHomeDataResult {
@@ -37,7 +38,8 @@ export function usePhvbHomeData(options: IUsePhvbHomeDataOptions): IUsePhvbHomeD
     siteContext,
     enabled = true,
     maxFolders,
-    includeMostViewed = false
+    includeMostViewed = false,
+    autoLoadRecent = true
   } = options;
   const libraryTitle = resolveIssuanceLibraryTitle(siteContext.issuanceLibraryTitle);
 
@@ -47,18 +49,20 @@ export function usePhvbHomeData(options: IUsePhvbHomeDataOptions): IUsePhvbHomeD
   const [itemCount, setItemCount] = useState<number>(0);
   const [mostViewed, setMostViewed] = useState<IBanHanhLibraryItem[]>([]);
   const [isLoadingRecent, setIsLoadingRecent] = useState<boolean>(enabled);
-  const [isLoadingMostViewed, setIsLoadingMostViewed] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [mostViewedErrorMessage, setMostViewedErrorMessage] = useState<string | undefined>(undefined);
+  const recentMountedRef = useRef<boolean>(true);
 
   useEffect(() => {
-    let isMounted = true;
+    return () => {
+      recentMountedRef.current = false;
+    };
+  }, []);
 
+  const loadRecentPublished = useCallback(async (): Promise<void> => {
     if (!enabled) {
       setIsLoadingRecent(false);
-      return () => {
-        isMounted = false;
-      };
+      return;
     }
 
     if (!hasSharePointSiteContext(siteContext)) {
@@ -67,73 +71,70 @@ export function usePhvbHomeData(options: IUsePhvbHomeDataOptions): IUsePhvbHomeD
       setFolderCount(0);
       setItemCount(0);
       setErrorMessage(SITE_CONTEXT_ERROR_MESSAGE);
-      return () => {
-        isMounted = false;
-      };
+      return;
     }
 
-    const loadRecent = async (): Promise<void> => {
-      setIsLoadingRecent(true);
+    setIsLoadingRecent(true);
 
-      try {
-        const configuredWindowDays = await phvbBanHanhConfigService.getRecentPublishedWindowDays(siteContext);
-        const recentData = await phvbDocumentLibraryService.loadRecentPublishedData(
-          siteContext,
-          configuredWindowDays
-        );
-        const folderNgayPhatHanhByKey: Record<string, string | undefined> = {};
+    try {
+      const configuredWindowDays = await phvbBanHanhConfigService.getRecentPublishedWindowDays(siteContext);
+      const recentData = await phvbDocumentLibraryService.loadRecentPublishedData(
+        siteContext,
+        configuredWindowDays
+      );
+      const folderNgayPhatHanhByKey: Record<string, string | undefined> = {};
 
-        recentData.folders.forEach(folder => {
-          folderNgayPhatHanhByKey[folder.fileRef] = folder.ngayPhatHanh;
-        });
+      recentData.folders.forEach(folder => {
+        folderNgayPhatHanhByKey[folder.fileRef] = folder.ngayPhatHanh;
+      });
 
-        const groupedSections = groupRecentPublishedByDocumentFolder(
-          recentData.items,
-          libraryTitle,
-          folderNgayPhatHanhByKey
-        );
-        const orderedSections = orderRecentPublishedSections(
-          groupedSections,
-          recentData.folders.map(folder => folder.fileRef)
-        );
+      const groupedSections = groupRecentPublishedByDocumentFolder(
+        recentData.items,
+        libraryTitle,
+        folderNgayPhatHanhByKey
+      );
+      const orderedSections = orderRecentPublishedSections(
+        groupedSections,
+        recentData.folders.map(folder => folder.fileRef)
+      );
 
-        if (!isMounted) {
-          return;
-        }
-
-        setWindowDays(configuredWindowDays);
-        setFolderCount(recentData.folders.length);
-        setAllSections(orderedSections);
-        setItemCount(recentData.items.length);
-        setErrorMessage(undefined);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        setAllSections([]);
-        setFolderCount(0);
-        setItemCount(0);
-        setErrorMessage(toRuntimeMessage(error, libraryTitle));
-      } finally {
-        if (isMounted) {
-          setIsLoadingRecent(false);
-        }
+      if (!recentMountedRef.current) {
+        return;
       }
-    };
 
-    loadRecent().catch(() => undefined);
+      setWindowDays(configuredWindowDays);
+      setFolderCount(recentData.folders.length);
+      setAllSections(orderedSections);
+      setItemCount(recentData.items.length);
+      setErrorMessage(undefined);
+    } catch (error) {
+      if (!recentMountedRef.current) {
+        return;
+      }
 
-    return () => {
-      isMounted = false;
-    };
+      setAllSections([]);
+      setFolderCount(0);
+      setItemCount(0);
+      setErrorMessage(toRuntimeMessage(error, libraryTitle));
+    } finally {
+      if (recentMountedRef.current) {
+        setIsLoadingRecent(false);
+      }
+    }
   }, [enabled, libraryTitle, siteContext]);
+
+  useEffect(() => {
+    if (!autoLoadRecent) {
+      return;
+    }
+
+    loadRecentPublished().catch(() => undefined);
+  }, [autoLoadRecent, loadRecentPublished]);
 
   useEffect(() => {
     let isMounted = true;
 
     if (!enabled || !includeMostViewed) {
-      setIsLoadingMostViewed(false);
       return () => {
         isMounted = false;
       };
@@ -142,39 +143,30 @@ export function usePhvbHomeData(options: IUsePhvbHomeDataOptions): IUsePhvbHomeD
     if (!hasSharePointSiteContext(siteContext)) {
       setMostViewed([]);
       setMostViewedErrorMessage(SITE_CONTEXT_ERROR_MESSAGE);
-      setIsLoadingMostViewed(false);
       return () => {
         isMounted = false;
       };
     }
 
-    const loadPopular = async (): Promise<void> => {
-      setIsLoadingMostViewed(true);
-
-      try {
-        const items = await phvbDocumentLibraryService.loadMostViewedDocuments(siteContext);
-
+    // Chạy nền: không chờ query xong mới cập nhật UI — widget tự hiện empty-state
+    // ngay lập tức rồi âm thầm thay bằng dữ liệu thật khi query trả về.
+    phvbDocumentLibraryService.loadMostViewedDocuments(siteContext)
+      .then(items => {
         if (!isMounted) {
           return;
         }
 
         setMostViewed(items);
         setMostViewedErrorMessage(undefined);
-      } catch (error) {
+      })
+      .catch(error => {
         if (!isMounted) {
           return;
         }
 
         setMostViewed([]);
         setMostViewedErrorMessage(toRuntimeMessage(error, libraryTitle));
-      } finally {
-        if (isMounted) {
-          setIsLoadingMostViewed(false);
-        }
-      }
-    };
-
-    loadPopular().catch(() => undefined);
+      });
 
     return () => {
       isMounted = false;
@@ -196,8 +188,8 @@ export function usePhvbHomeData(options: IUsePhvbHomeDataOptions): IUsePhvbHomeD
     itemCount,
     mostViewed,
     isLoadingRecent,
-    isLoadingMostViewed,
     errorMessage,
-    mostViewedErrorMessage
+    mostViewedErrorMessage,
+    loadRecentPublished
   };
 }

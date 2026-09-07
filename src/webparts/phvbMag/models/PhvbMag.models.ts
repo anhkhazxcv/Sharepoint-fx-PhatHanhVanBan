@@ -241,6 +241,10 @@ export interface IBanHanhLibraryItem {
   hieuLucDen?: string;
   lienHe?: string;
   fileUrl: string;
+  /** In-app iframe embed URL. Built from the site the item was actually resolved on. */
+  previewUrl?: string;
+  /** Office Online embed, used as a second attempt when previewUrl does not render. */
+  officeEmbedUrl?: string;
   uniqueId?: string;
   viewCount?: number;
   /** Folder browse: OpenItems from EffectiveBasePermissions. Search: always false. */

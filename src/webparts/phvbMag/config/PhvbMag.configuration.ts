@@ -25,6 +25,12 @@ export const HOME_CATEGORIES_LIST_TITLE = 'lstDanhMucTrangChu';
 export const HOME_CATEGORIES_QUERY_TOP = 50;
 export const HOME_CATEGORIES_TOP = 24;
 export const HOME_CATEGORY_DEFAULT_ICON = '📁';
+export const HOME_CATEGORY_GROUP_FIELD = 'NhomDanhMuc';
+export const HOME_CATEGORY_GROUP = {
+  CHUC_NANG: 'ChucNang',
+  PHONG_BAN: 'PhongBan'
+} as const;
+export type HomeCategoryGroupKey = typeof HOME_CATEGORY_GROUP[keyof typeof HOME_CATEGORY_GROUP];
 export const SAVED_DOCUMENTS_LIST_TITLE = 'lstVanBanDaLuu';
 export const RECENT_VIEWS_LIST_TITLE = 'lstVanBanXemGanDay';
 export const RECENT_VIEWS_TOP = 50;
@@ -308,6 +314,8 @@ export const LIBRARY_FILES_PAGE_SIZE = 20;
 export const LIBRARY_SEARCH_PAGE_SIZE = 20;
 export const LIBRARY_CACHE_STALE_MS = 5 * 60 * 1000;
 export const LIBRARY_PAGE_CACHE_LIMIT = 20;
+/** SharePoint usage analytics (ViewsLifeTime) only reprocesses once every 24h, so caching more often than that buys nothing. */
+export const MOST_VIEWED_CACHE_STALE_MS = 24 * 60 * 60 * 1000;
 export const SAVED_DOCUMENTS_TOP = 500;
 export const SAVED_DOCUMENTS_HYDRATE_CHUNK_SIZE = 25;
 

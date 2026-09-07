@@ -952,6 +952,8 @@
 
   .sidebar {
     width: 100%;
+    height: auto;
+    max-height: 40vh;
     border-right: none;
     border-bottom: 1px solid $border-color;
     padding: 16px 12px;

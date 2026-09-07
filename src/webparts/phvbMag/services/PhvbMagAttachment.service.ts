@@ -164,6 +164,27 @@ export class PhvbAttachmentService {
     return response.ok;
   }
 
+  private async deleteFolder(
+    siteUrl: string,
+    context: IAttachmentServiceContext,
+    folderPath: string
+  ): Promise<void> {
+    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)?${buildODataParameterQuery({
+      '@folderPath': folderPath
+    })}`;
+    const response = await context.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
+      headers: {
+        accept: 'application/json;odata=nometadata',
+        'content-type': 'application/json;odata=nometadata',
+        'odata-version': '',
+        'IF-MATCH': '*',
+        'X-HTTP-Method': 'DELETE'
+      }
+    });
+
+    await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_DELETE');
+  }
+
   private async createFolder(
     siteUrl: string,
     context: IAttachmentServiceContext,
@@ -600,7 +621,7 @@ export class PhvbAttachmentService {
       const attachmentContext: IAttachmentServiceContext = { ...context };
 
       try {
-        const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items?$select=${ATTACHMENT_SELECT_FIELDS.join(',')}&$filter=${filter}&$top=500&$orderby=Modified desc`;
+        const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items?$select=${ATTACHMENT_SELECT_FIELDS.join(',')}&$filter=${encodeURIComponent(filter)}&$top=500&$orderby=Modified desc`;
         const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
         await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_GET');
         const data = await response.json() as { value?: ISharePointAttachmentItem[] };
@@ -662,6 +683,43 @@ export class PhvbAttachmentService {
     }
 
     throw lastError || new Error('Unable to delete attachment files.');
+  }
+
+  /** Xóa toàn bộ thư mục tài liệu/biểu mẫu của một yêu cầu (kể cả subfolder Biểu Mẫu) trong một lần gọi. */
+  public async deleteRequestFolder(context: IAttachmentServiceContext, requestReferenceId: string): Promise<void> {
+    if (!requestReferenceId.trim()) {
+      return;
+    }
+
+    const candidates = getCandidateSiteUrls(context);
+
+    if (candidates.length === 0) {
+      throw new Error('Missing SharePoint site context.');
+    }
+
+    let lastError: unknown = null;
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const siteUrl = candidates[index];
+
+      try {
+        const libraryRootPath = await this.getLibraryRootFolder(siteUrl, context);
+        const documentFolderPath = joinServerRelativePath(
+          libraryRootPath,
+          resolveDocumentFolderName(requestReferenceId)
+        );
+
+        if (await this.folderExists(siteUrl, context, documentFolderPath)) {
+          await this.deleteFolder(siteUrl, context, documentFolderPath);
+        }
+
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error('Unable to delete request folder.');
   }
 }
 

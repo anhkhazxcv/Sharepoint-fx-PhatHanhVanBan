@@ -3,6 +3,7 @@ import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { appendHistory } from './PhvbMagExecutionHistory.service';
 import { toRuntimeMessage } from './PhvbMag.error';
 import { buildDateOnlyCorrectionFormValues, sharePointRestNull, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
+import { resolveDateFieldOrderForContext } from '../infrastructure/SharePointSite.utils';
 import { joinWithLimit } from '../utils/PhvbMagHistoryText.utils';
 import {
   buildRequestInfoChangedFieldLabels,
@@ -48,12 +49,14 @@ export class PhvbDetailInfoEditService {
       }
     });
 
+    const dateFieldOrder = await resolveDateFieldOrderForContext(context);
     const dateCorrections = buildDateOnlyCorrectionFormValues(
       {
         HieuLucTu: toSharePointDateOnlyIso(input.hieuLucTu),
         HieuLucDen: toSharePointDateOnlyIso(input.hieuLucDen)
       },
-      ['HieuLucTu', 'HieuLucDen']
+      ['HieuLucTu', 'HieuLucDen'],
+      dateFieldOrder
     );
 
     if (dateCorrections.length > 0) {

@@ -311,3 +311,16 @@ export async function appendHistory(
     }
   }
 }
+
+export async function deleteHistoryItems(
+  context: IAppendHistoryContext,
+  itemIds: ReadonlyArray<number>
+): Promise<void> {
+  const uniqueIds = itemIds.filter((id, index, array) => array.indexOf(id) === index && id > 0);
+
+  await Promise.all(uniqueIds.map(itemId => phvbRepository.deleteItem({
+    ...context,
+    listTitle: HISTORY_LIST_TITLE,
+    itemId
+  })));
+}

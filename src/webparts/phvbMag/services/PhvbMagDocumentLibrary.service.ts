@@ -4,6 +4,7 @@ import {
   LIBRARY_CACHE_STALE_MS,
   LIBRARY_FILES_PAGE_SIZE,
   LIBRARY_SEARCH_PAGE_SIZE,
+  MOST_VIEWED_CACHE_STALE_MS,
   MOST_VIEWED_LIMIT,
   RECENT_PUBLISHED_FILE_BATCH_TOP,
   RECENT_PUBLISHED_FOLDER_TOP,
@@ -12,8 +13,11 @@ import {
 } from '../config/PhvbMag.configuration';
 import { ensureSharePointResponseOk, tryAcrossCandidateSites } from '../infrastructure/SharePointHttp.utils';
 import {
+  buildOfficeOnlineEmbedUrl,
   buildSharePointFileDownloadUrl,
-  buildSharePointFileOpenUrl
+  buildSharePointFileOpenUrl,
+  buildSharePointFilePreviewUrl,
+  isPreviewableFile
 } from '../infrastructure/SharePointFile.utils';
 import { escapeODataValue, getCandidateSiteUrls, getSiteOrigin, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { buildApiLogParams } from '../services/PhvbMagLog.service';
@@ -117,6 +121,7 @@ const BAN_HANH_SELECT_FIELDS: ReadonlyArray<string> = [
   'FileDirRef',
   'FSObjType',
   'FileRef',
+  'UniqueId',
   'TomTatVanban',
   'NgayPhatHanh',
   'HieuLucTu',
@@ -127,7 +132,6 @@ const BAN_HANH_SELECT_FIELDS: ReadonlyArray<string> = [
 
 const RECENT_PUBLISHED_SELECT_FIELDS: ReadonlyArray<string> = [
   ...BAN_HANH_SELECT_FIELDS,
-  'UniqueId',
   'EffectiveBasePermissions'
 ];
 
@@ -138,6 +142,7 @@ const BAN_HANH_FOLDER_SELECT_FIELDS: ReadonlyArray<string> = [
   'FileDirRef',
   'FSObjType',
   'FileRef',
+  'UniqueId',
   'NgayPhatHanh',
   'TomTatVanban',
   'HieuLucTu',
@@ -195,6 +200,8 @@ interface IRecentPublishedDataCacheEntry {
 interface IMostViewedCacheEntry {
   items: IBanHanhLibraryItem[];
   fetchedAt: number;
+  /** Bump when IBanHanhLibraryItem gains a field the UI depends on. */
+  schemaVersion?: number;
 }
 
 let recentPublishedDataCache: IRecentPublishedDataCacheEntry | undefined;
@@ -214,7 +221,7 @@ function buildLibraryItemsQuery(options: IDocumentLibraryQueryOptions): string {
   const queryParts = [`$select=${options.selectFields.join(',')}`];
 
   if (options.filter) {
-    queryParts.push(`$filter=${options.filter}`);
+    queryParts.push(`$filter=${encodeURIComponent(options.filter)}`);
   }
 
   queryParts.push(`$top=${options.top || 500}`);
@@ -313,6 +320,10 @@ function mapBanHanhLibraryItem(
     hieuLucDen: item.HieuLucDen,
     lienHe: item.LienHe,
     fileUrl: buildSharePointFileOpenUrl(siteUrl, { fileRef, fileName: name, uniqueId }),
+    previewUrl: isPreviewableFile(name, fileRef)
+      ? buildSharePointFilePreviewUrl(siteUrl, { fileRef, fileName: name, uniqueId })
+      : undefined,
+    officeEmbedUrl: buildOfficeOnlineEmbedUrl(siteUrl, { fileRef, fileName: name, uniqueId }) || undefined,
     uniqueId,
     viewCount: extras?.viewCount,
     canDownload,
@@ -457,7 +468,81 @@ function isMostViewedCacheFresh(entry: IMostViewedCacheEntry | undefined): boole
     return false;
   }
 
-  return Date.now() - entry.fetchedAt < LIBRARY_CACHE_STALE_MS;
+  return Date.now() - entry.fetchedAt < MOST_VIEWED_CACHE_STALE_MS;
+}
+
+const MOST_VIEWED_STORAGE_KEY_PREFIX = 'phvbMag.mostViewed.v2.';
+
+/**
+ * Entries are persisted whole, so an item shape change silently poisons them —
+ * that is how cached items ended up without preview URLs. Reject anything not
+ * written by the current shape rather than serving it for the 24h TTL.
+ */
+const MOST_VIEWED_SCHEMA_VERSION = 2;
+
+function resolveMostViewedStorageKey(context: IPhvbSiteContext): string {
+  const libraryTitle = getLibraryTitle(context);
+
+  return MOST_VIEWED_STORAGE_KEY_PREFIX + [
+    context.sourceSiteUrl || '',
+    context.currentWebUrl || '',
+    context.siteCollectionUrl || '',
+    libraryTitle
+  ].join('|');
+}
+
+function readMostViewedFromStorage(context: IPhvbSiteContext): IMostViewedCacheEntry | undefined {
+  try {
+    const raw = window.localStorage.getItem(resolveMostViewedStorageKey(context));
+
+    if (!raw) {
+      return undefined;
+    }
+
+    const parsed = JSON.parse(raw) as IMostViewedCacheEntry;
+
+    if (!parsed || !Array.isArray(parsed.items) || typeof parsed.fetchedAt !== 'number') {
+      return undefined;
+    }
+
+    if (parsed.schemaVersion !== MOST_VIEWED_SCHEMA_VERSION) {
+      return undefined;
+    }
+
+    return parsed;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeMostViewedToStorage(context: IPhvbSiteContext, entry: IMostViewedCacheEntry): void {
+  try {
+    window.localStorage.setItem(
+      resolveMostViewedStorageKey(context),
+      JSON.stringify({ ...entry, schemaVersion: MOST_VIEWED_SCHEMA_VERSION })
+    );
+  } catch {
+    // Ignore storage quota/availability errors — this is a best-effort perf cache.
+  }
+}
+
+function clearMostViewedStorage(): void {
+  try {
+    const keysToRemove: string[] = [];
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+
+      // Version-agnostic so clearing also sweeps entries left by older versions.
+      if (key && key.indexOf('phvbMag.mostViewed.') === 0) {
+        keysToRemove.push(key);
+      }
+    }
+
+    keysToRemove.forEach(key => window.localStorage.removeItem(key));
+  } catch {
+    // Ignore storage quota/availability errors — this is a best-effort perf cache.
+  }
 }
 
 function buildMostViewedSearchKql(siteUrl: string, libraryRootPath: string): string {
@@ -838,9 +923,25 @@ export class PhvbDocumentLibraryService {
       return Promise.resolve(mostViewedCache!.items.slice(0, limit));
     }
 
+    // ViewsLifeTime only re-syncs once every 24h server-side, so a stale-but-recent
+    // result (persisted across page reloads) is just as correct as re-running the
+    // expensive sorted search — read it back instead of paying for the query again.
+    const storedEntry = mostViewedCache || readMostViewedFromStorage(context);
+
+    if (storedEntry) {
+      mostViewedCache = storedEntry;
+
+      if (!isMostViewedCacheFresh(storedEntry)) {
+        this.refreshMostViewedInBackground(context, limit);
+      }
+
+      return Promise.resolve(storedEntry.items.slice(0, limit));
+    }
+
     if (!mostViewedPromise) {
       mostViewedPromise = this.fetchMostViewedDocuments(context, limit).then(entry => {
         mostViewedCache = entry;
+        writeMostViewedToStorage(context, entry);
         return entry;
       });
     }
@@ -854,6 +955,26 @@ export class PhvbDocumentLibraryService {
 
       return entry.items.slice(0, limit);
     });
+  }
+
+  private refreshMostViewedInBackground(context: IPhvbSiteContext, limit: number): void {
+    if (mostViewedPromise) {
+      return;
+    }
+
+    mostViewedPromise = this.fetchMostViewedDocuments(context, limit)
+      .then(entry => {
+        mostViewedCache = entry;
+        writeMostViewedToStorage(context, entry);
+        mostViewedPromise = undefined;
+        return entry;
+      })
+      .catch(error => {
+        mostViewedPromise = undefined;
+        throw error;
+      });
+
+    mostViewedPromise.catch(() => undefined);
   }
 
   private fetchMostViewedDocuments(
@@ -924,6 +1045,7 @@ export class PhvbDocumentLibraryService {
     recentPublishedDataPromises.clear();
     mostViewedCache = undefined;
     mostViewedPromise = undefined;
+    clearMostViewedStorage();
   }
 
   public loadBanHanhLibraryFolders(context: IPhvbSiteContext): Promise<IBanHanhLibraryItem[]> {
@@ -1128,6 +1250,12 @@ export class PhvbDocumentLibraryService {
             fileUrl: isDocument
               ? buildSharePointFileOpenUrl(siteUrl, { fileRef: serverRelativeRef, fileName: filename })
               : '',
+            previewUrl: isDocument && isPreviewableFile(filename, serverRelativeRef)
+              ? buildSharePointFilePreviewUrl(siteUrl, { fileRef: serverRelativeRef, fileName: filename })
+              : undefined,
+            officeEmbedUrl: isDocument
+              ? buildOfficeOnlineEmbedUrl(siteUrl, { fileRef: serverRelativeRef, fileName: filename }) || undefined
+              : undefined,
             viewCount: parseSearchViewCount(parseSearchCellValue(cells, 'ViewsLifeTime')),
             canDownload: false
           } as IBanHanhLibraryItem;

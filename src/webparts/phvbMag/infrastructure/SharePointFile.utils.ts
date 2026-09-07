@@ -23,6 +23,24 @@ const OFFICE_ONLINE_EXTENSIONS: ReadonlySet<string> = new Set([
   'pptx'
 ]);
 
+/** Extensions SharePoint can render in an iframe. Anything else goes to the fallback panel. */
+const PREVIEWABLE_EXTENSIONS: ReadonlySet<string> = new Set([
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+  'pdf',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'bmp',
+  'svg',
+  'txt'
+]);
+
 function getFileExtension(fileName: string): string {
   const trimmed = (fileName || '').trim();
   const lastDot = trimmed.lastIndexOf('.');
@@ -85,6 +103,137 @@ export function buildSharePointFileOpenUrl(
   }
 
   return appendWebViewQuery(directUrl);
+}
+
+/**
+ * Embed URL for rendering a library file inside an in-app iframe.
+ *
+ * Differs from buildSharePointFileOpenUrl: that one targets a new browser tab
+ * (`action=default`, full Office chrome), this one targets an iframe.
+ */
+export function buildSharePointFilePreviewUrl(
+  siteUrl: string,
+  options: {
+    uniqueId?: string;
+    fileRef?: string;
+    fileName?: string;
+  }
+): string {
+  const fileRef = options.fileRef || '';
+  const webUrl = normalizeSiteUrl(siteUrl);
+  const uniqueId = options.uniqueId ? normalizeSharePointUniqueId(options.uniqueId) : '';
+
+  if (uniqueId) {
+    return `${webUrl}/_layouts/15/embed.aspx?UniqueId=${encodeURIComponent(uniqueId)}`;
+  }
+
+  // No UniqueId (e.g. search-sourced items): fall back to the direct file URL.
+  const directUrl = fileRef ? `${getSiteOrigin(siteUrl)}${fileRef}` : '';
+
+  return appendWebViewQuery(directUrl);
+}
+
+/**
+ * Office Online embed variant, kept separate so the spike can swap strategies
+ * per extension without touching callers.
+ */
+export function buildOfficeOnlineEmbedUrl(
+  siteUrl: string,
+  options: {
+    uniqueId?: string;
+    fileRef?: string;
+    fileName?: string;
+  }
+): string {
+  const fileName = options.fileName || '';
+  const fileRef = options.fileRef || '';
+  const uniqueId = options.uniqueId ? normalizeSharePointUniqueId(options.uniqueId) : '';
+
+  if (!uniqueId || !isOfficeOnlineFile(fileName, fileRef)) {
+    return '';
+  }
+
+  const webUrl = normalizeSiteUrl(siteUrl);
+  const sourcedoc = encodeURIComponent(uniqueId);
+  const fileQuery = fileName ? `&file=${encodeURIComponent(fileName)}` : '';
+
+  return `${webUrl}/_layouts/15/Doc.aspx?sourcedoc=${sourcedoc}${fileQuery}&action=embedview`;
+}
+
+/** True when the extension has no known in-browser renderer — go straight to fallback UI. */
+export function isPreviewableFile(fileName: string, fileRef: string): boolean {
+  const extension = getFileExtension(fileName) || getFileExtension(fileRef.split('/').pop() || '');
+
+  if (!extension) {
+    return false;
+  }
+
+  return PREVIEWABLE_EXTENSIONS.has(extension);
+}
+
+/**
+ * Reconstructs the web URL an item lives on, from data every item carries.
+ *
+ * Needed because preview URLs are normally precomputed in the library mapper
+ * (the only place that knows which candidate site actually answered). Items
+ * that skip that mapper — restored from a persisted cache written by older
+ * code, built by hand, or produced by the search fallback — have no preview
+ * URL, and guessing the site from the web part context would be wrong.
+ *
+ * `fileRef` is server-relative (`/sites/x/<library>/...`), so cutting it just
+ * before the library segment yields the web path; the origin comes from
+ * `fileUrl`, which every item has.
+ */
+function resolveWebUrlFromItem(fileUrl: string, fileRef: string, libraryTitle: string): string {
+  const origin = getSiteOrigin(fileUrl);
+  const marker = `/${libraryTitle}/`;
+  const markerIndex = fileRef.toLowerCase().indexOf(marker.toLowerCase());
+
+  if (!origin || markerIndex < 0) {
+    return '';
+  }
+
+  return `${origin}${fileRef.substring(0, markerIndex)}`;
+}
+
+/** Fallback embed URL for items whose previewUrl was never computed. */
+export function resolvePreviewUrlFromItem(
+  item: { fileUrl: string; fileRef: string; name: string; uniqueId?: string },
+  libraryTitle: string
+): string {
+  if (!isPreviewableFile(item.name, item.fileRef)) {
+    return '';
+  }
+
+  const webUrl = resolveWebUrlFromItem(item.fileUrl, item.fileRef, libraryTitle);
+
+  if (!webUrl) {
+    return '';
+  }
+
+  return buildSharePointFilePreviewUrl(webUrl, {
+    uniqueId: item.uniqueId,
+    fileRef: item.fileRef,
+    fileName: item.name
+  });
+}
+
+/** Fallback Office Online embed URL, same reasoning as resolvePreviewUrlFromItem. */
+export function resolveOfficeEmbedUrlFromItem(
+  item: { fileUrl: string; fileRef: string; name: string; uniqueId?: string },
+  libraryTitle: string
+): string {
+  const webUrl = resolveWebUrlFromItem(item.fileUrl, item.fileRef, libraryTitle);
+
+  if (!webUrl) {
+    return '';
+  }
+
+  return buildOfficeOnlineEmbedUrl(webUrl, {
+    uniqueId: item.uniqueId,
+    fileRef: item.fileRef,
+    fileName: item.name
+  });
 }
 
 /**

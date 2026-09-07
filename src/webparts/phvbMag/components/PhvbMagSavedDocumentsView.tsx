@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { DOCUMENT_COUNT_SUFFIX, TAB_LABELS } from '../config/PhvbMag.configuration';
 import type {
   IBanHanhLibraryItem,
@@ -7,6 +7,7 @@ import type {
   ISavedDocumentDisplayItem
 } from '../models/PhvbMag.models';
 import { usePhvbSavedDocuments } from '../context/PhvbMagSavedDocuments.context';
+import { usePhvbRegisterPreviewDocuments } from '../context/PhvbMagDocumentPreview.context';
 import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
 import { PhvbMagLibraryListPageShell } from './PhvbMagLibraryListPageShell';
@@ -80,6 +81,13 @@ function SavedDocumentCard(props: { item: ISavedDocumentDisplayItem }): React.Re
 
 export function PhvbMagSavedDocumentsView(props: IPhvbMagSavedDocumentsViewProps): React.ReactElement {
   const { loadSavedView, savedCount, isLoadingSavedView, errorMessage, savedDisplayItems } = usePhvbSavedDocuments();
+
+  usePhvbRegisterPreviewDocuments(useMemo(
+    () => savedDisplayItems
+      .filter(item => item.isAccessible && item.document)
+      .map(item => item.document as IBanHanhLibraryItem),
+    [savedDisplayItems]
+  ));
 
   useEffect(() => {
     loadSavedView().catch(() => undefined);

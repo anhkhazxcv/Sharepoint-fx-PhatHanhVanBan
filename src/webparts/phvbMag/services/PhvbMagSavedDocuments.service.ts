@@ -51,7 +51,7 @@ function buildSavedDocumentsQuery(userEmail: string, top: number = SAVED_DOCUMEN
   const normalizedEmail = escapeODataValue(userEmail.trim().toLowerCase());
   return [
     `$select=${SAVED_DOCUMENT_SELECT_FIELDS.join(',')}`,
-    `$filter=UserEmail eq '${normalizedEmail}'`,
+    `$filter=${encodeURIComponent(`UserEmail eq '${normalizedEmail}'`)}`,
     `$orderby=Created desc`,
     `$top=${top}`
   ].join('&');

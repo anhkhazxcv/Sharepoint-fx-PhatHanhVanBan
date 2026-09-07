@@ -53,10 +53,9 @@ Roles are `PHVB_ROLES` (`dc`, `admin`, `superAdmin`) plus stage-specific partici
 
 - `docs/PhvbMag_Luong_TrangThai.md` — status/workflow flow narrative (Vietnamese).
 - `docs/PHVB_DataModel_Lists_Fields.xlsx` — SharePoint list/field data model (generated via `npm run export:data-model`).
-- `docs/test-cases/PhvbMag_PhatHanhVanBan_TestCases.csv` — manual QA test case matrix (no automated tests exist; this is the current source of truth for expected behavior per role/flow).
 
 ### Non-negotiables
 
 - Do not invent SharePoint list/library names, fields, statuses, roles, or mail types — use only what's defined in `config/PhvbMag.configuration.ts` or explicitly provided.
 - Do not add new dependencies (especially PnPjs, `@fluentui/react-icons`) without approval.
-- There is no CI/CD pipeline (`.github/workflows` etc. don't exist) and no automated tests — verify changes by running `npm run serve` and manually exercising the affected flow/role, and cross-checking against `docs/test-cases/PhvbMag_PhatHanhVanBan_TestCases.csv`.
+- There is no CI/CD pipeline (`.github/workflows` etc. don't exist) and no automated tests — verify changes by running `npm run serve` and manually exercising the affected flow/role.

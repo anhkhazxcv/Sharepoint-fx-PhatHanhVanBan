@@ -13,10 +13,13 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaClipboardList,
+  FaCompress,
   FaCopy,
   FaDownload,
   FaEdit,
   FaEquals,
+  FaExpand,
+  FaExternalLinkAlt,
   FaEye,
   FaFile,
   FaFileAlt,
@@ -27,6 +30,7 @@ import {
   FaGem,
   FaHome,
   FaLightbulb,
+  FaLink,
   FaListAlt,
   FaListOl,
   FaMinus,
@@ -343,6 +347,22 @@ export function PaginationNextIcon(props: IIconProps): React.ReactElement {
 
 export function EyeIcon(props: IIconProps): React.ReactElement {
   return <FaEye className={props.className} style={props.style} aria-hidden />;
+}
+
+export function PreviewFullscreenIcon(props: IIconProps): React.ReactElement {
+  return <FaExpand className={props.className} style={props.style} aria-hidden />;
+}
+
+export function PreviewExitFullscreenIcon(props: IIconProps): React.ReactElement {
+  return <FaCompress className={props.className} style={props.style} aria-hidden />;
+}
+
+export function OpenExternalIcon(props: IIconProps): React.ReactElement {
+  return <FaExternalLinkAlt className={props.className} style={props.style} aria-hidden />;
+}
+
+export function CopyLinkIcon(props: IIconProps): React.ReactElement {
+  return <FaLink className={props.className} style={props.style} aria-hidden />;
 }
 
 export type LibraryFileTypeIconName = 'pdf' | 'word' | 'excel' | 'powerpoint' | 'file';

@@ -1,0 +1,231 @@
+// -------------------------------------------------------------
+// DOCUMENT PREVIEW — shared core, used as library 4th column and as overlay
+// -------------------------------------------------------------
+
+.previewPane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background-color: $surface-card;
+}
+
+.previewPaneColumn {
+  flex: 1 1 auto;
+  border-left: 1px solid $border-color;
+}
+
+.previewPaneOverlay {
+  flex: 1 1 auto;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  min-height: 48px;
+  padding: $space-2 $space-3;
+  background-color: $bg-folders;
+  border-bottom: 1px solid $border-color;
+  flex-shrink: 0;
+}
+
+.previewIdentity {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.previewFileTypeIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.previewTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: $text-main;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.previewActions {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  flex-shrink: 0;
+}
+
+.previewNav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: $space-1;
+  padding-right: $space-1;
+  border-right: 1px solid $border-color;
+}
+
+.previewIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: $radius-control;
+  background-color: transparent;
+  color: $text-muted;
+  cursor: pointer;
+  transition: background-color $transition-fast, color $transition-fast;
+
+  &:hover:not(:disabled) {
+    background-color: $primary-light;
+    color: $primary-color;
+  }
+
+  &:focus-visible {
+    @include phvb-focus-ring;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.previewMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-1 $space-4;
+  padding: $space-2 $space-3;
+  border-bottom: 1px solid $border-color;
+  background-color: $surface-card;
+  flex-shrink: 0;
+}
+
+.previewMetaItem {
+  font-size: 12px;
+  color: $text-muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+
+  strong {
+    font-weight: 600;
+    color: $text-main;
+  }
+}
+
+.previewBody {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: $space-3;
+  overflow: hidden;
+  background-color: $bg-content;
+}
+
+.previewLoading {
+  position: absolute;
+  inset: $space-3;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.previewFrame {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  border: 1px solid $border-subtle;
+  border-radius: $radius-card;
+  background-color: #EDE7E0;
+}
+
+.previewFallback {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-3;
+}
+
+.previewFallbackActions {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.previewEmpty {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// -------------------------------------------------------------
+// Overlay shell — larger than modalContentLg (920px), so a new class
+// -------------------------------------------------------------
+
+.previewOverlayContent {
+  display: flex;
+  flex-direction: column;
+  width: min(1200px, calc(100vw - 40px));
+  height: min(88vh, calc(100vh - 48px));
+  background-color: $surface-card;
+  border-radius: $radius-card;
+  box-shadow: $shadow-lg;
+  overflow: hidden;
+  animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.previewOverlayContentFullscreen {
+  // .modalOverlay pads 24px; fixed + inset escapes it so fullscreen truly fills.
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+}
+
+// -------------------------------------------------------------
+// Library 4th column layout
+// -------------------------------------------------------------
+
+.libraryListPaneWithPreview {
+  flex: 0 0 320px;
+  min-width: 280px;
+  max-width: 380px;
+}
+
+@media (max-width: 1180px) {
+  // Below this width libraryMain stacks vertically — the column form is
+  // replaced by the overlay, so the pane must not reserve space.
+  .libraryListPaneWithPreview {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .previewPaneColumn {
+    display: none;
+  }
+}

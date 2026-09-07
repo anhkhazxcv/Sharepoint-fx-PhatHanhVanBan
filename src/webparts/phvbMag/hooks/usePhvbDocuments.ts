@@ -3,10 +3,15 @@ import type { HttpClient, SPHttpClient } from '@microsoft/sp-http';
 import { hasSharePointSiteContext, resolveListTitle } from '../config/PhvbMag.configuration';
 import { SITE_CONTEXT_ERROR_MESSAGE } from '../services/PhvbMag.error';
 import { phvbDocumentsService } from '../services/PhvbMag.service';
+import { phvbDeleteRequestService } from '../services/PhvbMagDeleteRequest.service';
 import type { ICreateRequestInput, IEditRequestContext, IPhvbDirectoryUser, IPhvbLogContext, ISaveRequestResult, ITabCounts, IVanBanItem, SaveRequestMode, TabType } from '../models/PhvbMag.models';
 import { DEFAULT_TAB_COUNTS } from '../models/PhvbMag.models';
 import { createFlowRunId } from '../services/PhvbMagLog.service';
 import { usePhvbBusy } from '../context/PhvbMagBusy.context';
+import { ToastService } from '../utils/ToastService';
+
+const SAVE_REQUEST_ADMIN_CONTACT_MESSAGE = 'Không thể lưu yêu cầu. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
+const DELETE_REQUEST_ADMIN_CONTACT_MESSAGE = 'Không thể xóa văn bản. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
 
 interface IUsePhvbDocumentsOptions {
   userDisplayName: string;
@@ -37,7 +42,9 @@ interface IUsePhvbDocumentsResult {
     editContext?: IEditRequestContext,
     duplicateFromIdYeuCau?: string
   ) => Promise<ISaveRequestResult | undefined>;
+  deleteVanBan: (item: IVanBanItem) => Promise<boolean>;
   refetchCounts: () => Promise<void>;
+  refetchItems: () => Promise<void>;
 }
 
 export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDocumentsResult {
@@ -112,78 +119,50 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     };
   }, [deferCountsLoad, refetchCounts]);
 
-  useEffect(() => {
-    let isMounted = true;
+  const isListlessTab = activeTab === 'TrangChu'
+    || activeTab === 'ThuVienTaiLieu'
+    || activeTab === 'MoiBanHanh'
+    || activeTab === 'HuongDan'
+    || activeTab === 'DaLuu'
+    || activeTab === 'XemGanDay';
 
+  const refetchItems = useCallback(async (): Promise<void> => {
     if (!hasAnySiteContext) {
       setItems([]);
       setIsLoading(false);
       setErrorMessage(SITE_CONTEXT_ERROR_MESSAGE);
-      return () => {
-        isMounted = false;
-      };
+      return;
     }
 
-    if (suspendTabItemsLoad) {
+    if (suspendTabItemsLoad || isListlessTab) {
       setItems([]);
       setIsLoading(false);
       setErrorMessage(undefined);
-      return () => {
-        isMounted = false;
-      };
+      return;
     }
 
-    if (
-      activeTab === 'TrangChu'
-      || activeTab === 'ThuVienTaiLieu'
-      || activeTab === 'MoiBanHanh'
-      || activeTab === 'HuongDan'
-      || activeTab === 'DaLuu'
-      || activeTab === 'XemGanDay'
-    ) {
-      setItems([]);
-      setIsLoading(false);
+    setIsLoading(true);
+
+    try {
+      const nextItems = await phvbDocumentsService.loadTabItems({
+        ...siteContext,
+        userEmail,
+        tab: activeTab
+      });
+
+      setItems(nextItems);
       setErrorMessage(undefined);
-      return () => {
-        isMounted = false;
-      };
+    } catch (error) {
+      setItems([]);
+      setErrorMessage(phvbDocumentsService.getRuntimeErrorMessage(error, resolvedListTitle));
+    } finally {
+      setIsLoading(false);
     }
+  }, [activeTab, hasAnySiteContext, isListlessTab, resolvedListTitle, siteContext, suspendTabItemsLoad, userEmail]);
 
-    const loadItems = async (): Promise<void> => {
-      setIsLoading(true);
-
-      try {
-        const nextItems = await phvbDocumentsService.loadTabItems({
-          ...siteContext,
-          userEmail,
-          tab: activeTab
-        });
-        if (!isMounted) {
-          return;
-        }
-
-        setItems(nextItems);
-        setErrorMessage(undefined);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        setItems([]);
-        setErrorMessage(phvbDocumentsService.getRuntimeErrorMessage(error, resolvedListTitle));
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadItems().catch(() => undefined);
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeTab, hasAnySiteContext, resolvedListTitle, siteContext, suspendTabItemsLoad, userEmail]);
+  useEffect(() => {
+    refetchItems().catch(() => undefined);
+  }, [refetchItems]);
 
   const saveRequest = async (
     input: ICreateRequestInput,
@@ -238,8 +217,42 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
         };
       });
     } catch (error) {
-      setErrorMessage(phvbDocumentsService.getRuntimeErrorMessage(error, resolvedListTitle));
+      console.error('[PhvbMag] saveRequest failed', error);
+      ToastService.error(SAVE_REQUEST_ADMIN_CONTACT_MESSAGE);
       return undefined;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deleteVanBan = async (item: IVanBanItem): Promise<boolean> => {
+    if (!hasAnySiteContext) {
+      setErrorMessage(SITE_CONTEXT_ERROR_MESSAGE);
+      return false;
+    }
+
+    setIsSaving(true);
+
+    const logContext: IPhvbLogContext = {
+      flowRunId: createFlowRunId(),
+      screenName: 'PhvbMagTable',
+      actionName: 'Request_Delete',
+      userEmail,
+      itemId: item.IdYeuCau || item.Id
+    };
+
+    try {
+      await runBusy('Đang xóa văn bản...', async () => {
+        await phvbDeleteRequestService.deleteRequest(documentContext, item, logContext);
+      });
+
+      phvbDocumentsService.invalidateTabCountsCache();
+      await Promise.all([refetchItems(), refetchCounts()]);
+      return true;
+    } catch (error) {
+      console.error('[PhvbMag] deleteVanBan failed', error);
+      ToastService.error(DELETE_REQUEST_ADMIN_CONTACT_MESSAGE);
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -254,6 +267,8 @@ export function usePhvbDocuments(options: IUsePhvbDocumentsOptions): IUsePhvbDoc
     errorMessage,
     setActiveTab,
     saveRequest,
-    refetchCounts
+    deleteVanBan,
+    refetchCounts,
+    refetchItems
   };
 }

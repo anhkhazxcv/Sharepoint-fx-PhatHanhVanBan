@@ -15,6 +15,7 @@ import {
 } from './PhvbMagIcons';
 import { PhvbMagSaveBookmarkButton } from './PhvbMagSaveBookmarkButton';
 import { usePhvbRecentViewsOptional } from '../context/PhvbMagRecentViews.context';
+import { usePhvbDocumentPreviewOptional } from '../context/PhvbMagDocumentPreview.context';
 import styles from './PhvbMag.module.scss';
 
 export interface IPhvbMagLibraryDocumentCardProps {
@@ -40,6 +41,7 @@ function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps
     className
   } = props;
   const recentViews = usePhvbRecentViewsOptional();
+  const preview = usePhvbDocumentPreviewOptional();
   const fileType = resolveLibraryFileTypeVisual(document.name);
   const viewCountLabel = formatViewCount(document.viewCount);
   const effectiveStatus = resolveLibraryDocumentEffectiveStatus(document.hieuLucTu, document.hieuLucDen);
@@ -56,6 +58,13 @@ function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps
     }
   };
 
+  // Preview records the view itself (after a dwell delay), so no tracking here.
+  const handleOpenPreview = (event: React.MouseEvent | React.KeyboardEvent): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    preview?.openPreview(document);
+  };
+
   return (
     <article className={[styles.libraryDocumentItem, className].filter(Boolean).join(' ')}>
       <div className={styles.libraryDocumentFileType}>
@@ -70,13 +79,24 @@ function PhvbMagLibraryDocumentCardInner(props: IPhvbMagLibraryDocumentCardProps
 
       <div className={styles.libraryDocumentContent}>
         <div className={styles.libraryDocumentTitleRow}>
-          <PhvbMagExternalLink
-            href={document.fileUrl}
-            className={styles.libraryDocumentTitle}
-            onOpen={handleOpenDocument}
-          >
-            {document.name}
-          </PhvbMagExternalLink>
+          {preview ? (
+            <button
+              type="button"
+              className={styles.libraryDocumentTitle}
+              onClick={handleOpenPreview}
+              title={document.name}
+            >
+              {document.name}
+            </button>
+          ) : (
+            <PhvbMagExternalLink
+              href={document.fileUrl}
+              className={styles.libraryDocumentTitle}
+              onOpen={handleOpenDocument}
+            >
+              {document.name}
+            </PhvbMagExternalLink>
+          )}
 
           <div className={styles.libraryDocumentStatusGroup}>
             {badgeContent}

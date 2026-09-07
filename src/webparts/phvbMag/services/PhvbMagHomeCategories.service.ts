@@ -3,7 +3,9 @@ import {
   HOME_CATEGORIES_QUERY_TOP,
   HOME_CATEGORIES_TOP,
   HOME_CATEGORY_DEFAULT_ICON,
-  LIBRARY_CACHE_STALE_MS
+  HOME_CATEGORY_GROUP_FIELD,
+  LIBRARY_CACHE_STALE_MS,
+  type HomeCategoryGroupKey
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { toRuntimeMessage } from './PhvbMag.error';
@@ -38,12 +40,13 @@ const HOME_CATEGORY_SELECT_FIELDS: ReadonlyArray<string> = [
 const cacheBySiteUrl = new Map<string, IHomeCategoriesCacheEntry>();
 const promiseBySiteUrl = new Map<string, Promise<IHomeCategoryItem[]>>();
 
-function resolveCacheKey(context: IPhvbSiteContext): string {
+function resolveCacheKey(context: IPhvbSiteContext, group: HomeCategoryGroupKey): string {
   return [
     context.sourceSiteUrl || '',
     context.currentWebUrl || '',
     context.siteCollectionUrl || '',
-    context.issuanceLibraryTitle || ''
+    context.issuanceLibraryTitle || '',
+    group
   ].join('|');
 }
 
@@ -93,8 +96,8 @@ function mapHomeCategoryItem(item: ISharePointHomeCategoryItem): IHomeCategoryIt
 }
 
 export class PhvbHomeCategoriesService {
-  public loadHomeCategories(context: IPhvbSiteContext): Promise<IHomeCategoryItem[]> {
-    const cacheKey = resolveCacheKey(context);
+  public loadHomeCategories(context: IPhvbSiteContext, group: HomeCategoryGroupKey): Promise<IHomeCategoryItem[]> {
+    const cacheKey = resolveCacheKey(context, group);
     const cachedEntry = cacheBySiteUrl.get(cacheKey);
 
     if (isCacheFresh(cachedEntry)) {
@@ -107,7 +110,7 @@ export class PhvbHomeCategoriesService {
       return pendingPromise.then(items => items.slice());
     }
 
-    const requestPromise = this.fetchHomeCategories(context).then(items => {
+    const requestPromise = this.fetchHomeCategories(context, group).then(items => {
       cacheBySiteUrl.set(cacheKey, {
         items,
         fetchedAt: Date.now()
@@ -126,12 +129,12 @@ export class PhvbHomeCategoriesService {
     });
   }
 
-  private async fetchHomeCategories(context: IPhvbSiteContext): Promise<IHomeCategoryItem[]> {
+  private async fetchHomeCategories(context: IPhvbSiteContext, group: HomeCategoryGroupKey): Promise<IHomeCategoryItem[]> {
     const items = await phvbRepository.fetchItems({
       ...context,
       listTitle: HOME_CATEGORIES_LIST_TITLE,
       selectFields: HOME_CATEGORY_SELECT_FIELDS,
-      filter: 'HienThi eq 1',
+      filter: `HienThi eq 1 and ${HOME_CATEGORY_GROUP_FIELD} eq '${group}'`,
       top: HOME_CATEGORIES_QUERY_TOP,
       orderBy: 'ThuTu asc,Id asc'
     }) as ISharePointHomeCategoryItem[];

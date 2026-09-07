@@ -107,10 +107,27 @@ export function sharePointRestNull(): string {
   return null as unknown as string;
 }
 
-/** validateUpdateListItem FieldValue for Date-only: M/d/yyyy (site en-US, e.g. 2/23/2012). Do not use dd/MM/yyyy or REST ISO. Empty → ''. */
-export function toSharePointDateOnlyFieldValue(value?: string | Date): string {
+/**
+ * validateUpdateListItem parses FieldValue using the target site's regional date format,
+ * not a fixed one — 'MDY' (M/d/yyyy, e.g. 2/23/2012) for en-US sites, 'DMY' (d/M/yyyy,
+ * e.g. 23/2/2012) for everything else. Resolve the actual value via
+ * resolveSiteDateFieldOrder/resolveDateFieldOrderForContext before calling this.
+ */
+export type SharePointDateFieldOrder = 'MDY' | 'DMY';
+
+/** validateUpdateListItem FieldValue for Date-only fields. Do not use REST ISO here. Empty → ''. */
+export function toSharePointDateOnlyFieldValue(value?: string | Date, order: SharePointDateFieldOrder = 'MDY'): string {
   const parsed = toLocalDateOnly(value);
-  return parsed ? `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}` : '';
+
+  if (!parsed) {
+    return '';
+  }
+
+  const month = parsed.getMonth() + 1;
+  const day = parsed.getDate();
+  const year = parsed.getFullYear();
+
+  return order === 'MDY' ? `${month}/${day}/${year}` : `${day}/${month}/${year}`;
 }
 
 export interface IDateOnlyFormValue {
@@ -126,7 +143,8 @@ export interface IDateOnlyFormValue {
  */
 export function buildDateOnlyCorrectionFormValues(
   payload: Record<string, string | boolean | number | undefined>,
-  fieldNames: ReadonlyArray<string>
+  fieldNames: ReadonlyArray<string>,
+  order: SharePointDateFieldOrder
 ): IDateOnlyFormValue[] {
   const values: IDateOnlyFormValue[] = [];
 
@@ -136,7 +154,7 @@ export function buildDateOnlyCorrectionFormValues(
       return;
     }
 
-    const fieldValue = toSharePointDateOnlyFieldValue(rawValue);
+    const fieldValue = toSharePointDateOnlyFieldValue(rawValue, order);
     if (fieldValue) {
       values.push({ FieldName: fieldName, FieldValue: fieldValue });
     }

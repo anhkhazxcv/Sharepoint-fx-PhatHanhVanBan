@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { IBanHanhLibraryItem, IPhvbSiteContext } from '../models/PhvbMag.models';
 import { usePhvbRecentPublished } from '../hooks/usePhvbRecentPublished';
+import { usePhvbRegisterPreviewDocuments } from '../context/PhvbMagDocumentPreview.context';
 import { resolveLibraryContactPerson } from '../utils/PhvbMagLibrary.utils';
 import {
   formatRecentPublishDate,
@@ -100,6 +101,19 @@ export function PhvbMagRecentPublishedView(props: IPhvbMagRecentPublishedViewPro
   const recent = usePhvbRecentPublished(siteContext);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set<string>());
   const hasSections = recent.sections.length > 0;
+
+  // Flatten sections so preview navigation walks the whole visible list.
+  usePhvbRegisterPreviewDocuments(useMemo(() => {
+    const flattened: IBanHanhLibraryItem[] = [];
+
+    recent.sections.forEach((section: IRecentPublishedSection) => {
+      section.documents.forEach((document: IBanHanhLibraryItem) => {
+        flattened.push(document);
+      });
+    });
+
+    return flattened;
+  }, [recent.sections]));
 
   useEffect(() => {
     const validKeys = new Set<string>();

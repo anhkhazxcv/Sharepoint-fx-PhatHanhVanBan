@@ -146,6 +146,27 @@ export class PhvbCommentAttachmentService {
     return response.ok;
   }
 
+  private async deleteFolder(
+    siteUrl: string,
+    context: ICommentAttachmentContext,
+    folderPath: string
+  ): Promise<void> {
+    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)?${buildODataParameterQuery({
+      '@folderPath': folderPath
+    })}`;
+    const response = await context.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
+      headers: {
+        accept: 'application/json;odata=nometadata',
+        'content-type': 'application/json;odata=nometadata',
+        'odata-version': '',
+        'IF-MATCH': '*',
+        'X-HTTP-Method': 'DELETE'
+      }
+    });
+
+    await ensureCommentAttachmentResponseOk(response, requestUrl, context, 'SP_DELETE');
+  }
+
   private async createFolder(
     siteUrl: string,
     context: ICommentAttachmentContext,
@@ -363,6 +384,52 @@ export class PhvbCommentAttachmentService {
     }
 
     return merged;
+  }
+
+  /** Xóa folder đính kèm (nếu có) của từng comment/lịch sử — bỏ qua id nào không có folder. */
+  public async deleteCommentFolders(context: IPhvbSiteContext, commentIds: number[]): Promise<void> {
+    const uniqueIds = commentIds.filter((id, index, array) => array.indexOf(id) === index && id > 0);
+
+    if (uniqueIds.length === 0) {
+      return;
+    }
+
+    const candidates = getCandidateSiteUrls(context);
+
+    if (candidates.length === 0) {
+      throw new Error('Missing SharePoint site context.');
+    }
+
+    let lastError: unknown = null;
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const siteUrl = candidates[index];
+
+      try {
+        const libraryRootPath = await this.getLibraryRootFolder(siteUrl, context);
+
+        for (let idIndex = 0; idIndex < uniqueIds.length; idIndex += COMMENT_ATTACHMENT_CHUNK_SIZE) {
+          const chunk = uniqueIds.slice(idIndex, idIndex + COMMENT_ATTACHMENT_CHUNK_SIZE);
+
+          await Promise.all(chunk.map(async (commentId): Promise<void> => {
+            const folderPath = joinServerRelativePath(
+              libraryRootPath,
+              resolveCommentAttachmentFolderName(commentId)
+            );
+
+            if (await this.folderExists(siteUrl, context, folderPath)) {
+              await this.deleteFolder(siteUrl, context, folderPath);
+            }
+          }));
+        }
+
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error('Unable to delete comment attachment folders.');
   }
 }
 

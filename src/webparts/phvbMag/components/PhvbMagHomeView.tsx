@@ -2,14 +2,22 @@ import * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  HOME_CATEGORY_GROUP,
   RECENT_PUBLISHED_HOME_FOLDER_LIMIT,
   TAB_LABELS
 } from '../config/PhvbMag.configuration';
+import { usePhvbBusy } from '../context/PhvbMagBusy.context';
 import { usePhvbSavedDocuments } from '../context/PhvbMagSavedDocuments.context';
 import { usePhvbRecentViews } from '../context/PhvbMagRecentViews.context';
+import { usePhvbRegisterPreviewDocuments } from '../context/PhvbMagDocumentPreview.context';
 import { usePhvbHomeCategories } from '../hooks/usePhvbHomeCategories';
 import { usePhvbHomeData } from '../hooks/usePhvbHomeData';
-import type { IPhvbDocumentContext, IPhvbSiteContext, IHomeCategoryItem } from '../models/PhvbMag.models';
+import type {
+  IBanHanhLibraryItem,
+  IPhvbDocumentContext,
+  IPhvbSiteContext,
+  IHomeCategoryItem
+} from '../models/PhvbMag.models';
 import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import {
   buildHomeCategoryAriaLabel,
@@ -30,7 +38,6 @@ import {
 import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagHomeLibraryPreviewColumn } from './PhvbMagHomeLibraryPreviewColumn';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
-import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import { PhvbMagSectionShell } from './PhvbMagSectionShell';
 import { PhvbMagSkeleton } from './PhvbMagSkeleton';
 import styles from './PhvbMag.module.scss';
@@ -70,6 +77,47 @@ function HomeCategorySkeleton(): React.ReactElement {
   return <PhvbMagSkeleton variant="tile" count={4} className={styles.homeCategorySkeletonGrid} />;
 }
 
+interface IHomeCategoriesSectionProps {
+  title: string;
+  isLoading: boolean;
+  categories: IHomeCategoryItem[];
+  onNavigate: (path: string) => void;
+}
+
+function HomeCategoriesSection(props: IHomeCategoriesSectionProps): React.ReactElement {
+  const { title, isLoading, categories, onNavigate } = props;
+
+  return (
+    <PhvbMagSectionShell
+      title={title}
+      icon={<HomeCategoryIcon className={styles.homeSectionIcon} />}
+      action={(
+        <button
+          type="button"
+          className={styles.homeSectionMore}
+          onClick={() => onNavigate('/tab/ThuVienTaiLieu/all')}
+        >
+          Xem tất cả →
+        </button>
+      )}
+    >
+      {isLoading ? <HomeCategorySkeleton /> : null}
+
+      {!isLoading && categories.length > 0 ? (
+        <div className={styles.homeCategoryGrid}>
+          {categories.map(category => (
+            <HomeCategoryTile
+              key={category.id}
+              category={category}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      ) : null}
+    </PhvbMagSectionShell>
+  );
+}
+
 export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElement {
   const { siteContext } = props;
   const navigate = useNavigate();
@@ -85,12 +133,16 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
   const homeData = usePhvbHomeData({
     siteContext,
     includeMostViewed: true,
-    maxFolders: RECENT_PUBLISHED_HOME_FOLDER_LIMIT
+    maxFolders: RECENT_PUBLISHED_HOME_FOLDER_LIMIT,
+    autoLoadRecent: false
   });
+  const { loadRecentPublished } = homeData;
 
-  const homeCategories = usePhvbHomeCategories({ siteContext });
+  const homeCategoriesChucNang = usePhvbHomeCategories({ siteContext, group: HOME_CATEGORY_GROUP.CHUC_NANG });
+  const { loadCategories: loadCategoriesChucNang } = homeCategoriesChucNang;
 
-  const showCategoriesSection = homeCategories.isLoading || homeCategories.categories.length > 0;
+  const homeCategoriesPhongBan = usePhvbHomeCategories({ siteContext, group: HOME_CATEGORY_GROUP.PHONG_BAN });
+  const { loadCategories: loadCategoriesPhongBan } = homeCategoriesPhongBan;
 
   const {
     loadSavedPreview,
@@ -104,12 +156,19 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
     isLoadingRecentPreview
   } = usePhvbRecentViews();
 
+  const { runBusy } = usePhvbBusy();
+
   useEffect(() => {
-    Promise.all([
-      loadSavedPreview(),
-      loadRecentPreview()
-    ]).catch(() => undefined);
-  }, [loadSavedPreview, loadRecentPreview]);
+    runBusy('Đang tải...', () =>
+      Promise.all([
+        loadRecentPublished(),
+        loadCategoriesChucNang(),
+        loadCategoriesPhongBan(),
+        loadSavedPreview(),
+        loadRecentPreview()
+      ])
+    ).catch(() => undefined);
+  }, [runBusy, loadRecentPublished, loadCategoriesChucNang, loadCategoriesPhongBan, loadSavedPreview, loadRecentPreview]);
 
   const isLoadingLibraryPreview = isLoadingSavedPreview || isLoadingRecentPreview;
 
@@ -132,6 +191,36 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
       isAccessible: item.isAccessible
     }))
   ), [recentPreviewItems]);
+
+  // Home renders several independent lists; flatten them in render order so
+  // preview navigation walks every document visible on the page.
+  usePhvbRegisterPreviewDocuments(useMemo(() => {
+    const flattened: IBanHanhLibraryItem[] = [];
+
+    homeData.sections.forEach(section => {
+      section.documents.forEach(document => {
+        flattened.push(document);
+      });
+    });
+
+    savedHomePreviewItems.forEach(item => {
+      if (item.isAccessible && item.document) {
+        flattened.push(item.document);
+      }
+    });
+
+    recentHomePreviewItems.forEach(item => {
+      if (item.isAccessible && item.document) {
+        flattened.push(item.document);
+      }
+    });
+
+    homeData.mostViewed.forEach(document => {
+      flattened.push(document);
+    });
+
+    return flattened;
+  }, [homeData.sections, homeData.mostViewed, savedHomePreviewItems, recentHomePreviewItems]));
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -216,34 +305,22 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
           </PhvbMagSectionShell>
         ) : null}
 
-        {showCategoriesSection ? (
-          <PhvbMagSectionShell
-            title="Danh mục"
-            icon={<HomeCategoryIcon className={styles.homeSectionIcon} />}
-            action={(
-              <button
-                type="button"
-                className={styles.homeSectionMore}
-                onClick={() => navigate('/tab/ThuVienTaiLieu/all')}
-              >
-                Xem tất cả →
-              </button>
-            )}
-          >
-            {homeCategories.isLoading ? <HomeCategorySkeleton /> : null}
+        {(homeCategoriesChucNang.isLoading || homeCategoriesChucNang.categories.length > 0) ? (
+          <HomeCategoriesSection
+            title="Danh mục theo loại văn bản"
+            isLoading={homeCategoriesChucNang.isLoading}
+            categories={homeCategoriesChucNang.categories}
+            onNavigate={path => navigate(path)}
+          />
+        ) : null}
 
-            {!homeCategories.isLoading && homeCategories.categories.length > 0 ? (
-              <div className={styles.homeCategoryGrid}>
-                {homeCategories.categories.map(category => (
-                  <HomeCategoryTile
-                    key={category.id}
-                    category={category}
-                    onNavigate={path => navigate(path)}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </PhvbMagSectionShell>
+        {(homeCategoriesPhongBan.isLoading || homeCategoriesPhongBan.categories.length > 0) ? (
+          <HomeCategoriesSection
+            title="Danh mục theo chức năng"
+            isLoading={homeCategoriesPhongBan.isLoading}
+            categories={homeCategoriesPhongBan.categories}
+            onNavigate={path => navigate(path)}
+          />
         ) : null}
 
         <PhvbMagSectionShell
@@ -259,17 +336,15 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
             </button>
           )}
         >
-          <PhvbMagLoadingOverlay isOpen={homeData.isLoadingRecent} message="Đang tải văn bản mới ban hành..." />
-
-          {!homeData.isLoadingRecent && homeData.errorMessage ? (
+          {homeData.errorMessage ? (
             <PhvbMagEmptyState message={homeData.errorMessage} role="alert" />
           ) : null}
 
-          {!homeData.isLoadingRecent && !homeData.errorMessage && homeData.sections.length === 0 ? (
+          {!homeData.errorMessage && homeData.sections.length === 0 ? (
             <PhvbMagEmptyState message={`Không có văn bản mới trong ${homeData.windowDays} ngày qua.`} />
           ) : null}
 
-          {!homeData.isLoadingRecent && !homeData.errorMessage && homeData.sections.length > 0 ? (
+          {!homeData.errorMessage && homeData.sections.length > 0 ? (
             <div className={styles.homeRecentFolderList}>
               {homeData.sections.map(section => {
                 const publishDate = formatRecentPublishDate(section.folderNgayPhatHanh)
@@ -339,17 +414,15 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
             </button>
           )}
         >
-          <PhvbMagLoadingOverlay isOpen={homeData.isLoadingMostViewed} message="Đang tải..." />
-
-          {!homeData.isLoadingMostViewed && homeData.mostViewedErrorMessage ? (
+          {homeData.mostViewedErrorMessage ? (
             <PhvbMagEmptyState message={homeData.mostViewedErrorMessage} role="alert" />
           ) : null}
 
-          {!homeData.isLoadingMostViewed && !homeData.mostViewedErrorMessage && homeData.mostViewed.length === 0 ? (
+          {!homeData.mostViewedErrorMessage && homeData.mostViewed.length === 0 ? (
             <PhvbMagEmptyState message="Chưa có dữ liệu lượt xem." />
           ) : null}
 
-          {!homeData.isLoadingMostViewed && !homeData.mostViewedErrorMessage && homeData.mostViewed.length > 0 ? (
+          {!homeData.mostViewedErrorMessage && homeData.mostViewed.length > 0 ? (
             <div className={styles.homePopularList}>
               {homeData.mostViewed.map(document => (
                 <PhvbMagLibraryDocumentCard

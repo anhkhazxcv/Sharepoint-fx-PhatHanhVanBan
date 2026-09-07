@@ -68,6 +68,39 @@ export function buildLibrarySearchPath(query: string, page: number): string {
   return `${LIBRARY_TAB_PREFIX}/search?${params.toString()}`;
 }
 
+const PREVIEW_QUERY_KEY = 'preview';
+
+/**
+ * Preview is a layer on top of the browse state, not a browse mode of its own —
+ * it rides on `?preview=` so folder/page/search stay intact in the URL.
+ */
+export function parsePreviewParam(search: string): number | undefined {
+  const raw = new URLSearchParams(search).get(PREVIEW_QUERY_KEY);
+
+  if (!raw) {
+    return undefined;
+  }
+
+  const parsed = parseInt(raw, 10);
+
+  return isNaN(parsed) || parsed <= 0 ? undefined : parsed;
+}
+
+/** Adds/removes `preview` while preserving every other query param (page, q). */
+export function buildPreviewSearch(search: string, itemId: number | undefined): string {
+  const params = new URLSearchParams(search);
+
+  if (itemId === undefined) {
+    params.delete(PREVIEW_QUERY_KEY);
+  } else {
+    params.set(PREVIEW_QUERY_KEY, `${itemId}`);
+  }
+
+  const serialized = params.toString();
+
+  return serialized ? `?${serialized}` : '';
+}
+
 export function escapeKqlText(value: string): string {
   return value
     .replace(/\\/g, '\\\\')

@@ -1,5 +1,5 @@
 import type { IVanBanItem } from '../models/PhvbMag.models';
-import { toSharePointDateOnlyFieldValue } from './PhvbMagDateTime.utils';
+import { toSharePointDateOnlyFieldValue, type SharePointDateFieldOrder } from './PhvbMagDateTime.utils';
 
 export interface IListFormValue {
   FieldName: string;
@@ -10,10 +10,10 @@ function resolveIssuanceContact(release: IVanBanItem): string {
   return (release.LienHe || release.NguoiTao || release.EmailNguoiTao || '').trim();
 }
 
-export function buildIssuanceMetadataValues(release: IVanBanItem): IListFormValue[] {
-  const publishDate = toSharePointDateOnlyFieldValue(new Date());
-  const hieuLucTu = toSharePointDateOnlyFieldValue(release.HieuLucTu) || publishDate;
-  const hieuLucDen = toSharePointDateOnlyFieldValue(release.HieuLucDen);
+export function buildIssuanceMetadataValues(release: IVanBanItem, dateFieldOrder: SharePointDateFieldOrder): IListFormValue[] {
+  const publishDate = toSharePointDateOnlyFieldValue(new Date(), dateFieldOrder);
+  const hieuLucTu = toSharePointDateOnlyFieldValue(release.HieuLucTu, dateFieldOrder) || publishDate;
+  const hieuLucDen = toSharePointDateOnlyFieldValue(release.HieuLucDen, dateFieldOrder);
   const values: IListFormValue[] = [
     { FieldName: 'TomTatVanban', FieldValue: (release.TomTatNoiDung || '').trim() },
     { FieldName: 'NgayPhatHanh', FieldValue: publishDate },

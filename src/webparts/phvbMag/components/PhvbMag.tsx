@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -14,6 +14,7 @@ import { usePhvbDocuments } from '../hooks/usePhvbDocuments';
 import { usePhvbDraftEdit } from '../hooks/usePhvbDraftEdit';
 import { usePhvbDuplicateRequest } from '../hooks/usePhvbDuplicateRequest';
 import { usePhvbLabelCustomConfig } from '../hooks/usePhvbLabelCustomConfig';
+import { usePhvbNarrowViewport } from '../hooks/usePhvbNarrowViewport';
 import { usePhvbRecentPublishedFolderCount } from '../hooks/usePhvbRecentPublishedFolderCount';
 import { usePhvbRemindDeadline } from '../hooks/usePhvbRemindDeadline';
 import { usePhvbRequestDetail } from '../hooks/usePhvbRequestDetail';
@@ -38,6 +39,7 @@ import type { IPhvbMagProps } from './IPhvbMagProps';
 import type { BanHanhNotifyMode } from './PhvbMagBanHanhNotifyDialog';
 import { PhvbMagBanHanhNotifyDialog } from './PhvbMagBanHanhNotifyDialog';
 import { PhvbMagCreateModal } from './PhvbMagCreateModal';
+import { PhvbMagDeleteVanBanDialog } from './PhvbMagDeleteVanBanDialog';
 import { PhvbMagDetail } from './PhvbMagDetail';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import { PhvbMagSidebar } from './PhvbMagSidebar';
@@ -51,9 +53,36 @@ import { PhvbMagRecentPublishedView } from './PhvbMagRecentPublishedView';
 import { PhvbMagSavedDocumentsView } from './PhvbMagSavedDocumentsView';
 import { PhvbMagRecentViewsView } from './PhvbMagRecentViewsView';
 import { PhvbMagHomeView } from './PhvbMagHomeView';
+import { PhvbMagDocumentPreviewOverlay } from './PhvbMagDocumentPreviewOverlay';
 import { PhvbSavedDocumentsProvider } from '../context/PhvbMagSavedDocuments.context';
 import { PhvbRecentViewsProvider } from '../context/PhvbMagRecentViews.context';
+import {
+  PhvbDocumentPreviewProvider,
+  usePhvbDocumentPreviewOptional
+} from '../context/PhvbMagDocumentPreview.context';
 import { PhvbBusyProvider } from '../context/PhvbMagBusy.context';
+
+/**
+ * PhvbMagInner owns isSidebarCollapsed but renders PhvbDocumentPreviewProvider
+ * itself, so it cannot read that provider's context directly — a component
+ * calling useContext only sees a Provider above it in the tree, never one it
+ * is about to render. This bridge lives inside the provider's subtree instead
+ * and reports preview state back up through a callback prop.
+ */
+function PhvbMagLibrarySidebarAutoCollapseSync(props: {
+  isLibraryTab: boolean;
+  onPreviewOpenChange: (isOpen: boolean) => void;
+}): React.ReactElement {
+  const { isLibraryTab, onPreviewOpenChange } = props;
+  const preview = usePhvbDocumentPreviewOptional();
+  const isPreviewOpen = isLibraryTab && Boolean(preview?.previewDocument);
+
+  useEffect(() => {
+    onPreviewOpenChange(isPreviewOpen);
+  }, [isPreviewOpen, onPreviewOpenChange]);
+
+  return <></>;
+}
 
 function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const { userDisplayName, userEmail, msGraphClientFactory, spHttpClient, httpClient, currentWebUrl, siteCollectionUrl, sourceSiteUrl, listTitle, issuanceLibraryTitle, endPointSendMail, endPointShortUrl, roleGroupID } = props;
@@ -71,10 +100,34 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isDetailSidebarCollapsed, setIsDetailSidebarCollapsed] = useState<boolean>(true);
+  // Restore-on-close only if the sidebar was expanded right before the auto-collapse.
+  const wasSidebarExpandedBeforeAutoCollapseRef = useRef<boolean>(false);
+  const isLibraryPreviewOpenRef = useRef<boolean>(false);
+  const handleLibraryPreviewOpenChange = useCallback((isPreviewOpen: boolean): void => {
+    if (isPreviewOpen === isLibraryPreviewOpenRef.current) {
+      return;
+    }
+
+    isLibraryPreviewOpenRef.current = isPreviewOpen;
+
+    if (isPreviewOpen) {
+      setIsSidebarCollapsed(previous => {
+        wasSidebarExpandedBeforeAutoCollapseRef.current = !previous;
+        return true;
+      });
+      return;
+    }
+
+    if (wasSidebarExpandedBeforeAutoCollapseRef.current) {
+      setIsSidebarCollapsed(false);
+    }
+  }, []);
   const [isParticipantModalOpen, setIsParticipantModalOpen] = useState<boolean>(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
   const [banHanhNotifyDraft, setBanHanhNotifyDraft] = useState<IBanHanhNotifyDraft | undefined>(undefined);
   const [banHanhNotifyMode, setBanHanhNotifyMode] = useState<BanHanhNotifyMode>('prepare');
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<IVanBanItem | undefined>(undefined);
+  const [isDeletingVanBan, setIsDeletingVanBan] = useState<boolean>(false);
 
   const {
     tenantUsers,
@@ -123,7 +176,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
   const suspendTabItemsLoad = isDetailRoute || isEditRoute || isDuplicateRoute || isCreateRoute || isDmvlCreateRoute;
 
-  const { activeTab, counts, items, isLoading, isSaving, errorMessage, setActiveTab, saveRequest, refetchCounts } = usePhvbDocuments({
+  const { activeTab, counts, items, isLoading, isSaving, errorMessage, setActiveTab, saveRequest, deleteVanBan, refetchCounts } = usePhvbDocuments({
     userDisplayName,
     userEmail,
     spHttpClient,
@@ -444,6 +497,37 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     return succeeded;
   };
 
+  const handleDeleteVanBanRequest = (item: IVanBanItem): void => {
+    setPendingDeleteItem(item);
+  };
+
+  const handleCancelDeleteVanBan = (): void => {
+    if (isDeletingVanBan) {
+      return;
+    }
+
+    setPendingDeleteItem(undefined);
+  };
+
+  const handleConfirmDeleteVanBan = async (): Promise<void> => {
+    if (!pendingDeleteItem) {
+      return;
+    }
+
+    setIsDeletingVanBan(true);
+
+    try {
+      const succeeded = await deleteVanBan(pendingDeleteItem);
+
+      if (succeeded) {
+        ToastService.success('Đã xóa văn bản.');
+        setPendingDeleteItem(undefined);
+      }
+    } finally {
+      setIsDeletingVanBan(false);
+    }
+  };
+
   const handleUploadDocuments = async (
     kind: DetailDocumentUploadKind,
     files: FileList | File[]
@@ -677,6 +761,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     return resolveTabFromPathname(location.pathname, tabName, activeTab);
   }, [activeTab, location.pathname, tabName]);
   const isLibraryTab = resolvedTabName === 'ThuVienTaiLieu';
+  const isNarrowViewport = usePhvbNarrowViewport();
   const isGuideTab = resolvedTabName === 'HuongDan';
   const isRecentTab = resolvedTabName === 'MoiBanHanh';
   const isSavedTab = resolvedTabName === 'DaLuu';
@@ -696,7 +781,12 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   return (
     <PhvbRecentViewsProvider documentContext={documentContext} activeTab={resolvedTabName}>
     <PhvbSavedDocumentsProvider documentContext={documentContext} activeTab={resolvedTabName}>
+    <PhvbDocumentPreviewProvider documentContext={documentContext}>
     <div className={[styles.phvbContainer, isDetailRoute ? styles.phvbContainerDetail : ''].filter(Boolean).join(' ')}>
+      <PhvbMagLibrarySidebarAutoCollapseSync
+        isLibraryTab={isLibraryTab}
+        onPreviewOpenChange={handleLibraryPreviewOpenChange}
+      />
       <PhvbMagSidebar
         activeTab={resolvedTabName}
         counts={counts}
@@ -886,6 +976,8 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
               filterOptions={workflowFilters}
               onSearchChange={setSearchQuery}
               onSelectItem={handleSelectItem}
+              canDeleteItem={activeTab === 'QLVanBan' && canAccessQLVanBan}
+              onDeleteItem={handleDeleteVanBanRequest}
             />
           </>
         )}
@@ -893,6 +985,14 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 
       <PhvbMagLoadingOverlay isOpen={isEditRoute && isDraftLoading} message="Đang tải bản nháp..." />
       <PhvbMagLoadingOverlay isOpen={isDuplicateRoute && isDuplicateLoading} message="Đang tải dữ liệu để tạo bản sao..." />
+
+      <PhvbMagDeleteVanBanDialog
+        isOpen={Boolean(pendingDeleteItem)}
+        item={pendingDeleteItem}
+        isDeleting={isDeletingVanBan}
+        onCancel={handleCancelDeleteVanBan}
+        onConfirm={handleConfirmDeleteVanBan}
+      />
 
       <PhvbMagTemplateModal
         isOpen={isTemplateModalOpen}
@@ -931,7 +1031,13 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         onCancel={handleDmvlNotifyCancel}
         onConfirm={handleDmvlNotifyConfirmWrapper}
       />
+
+      <PhvbMagDocumentPreviewOverlay
+        documentContext={documentContext}
+        isEnabled={!isLibraryTab || isNarrowViewport}
+      />
     </div>
+    </PhvbDocumentPreviewProvider>
     </PhvbSavedDocumentsProvider>
     </PhvbRecentViewsProvider>
   );

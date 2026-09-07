@@ -8,6 +8,13 @@ import type {
 import { usePhvbLibrary } from '../hooks/usePhvbLibrary';
 import { formatBanHanhDate } from '../utils/PhvbMagBanHanh.tree';
 import { resolveLibraryContactPerson } from '../utils/PhvbMagLibrary.utils';
+import { resolveIssuanceLibraryTitle } from '../config/PhvbMag.configuration';
+import {
+  usePhvbDocumentPreviewOptional,
+  usePhvbRegisterPreviewDocuments
+} from '../context/PhvbMagDocumentPreview.context';
+import { usePhvbNarrowViewport } from '../hooks/usePhvbNarrowViewport';
+import { PhvbMagDocumentPreview } from './PhvbMagDocumentPreview';
 import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
 import { PhvbMagSkeleton } from './PhvbMagSkeleton';
@@ -195,6 +202,16 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
   const libraryViewRef = React.useRef<HTMLDivElement>(null);
   const [sidebarWidthUnits, setSidebarWidthUnits] = React.useState<number>(readStoredUnits);
   const [isDragging, setIsDragging] = React.useState<boolean>(false);
+  const preview = usePhvbDocumentPreviewOptional();
+  const isNarrowViewport = usePhvbNarrowViewport();
+  // Below the stacking breakpoint, and in fullscreen, the overlay takes over.
+  const isPreviewColumnVisible = !isNarrowViewport && !preview?.isFullscreen;
+
+  // Search results mix folders in; only files are previewable.
+  usePhvbRegisterPreviewDocuments(React.useMemo(
+    () => library.documents.filter(item => item.fsObjType !== 1),
+    [library.documents]
+  ));
   const totalPages = library.totalCount !== undefined
     ? Math.max(1, Math.ceil(library.totalCount / library.pageSize))
     : undefined;
@@ -432,7 +449,12 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
           </>
         ) : null}
 
-        <section className={styles.libraryContentPane}>
+        <section
+          className={[
+            styles.libraryContentPane,
+            isPreviewColumnVisible && preview?.previewDocument ? styles.libraryListPaneWithPreview : ''
+          ].filter(Boolean).join(' ')}
+        >
           <div className={styles.libraryColumnHeader}>
             <DocumentFileIcon className={styles.libraryColumnHeaderIconDocument} />
             <span>Tài liệu ({documentCount})</span>
@@ -520,6 +542,22 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
             </div>
           </div>
         </section>
+
+        {isPreviewColumnVisible && preview?.previewDocument ? (
+          <PhvbMagDocumentPreview
+            document={preview.previewDocument}
+            libraryTitle={resolveIssuanceLibraryTitle(documentContext.issuanceLibraryTitle)}
+            variant="column"
+            isFullscreen={preview.isFullscreen}
+            hasPrevious={preview.hasPrevious}
+            hasNext={preview.hasNext}
+            onToggleFullscreen={preview.toggleFullscreen}
+            onPrevious={preview.goPrevious}
+            onNext={preview.goNext}
+            onClose={preview.closePreview}
+            onCopyLink={preview.copyPreviewLink}
+          />
+        ) : null}
       </div>
     </div>
   );

@@ -69,7 +69,7 @@ function buildQueryString(query: IFetchPhvbItemsQuery, selectFields: string[]): 
   const queryParts: string[] = [`$select=${selectFields.join(',')}`];
 
   if (query.filter) {
-    queryParts.push(`$filter=${query.filter}`);
+    queryParts.push(`$filter=${encodeURIComponent(query.filter)}`);
   }
 
   const top = query.top || MAX_LIST_FETCH_TOP;
@@ -225,7 +225,7 @@ function buildCountQueryString(query: IFetchPhvbCountQuery): string {
     return '';
   }
 
-  return `$filter=${query.filter}`;
+  return `$filter=${encodeURIComponent(query.filter)}`;
 }
 
 async function runCountRequest(siteUrl: string, query: IFetchPhvbCountQuery): Promise<number> {

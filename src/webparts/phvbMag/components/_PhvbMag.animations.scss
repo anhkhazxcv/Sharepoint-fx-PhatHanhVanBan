@@ -495,8 +495,8 @@ button.libraryDocumentTitle {
   white-space: nowrap;
 
   &[data-status='expired'] {
-    background-color: $surface-muted;
-    color: $text-muted;
+    background-color: $color-error-bg;
+    color: $color-error;
   }
 }
 

@@ -18,6 +18,7 @@ import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagListPager } from './PhvbMagListPager';
 import styles from './PhvbMag.module.scss';
 import {
+  DeleteFileIcon,
   SearchIcon,
   StatusDraftIcon,
   StatusGopYIcon,
@@ -38,6 +39,8 @@ interface IPhvbMagTableProps {
   filterOptions: IWorkflowFilterOptions;
   onSearchChange: (value: string) => void;
   onSelectItem: (item: IVanBanItem) => void;
+  canDeleteItem?: boolean;
+  onDeleteItem?: (item: IVanBanItem) => void;
 }
 
 const metricToneClassMap: Record<IWorkflowMetricCard['tone'], string> = {
@@ -64,6 +67,8 @@ const TABLE_COLUMNS: ReadonlyArray<ITableColumnDefinition> = [
   { key: 'created', label: 'NGÀY TẠO', sortKey: 'Created' },
   { key: 'status', label: 'TRẠNG THÁI', sortKey: 'StatusApproved' }
 ];
+
+const ACTIONS_COLUMN: ITableColumnDefinition = { key: 'actions', label: '' };
 
 const LIST_TAB_CONFIG: Record<
   'ViecCanLam' | 'YeuCauCuaToi' | 'CapSo' | 'QLVanBan',
@@ -280,12 +285,6 @@ function RequestTableToolbar(props: IRequestTableToolbarProps): React.ReactEleme
           onChange={loaiYeuCau => updateFilter({ loaiYeuCau })}
         />
         <RequestFilterSelect
-          label="Phòng ban:"
-          value={filters.department}
-          options={filterOptions.phongBan}
-          onChange={department => updateFilter({ department })}
-        />
-        <RequestFilterSelect
           label="Thời gian tạo:"
           value={filters.requestCreatedYear}
           options={filterOptions.namTaoYeuCau}
@@ -356,12 +355,15 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
     boardTitle,
     countSuffix,
     showStatusMetrics = false,
-    emptyMessage = 'Không có dữ liệu phù hợp với bộ lọc hiện tại.'
+    emptyMessage = 'Không có dữ liệu phù hợp với bộ lọc hiện tại.',
+    canDeleteItem = false,
+    onDeleteItem
   } = props;
   const [filters, setFilters] = React.useState<IRequestTableFilters>(DEFAULT_REQUEST_TABLE_FILTERS);
   const [sortKey, setSortKey] = React.useState<RequestTableSortKey | undefined>(undefined);
   const [sortDirection, setSortDirection] = React.useState<RequestTableSortDirection>('desc');
   const metrics = showStatusMetrics ? getWorkflowMetricCards(items) : [];
+  const columns = canDeleteItem ? [...TABLE_COLUMNS, ACTIONS_COLUMN] : TABLE_COLUMNS;
 
   const filteredItems = React.useMemo(
     () => applyRequestTableFilters(items, filters),
@@ -439,7 +441,7 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
             <table className={styles.requestTable}>
               <thead>
                 <tr>
-                  {TABLE_COLUMNS.map(column => (
+                  {columns.map(column => (
                     <SortableTableHeader
                       key={column.key}
                       column={column}
@@ -492,6 +494,21 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
                           {requestStatus.label}
                         </span>
                       </td>
+                      {canDeleteItem ? (
+                        <td>
+                          <button
+                            type="button"
+                            className={styles.detailDocDeleteBtn}
+                            aria-label="Xóa văn bản"
+                            onClick={event => {
+                              event.stopPropagation();
+                              onDeleteItem?.(item);
+                            }}
+                          >
+                            <DeleteFileIcon />
+                          </button>
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })}

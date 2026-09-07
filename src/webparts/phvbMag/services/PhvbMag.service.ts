@@ -6,6 +6,7 @@ import { appendHistory } from './PhvbMagExecutionHistory.service';
 import { phvbWorkflowWriteService } from './PhvbMagWorkflowWrite.service';
 import { generateRequestReferenceId } from '../utils/PhvbMagRequestId.utils';
 import { buildDateOnlyCorrectionFormValues, sharePointRestNull, toSharePointDateOnlyIso } from '../utils/PhvbMagDateTime.utils';
+import { resolveDateFieldOrderForContext } from '../infrastructure/SharePointSite.utils';
 import { joinWithLimit, resolveAttachmentDisplayNames } from '../utils/PhvbMagHistoryText.utils';
 import { sanitizeRequestInputForSave, getRequestTypeFormRules } from '../utils/PhvbMagRequestForm.utils';
 import {
@@ -472,7 +473,8 @@ export class PhvbDocumentsService {
       payload
     });
 
-    const dateCorrections = buildDateOnlyCorrectionFormValues(payload, DATE_ONLY_CORRECTION_FIELDS);
+    const dateFieldOrder = await resolveDateFieldOrderForContext(options);
+    const dateCorrections = buildDateOnlyCorrectionFormValues(payload, DATE_ONLY_CORRECTION_FIELDS, dateFieldOrder);
 
     if (dateCorrections.length > 0) {
       await phvbRepository.updateItemFieldValues({
@@ -536,7 +538,8 @@ export class PhvbDocumentsService {
       payload: updatePayload
     });
 
-    const dateCorrections = buildDateOnlyCorrectionFormValues(updatePayload, DATE_ONLY_CORRECTION_FIELDS);
+    const dateFieldOrder = await resolveDateFieldOrderForContext(options);
+    const dateCorrections = buildDateOnlyCorrectionFormValues(updatePayload, DATE_ONLY_CORRECTION_FIELDS, dateFieldOrder);
 
     if (dateCorrections.length > 0) {
       await phvbRepository.updateItemFieldValues({
