@@ -13,10 +13,12 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaClipboardList,
+  FaCommentDots,
   FaCompress,
   FaCopy,
   FaDownload,
   FaEdit,
+  FaEllipsisH,
   FaEquals,
   FaExpand,
   FaExternalLinkAlt,
@@ -403,4 +405,20 @@ export function LibraryFileTypeIcon(
   }
 
   return <FaFile className={className} style={style} aria-hidden />;
+}
+
+// -------------------------------------------------------------
+// MOBILE CHROME
+// -------------------------------------------------------------
+
+export function MobileBackIcon(props: IIconProps): React.ReactElement {
+  return <FaChevronLeft className={props.className} style={props.style} aria-hidden />;
+}
+
+export function MobileCommentIcon(props: IIconProps): React.ReactElement {
+  return <FaCommentDots className={props.className} style={props.style} aria-hidden />;
+}
+
+export function MobileMoreIcon(props: IIconProps): React.ReactElement {
+  return <FaEllipsisH className={props.className} style={props.style} aria-hidden />;
 }

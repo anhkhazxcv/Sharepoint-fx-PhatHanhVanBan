@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { ALL_FILTER_VALUE, REQUEST_STATUS, TAB_LABELS } from '../config/PhvbMag.configuration';
+import { ALL_FILTER_VALUE, TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { IVanBanItem, IWorkflowFilterOptions, TabType } from '../models/PhvbMag.models';
 import { formatExecutionDate } from '../utils/PhvbMagDateTime.utils';
-import { getBadgeVariant, getRequestStatusDisplayForItem } from '../utils/PhvbMag.selectors';
+import { getBadgeVariant } from '../utils/PhvbMag.selectors';
 import {
   applyRequestTableFilters,
   DEFAULT_REQUEST_TABLE_FILTERS,
@@ -14,22 +14,11 @@ import {
   sortRequestTableItems
 } from '../utils/PhvbMagTable.utils';
 import { usePhvbPagedItems } from '../hooks/usePhvbPagedItems';
+import { getRequestStatusState } from './PhvbMagRequestStatusBadge';
 import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagListPager } from './PhvbMagListPager';
 import styles from './PhvbMag.module.scss';
-import {
-  DeleteFileIcon,
-  SearchIcon,
-  StatusDraftIcon,
-  StatusGopYIcon,
-  StatusNumberedIcon,
-  StatusPendingIcon,
-  StatusPheDuyetIcon,
-  StatusPublishedIcon,
-  StatusRejectedIcon,
-  StatusRevokedIcon,
-  StatusThamDinhIcon
-} from './PhvbMagIcons';
+import { DeleteFileIcon, SearchIcon } from './PhvbMagIcons';
 
 interface IPhvbMagTableProps {
   activeTab: TabType;
@@ -111,73 +100,6 @@ function isListTableTab(tab: TabType): tab is keyof typeof LIST_TAB_CONFIG {
   return LIST_TABLE_TABS.indexOf(tab as keyof typeof LIST_TAB_CONFIG) > -1;
 }
 
-function resolveRequestStatusClassName(statusApproved?: string): string {
-  switch (statusApproved) {
-    case REQUEST_STATUS.BAN_NHAP:
-      return styles.requestStatusBanNhap;
-    case REQUEST_STATUS.DANG_GOP_Y:
-      return styles.requestStatusDangGopY;
-    case REQUEST_STATUS.DANG_THAM_DINH:
-      return styles.requestStatusDangThamDinh;
-    case REQUEST_STATUS.DANG_PHE_DUYET:
-      return styles.requestStatusDangPheDuyet;
-    case REQUEST_STATUS.CHO_CAP_SO:
-      return styles.requestStatusChoCapSo;
-    case REQUEST_STATUS.DA_CAP_SO:
-      return styles.requestStatusDaCapSo;
-    case REQUEST_STATUS.CHO_BAN_HANH:
-      return styles.requestStatusChoBanHanh;
-    case REQUEST_STATUS.BAN_HANH:
-      return styles.requestStatusBanHanh;
-    case REQUEST_STATUS.TU_CHOI_THAM_DINH:
-      return styles.requestStatusTuChoiThamDinh;
-    case REQUEST_STATUS.TU_CHOI_PHE_DUYET:
-      return styles.requestStatusTuChoiPheDuyet;
-    case REQUEST_STATUS.THU_HOI:
-    case REQUEST_STATUS.CHO_ADMIN_THU_HOI:
-    case REQUEST_STATUS.CHO_SUPER_ADMIN_THU_HOI:
-      return styles.requestStatusThuHoi;
-    default:
-      return styles.requestStatusDefault;
-  }
-}
-
-function resolveRequestStatusIcon(statusApproved?: string): React.ReactElement | undefined {
-  switch (statusApproved) {
-    case REQUEST_STATUS.BAN_NHAP:
-      return <StatusDraftIcon />;
-    case REQUEST_STATUS.DANG_GOP_Y:
-      return <StatusGopYIcon />;
-    case REQUEST_STATUS.DANG_THAM_DINH:
-      return <StatusThamDinhIcon />;
-    case REQUEST_STATUS.DANG_PHE_DUYET:
-      return <StatusPheDuyetIcon />;
-    case REQUEST_STATUS.CHO_CAP_SO:
-    case REQUEST_STATUS.CHO_BAN_HANH:
-      return <StatusPendingIcon />;
-    case REQUEST_STATUS.DA_CAP_SO:
-      return <StatusNumberedIcon />;
-    case REQUEST_STATUS.BAN_HANH:
-      return <StatusPublishedIcon />;
-    case REQUEST_STATUS.TU_CHOI_THAM_DINH:
-    case REQUEST_STATUS.TU_CHOI_PHE_DUYET:
-      return <StatusRejectedIcon />;
-    case REQUEST_STATUS.THU_HOI:
-    case REQUEST_STATUS.CHO_ADMIN_THU_HOI:
-    case REQUEST_STATUS.CHO_SUPER_ADMIN_THU_HOI:
-      return <StatusRevokedIcon />;
-    default:
-      return undefined;
-  }
-}
-
-function getRequestStatusState(item: IVanBanItem): { label: string; className: string; icon: React.ReactElement | undefined } {
-  return {
-    label: getRequestStatusDisplayForItem(item).label,
-    className: resolveRequestStatusClassName(item.StatusApproved),
-    icon: resolveRequestStatusIcon(item.StatusApproved)
-  };
-}
 
 interface IRequestSearchControlsProps {
   searchQuery: string;

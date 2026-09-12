@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { IBanHanhNotifyDraft, IAttachmentLibraryItem } from '../models/PhvbMag.models';
+import { usePhvbIsMobile } from '../hooks/usePhvbViewport';
 import { parseStoredMainDocumentId } from '../services/PhvbMagIssuancePublish.service';
 import { validateBanHanhNotifyDraft } from '../utils/PhvbMagBanHanhNotify.utils';
 import { PhvbMagDialog } from './primitives/PhvbMagDialog';
@@ -99,6 +100,7 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
   const [body, setBody] = useState<string>('');
   const [selectedMainDocumentId, setSelectedMainDocumentId] = useState<number | undefined>(undefined);
   const [validationError, setValidationError] = useState<string | undefined>(undefined);
+  const isMobile = usePhvbIsMobile();
   const bodyEditorRef = useRef<HTMLDivElement>(null);
   const isReadOnly = mode === 'publish';
   const showMainDocumentPicker = requireMainDocument || mainDocumentReadOnly;
@@ -172,6 +174,39 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
     );
   };
 
+  const cancelButton = (
+    <button
+      type="button"
+      className={styles.banHanhNotifyCancelBtn}
+      disabled={isBusy}
+      onClick={onCancel}
+    >
+      Thoát
+    </button>
+  );
+
+  const returnButton = mode === 'publish' && onReturnToAdmin ? (
+    <button
+      type="button"
+      className={styles.banHanhNotifyReturnBtn}
+      disabled={isBusy || isAwaitingDraft}
+      onClick={onReturnToAdmin}
+    >
+      Từ chối
+    </button>
+  ) : null;
+
+  const sendButton = (
+    <button
+      type="button"
+      className={styles.banHanhNotifySendBtn}
+      disabled={isBusy || isAwaitingDraft}
+      onClick={handleConfirm}
+    >
+      {getConfirmLabel(mode, confirmLabel)}
+    </button>
+  );
+
   return (
     <PhvbMagDialog
       isOpen={isOpen}
@@ -181,35 +216,16 @@ export function PhvbMagBanHanhNotifyDialog(props: IPhvbMagBanHanhNotifyDialogPro
       contentClassName={styles.banHanhNotifyModal}
       bodyClassName={styles.banHanhNotifyBody}
       footerClassName={styles.banHanhNotifyActions}
+      // Mobile theo quy ước action sheet: hành động chính trọn hàng trên, rồi
+      // Từ chối + Thoát chia đôi hàng dưới (bố cục do .banHanhNotifyActions lo).
+      // Phải đảo THỨ TỰ RENDER ở đây — dùng CSS order/reverse sẽ làm thứ tự
+      // focus lệch thứ tự nhìn thấy.
       footer={
-        <>
-          <button
-            type="button"
-            className={styles.banHanhNotifyCancelBtn}
-            disabled={isBusy}
-            onClick={onCancel}
-          >
-            Thoát
-          </button>
-          {mode === 'publish' && onReturnToAdmin ? (
-            <button
-              type="button"
-              className={styles.banHanhNotifyReturnBtn}
-              disabled={isBusy || isAwaitingDraft}
-              onClick={onReturnToAdmin}
-            >
-              Từ chối
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className={styles.banHanhNotifySendBtn}
-            disabled={isBusy || isAwaitingDraft}
-            onClick={handleConfirm}
-          >
-            {getConfirmLabel(mode, confirmLabel)}
-          </button>
-        </>
+        isMobile ? (
+          <>{sendButton}{returnButton}{cancelButton}</>
+        ) : (
+          <>{cancelButton}{returnButton}{sendButton}</>
+        )
       }
     >
       {!isAwaitingDraft ? (

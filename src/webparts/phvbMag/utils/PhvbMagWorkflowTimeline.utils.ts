@@ -27,6 +27,20 @@ const STAGE_LABELS: Record<WorkflowStage, string> = {
   pheduyet: 'Phê duyệt'
 };
 
+/**
+ * Nhãn hiển thị trên chip của card luồng duyệt — chỉ dùng cho UI.
+ * KHÔNG dùng WORKFLOW_PARTICIPANT_STATUS ở đây: đó là Choice value lưu trên
+ * SharePoint, đổi chữ hiển thị không được kéo theo đổi dữ liệu.
+ */
+const WORKFLOW_STEP_CHIP_LABEL = {
+  DONE: 'Đồng ý',
+  DRAFT_DONE: 'Hoàn thành',
+  REJECTED: 'Từ chối',
+  ACTIVE: 'Đang xử lý',
+  PENDING: 'Chưa xử lý',
+  SKIPPED: 'Hết hiệu lực'
+} as const;
+
 function normalizeStatusValue(status?: string): string {
   return (status || '')
     .trim()
@@ -123,30 +137,25 @@ function buildParticipantSubtitle(participant: IWorkflowParticipantItem): string
 
 export function resolveWorkflowStepStatusChip(step: IWorkflowTimelineStep): string {
   if (step.statusTone === 'rejected') {
-    return WORKFLOW_PARTICIPANT_STATUS.DA_TU_CHOI;
+    return WORKFLOW_STEP_CHIP_LABEL.REJECTED;
   }
 
   if (step.statusTone === 'active') {
-    return 'Đang xử lý';
+    return WORKFLOW_STEP_CHIP_LABEL.ACTIVE;
   }
 
   if (step.statusTone === 'pending') {
-    return 'Chờ';
+    return WORKFLOW_STEP_CHIP_LABEL.PENDING;
   }
 
   if (step.statusTone === 'skipped') {
-    return 'Đã kết thúc';
+    return WORKFLOW_STEP_CHIP_LABEL.SKIPPED;
   }
 
-  if (step.id === 'draft-creator') {
-    return step.status || 'Hoàn thành';
-  }
-
-  if (step.stageLabel === 'Góp ý' && step.status === WORKFLOW_PARTICIPANT_STATUS.DA_XAC_NHAN) {
-    return 'Đồng ý';
-  }
-
-  return step.status || WORKFLOW_PARTICIPANT_STATUS.DA_XAC_NHAN;
+  // Còn lại là tone 'done'.
+  return step.id === 'draft-creator'
+    ? WORKFLOW_STEP_CHIP_LABEL.DRAFT_DONE
+    : WORKFLOW_STEP_CHIP_LABEL.DONE;
 }
 
 export function getWorkflowStepDisplayInitials(name: string): string {

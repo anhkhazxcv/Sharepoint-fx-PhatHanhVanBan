@@ -350,6 +350,12 @@
   overflow: hidden;
   box-shadow: $shadow-lg;
   animation: scaleUp 0.2s ease;
+  // Header/footer đứng yên, thân cuộn. Thiếu ba dòng này thì nội dung dài
+  // (nhiều file đính kèm, bàn phím ảo bung lên) sẽ CẮT mất cả cụm nút bấm
+  // thay vì cuộn — overflow:hidden ở trên không có gì cứu.
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
 
   p {
     margin: 0 0 18px;
@@ -461,10 +467,14 @@
 }
 
 .confirmDialogBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   padding: 16px 24px 0;
 }
 
 .confirmDialogActions {
+  flex: 0 0 auto;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -659,36 +669,28 @@
   background-color: $bg-folders;
 }
 
+// Thoát chỉ đóng dialog — trung tính, không phải hành động phá huỷ.
 .banHanhNotifyCancelBtn {
-  background-color: #FFFFFF;
-  border: 1.5px solid $color-error;
-  border-radius: $radius-control;
-  padding: 7px 16px;
-  color: $color-error;
-  font-weight: 700;
-  cursor: pointer;
+  @include phvb-btn-secondary;
+  font-weight: $font-weight-bold;
 
-  &:hover:not(:disabled) {
-    background-color: #FFF5F5;
-  }
-
+  // phvb-btn-secondary không có state disabled.
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
 }
 
+// Từ chối mới là hành động phá huỷ → nhận màu đỏ.
 .banHanhNotifyReturnBtn {
-  background-color: #FFFFFF;
-  border: 1.5px solid #B45309;
-  border-radius: $radius-control;
-  padding: 7px 16px;
-  color: #B45309;
-  font-weight: 700;
-  cursor: pointer;
+  @include phvb-btn-base;
+  background-color: $surface-card;
+  border: 1px solid $color-error;
+  color: $color-error;
+  font-weight: $font-weight-bold;
 
   &:hover:not(:disabled) {
-    background-color: #FFFBEB;
+    background-color: $color-error-bg;
   }
 
   &:disabled {
@@ -698,13 +700,11 @@
 }
 
 .banHanhNotifySendBtn {
+  @include phvb-btn-base;
   background-color: $primary-color;
   border: none;
-  border-radius: $radius-control;
-  padding: 7px 18px;
   color: #FFFFFF;
-  font-weight: 700;
-  cursor: pointer;
+  font-weight: $font-weight-bold;
 
   &:hover:not(:disabled) {
     background-color: $primary-hover;
@@ -2156,8 +2156,16 @@ $detail-page-gap: 18px;
   font-size: $font-size-base;
 }
 
+.detailDocTableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .detailDocTable {
   width: 100%;
+  // Panel chi tiết co lại khá hẹp; min-width + wrapper cuộn giữ cho cột Tên file
+  // không bị bóp nát khi có đủ 5 cột.
+  min-width: 520px;
   table-layout: fixed;
   border-collapse: collapse;
 
@@ -2183,7 +2191,7 @@ $detail-page-gap: 18px;
 }
 
 .detailDocActionsCol {
-  width: 112px;
+  width: 48px;
 }
 
 .detailDocActions {
@@ -2210,12 +2218,19 @@ $detail-page-gap: 18px;
   }
 }
 
-.detailDocFolder {
-  width: 32%;
+.detailDocEditorCol {
+  width: 22%;
   color: $text-ink3;
   font-size: $font-size-md;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailDocModifiedCol {
+  width: 150px;
+  color: $text-ink3;
+  font-size: $font-size-md;
   white-space: nowrap;
 }
 

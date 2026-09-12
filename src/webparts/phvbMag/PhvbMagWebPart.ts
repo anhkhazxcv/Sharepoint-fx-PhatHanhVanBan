@@ -39,6 +39,34 @@ const PHVB_MIN_SHELL_HEIGHT_PX = 200;
 // with no other trigger to recompute.
 const PHVB_SETTLE_RECHECK_DELAYS_MS = [100, 300, 600, 1000, 1600, 2500];
 
+// Phải khớp $bp-mobile trong _PhvbMag.design-tokens.scss và
+// PHVB_VIEWPORT_BREAKPOINTS.mobile trong hooks/usePhvbViewport.ts.
+const PHVB_MOBILE_BREAKPOINT_PX = 768;
+
+const PHVB_TEXT_ENTRY_TAGS = ['INPUT', 'TEXTAREA', 'SELECT'];
+
+// iOS Safari co window.innerHeight khi bàn phím ảo mở. Nếu vẫn đo lúc đó thì
+// shell tụt xuống còn ~40% và layout sập ngay giữa lúc người dùng đang gõ
+// (rõ nhất ở composer bình luận trong bottom sheet). Giữ nguyên chiều cao
+// đang có cho tới khi input mất focus.
+function isVirtualKeyboardLikelyOpen(root: HTMLElement): boolean {
+  if (window.innerWidth > PHVB_MOBILE_BREAKPOINT_PX) {
+    return false;
+  }
+
+  const active = document.activeElement;
+
+  if (!active || !root.contains(active)) {
+    return false;
+  }
+
+  if (PHVB_TEXT_ENTRY_TAGS.indexOf(active.tagName) !== -1) {
+    return true;
+  }
+
+  return (active as HTMLElement).isContentEditable === true;
+}
+
 // Tìm ancestor gần nhất có overflow cuộn thật (vd. contentScrollRegion của
 // SharePoint AppChrome shell) — đây mới là ranh giới đáy thật sự của không
 // gian dành cho web part, khác với viewport khi trang dùng layout kiểu này.
@@ -64,6 +92,7 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
   private _resizeObserver: ResizeObserver | undefined;
   private _bodyResizeObserver: ResizeObserver | undefined;
   private _windowResizeHandler: (() => void) | undefined;
+  private _focusOutHandler: (() => void) | undefined;
   private _settleRecheckTimeouts: number[] = [];
 
   protected get propertiesMetadata(): IWebPartPropertiesMetadata {
@@ -114,6 +143,14 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
       this._recheckAvailableHeight();
     };
     window.addEventListener('resize', this._windowResizeHandler);
+
+    // Khi bàn phím ảo đóng lại, 'resize' thường bắn ra trước khi activeElement
+    // nhả focus, nên lần đo đó vẫn bị isVirtualKeyboardLikelyOpen chặn. Đo lại
+    // lúc focus rời khỏi input để lấy lại chiều cao đầy đủ.
+    this._focusOutHandler = (): void => {
+      this._recheckAvailableHeight();
+    };
+    this.domElement.addEventListener('focusout', this._focusOutHandler);
   }
 
   // Đo lại ngay + hẹn giờ đo thêm vài lần trong ~2.5s tới — dùng cho MỌI nguồn
@@ -141,6 +178,10 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
 
   private _updateAvailableHeight(): void {
     try {
+      if (isVirtualKeyboardLikelyOpen(this.domElement)) {
+        return;
+      }
+
       const top = this.domElement.getBoundingClientRect().top;
       const boundary = findScrollBoundaryAncestor(this.domElement);
       // Ưu tiên cạnh đáy của vùng cuộn thật (contentScrollRegion...) — chỉ
@@ -223,6 +264,11 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
     if (this._windowResizeHandler) {
       window.removeEventListener('resize', this._windowResizeHandler);
       this._windowResizeHandler = undefined;
+    }
+
+    if (this._focusOutHandler) {
+      this.domElement.removeEventListener('focusout', this._focusOutHandler);
+      this._focusOutHandler = undefined;
     }
 
     this._clearSettleRecheckTimeouts();

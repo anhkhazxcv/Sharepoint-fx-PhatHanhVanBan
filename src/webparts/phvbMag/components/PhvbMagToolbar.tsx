@@ -28,7 +28,7 @@ export function PhvbMagToolbar(props: IPhvbMagToolbarProps): React.ReactElement 
             <button type="button" className={styles.btnDmvl} onClick={onOpenDmvl}>
               <span className={styles.btnDmvlContent}>
                 <SidebarNumberingIcon />
-                DMVL
+                Danh mục vật liệu
               </span>
             </button>
           ) : null}

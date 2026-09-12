@@ -7,6 +7,10 @@
   left: 0;
   width: 100vw;
   height: 100vh;
+  // iOS Safari tính 100vh theo khung ĐÃ ẩn toolbar → đáy overlay chui xuống
+  // dưới vùng nhìn thấy và nuốt mất footer dialog. Trình duyệt cũ không hiểu
+  // dvh sẽ bỏ qua dòng này và giữ 100vh.
+  height: 100dvh;
   background-color: $color-overlay;
   backdrop-filter: blur(5px);
   z-index: 600;

@@ -1,5 +1,14 @@
+import { TAB_LABELS } from '../config/PhvbMag.configuration';
 import type { TabType } from '../models/PhvbMag.models';
 import { buildLibraryFolderPath, buildPreviewSearch } from './PhvbMagLibrary.utils';
+
+/**
+ * Chặn cast bừa từ param `:tabName`. TAB_LABELS là Record<TabType, string> nên
+ * whitelist tự đồng bộ khi thêm tab, không phải nuôi danh sách thứ hai.
+ */
+export function isTabType(value: string | undefined): value is TabType {
+  return Boolean(value) && Object.keys(TAB_LABELS).indexOf(value as string) > -1;
+}
 
 export function resolveTabFromPathname(
   pathname: string,
@@ -14,7 +23,9 @@ export function resolveTabFromPathname(
     return 'ThuVienTaiLieu';
   }
 
-  return (tabName as TabType) || fallback;
+  // URL lạ (sai hoa thường, tab không tồn tại) phải rơi về fallback: nếu cast
+  // bừa, loadTabItems rơi vào nhánh default và trả nguyên list không lọc.
+  return isTabType(tabName) ? tabName : fallback;
 }
 
 export function buildYeuCauDetailUrl(tab: TabType, idYeuCau: string): string {

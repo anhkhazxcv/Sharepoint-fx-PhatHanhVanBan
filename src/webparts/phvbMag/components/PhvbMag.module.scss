@@ -216,3 +216,5 @@
 @import './PhvbMag.animations';
 @import './PhvbMag.home';
 @import './PhvbMag.preview';
+// Mobile chrome import CUỐI: cố ý ghi đè các @media hẹp ở trên.
+@import './PhvbMag.mobile';

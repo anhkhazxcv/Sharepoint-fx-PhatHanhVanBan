@@ -25,6 +25,7 @@ import {
 } from '../utils/PhvbMagHomeCategories.utils';
 import { buildLibrarySearchPath } from '../utils/PhvbMagLibrary.utils';
 import { formatRecentPublishDate } from '../utils/PhvbMagRecentPublished.utils';
+import { readStoredString, writeStoredString } from '../utils/PhvbMagStorage.utils';
 import {
   CloseIcon,
   FolderAccentIcon,
@@ -122,13 +123,9 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
   const { siteContext } = props;
   const navigate = useNavigate();
   const [searchDraft, setSearchDraft] = useState<string>('');
-  const [isGuideDismissed, setIsGuideDismissed] = useState<boolean>(() => {
-    try {
-      return window.sessionStorage.getItem(HOME_GUIDE_DISMISS_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
+  const [isGuideDismissed, setIsGuideDismissed] = useState<boolean>(
+    () => readStoredString('session', HOME_GUIDE_DISMISS_KEY) === '1'
+  );
 
   const homeData = usePhvbHomeData({
     siteContext,
@@ -236,12 +233,7 @@ export function PhvbMagHomeView(props: IPhvbMagHomeViewProps): React.ReactElemen
 
   const handleDismissGuide = (): void => {
     setIsGuideDismissed(true);
-
-    try {
-      window.sessionStorage.setItem(HOME_GUIDE_DISMISS_KEY, '1');
-    } catch {
-      // Ignore storage errors in restricted environments.
-    }
+    writeStoredString('session', HOME_GUIDE_DISMISS_KEY, '1');
   };
 
   return (

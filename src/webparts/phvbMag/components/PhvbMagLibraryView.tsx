@@ -14,6 +14,12 @@ import {
   usePhvbRegisterPreviewDocuments
 } from '../context/PhvbMagDocumentPreview.context';
 import { usePhvbNarrowViewport } from '../hooks/usePhvbNarrowViewport';
+import {
+  readStoredNumber,
+  readStoredNumberOptional,
+  removeStoredKey,
+  writeStoredNumber
+} from '../utils/PhvbMagStorage.utils';
 import { PhvbMagDocumentPreview } from './PhvbMagDocumentPreview';
 import { PhvbMagEmptyState } from './PhvbMagEmptyState';
 import { PhvbMagLibraryDocumentCard } from './PhvbMagLibraryDocumentCard';
@@ -30,42 +36,39 @@ import {
 } from './PhvbMagIcons';
 import styles from './PhvbMag.module.scss';
 
+// Kích thước 2 divider lưu ở localStorage (không phải session): đây là thói
+// quen bố cục của user, phải giữ qua nhiều lần mở/đóng tab.
+//
+// Bố cục 2 cột (thư mục | danh sách) và 3 cột (thêm cột xem trước) có key
+// riêng: độ rộng cột thư mục hợp lý ở 2 cột (5:5) quá to khi có cột xem trước
+// (2:3:5), nên dùng chung một giá trị sẽ luôn sai ở một trong hai bố cục.
 const LIBRARY_SIDEBAR_UNITS_KEY = 'phvbMag.librarySidebarUnits';
+const LIBRARY_SIDEBAR_UNITS_PREVIEW_KEY = 'phvbMag.librarySidebarUnitsPreview';
 const TOTAL_UNITS = 10;
 const DEFAULT_UNITS = 5;
+const DEFAULT_UNITS_WITH_PREVIEW = 2;
 const MIN_UNITS = 2;
 const MAX_UNITS = 7;
+
+const LIBRARY_LIST_WIDTH_KEY = 'phvbMag.libraryListWidthPx';
+// Phần cột danh sách trong bố cục mặc định 2:3:5, đo ra px lúc cột xem trước
+// mở lần đầu (xem useLayoutEffect bên dưới).
+const DEFAULT_LIST_RATIO_WITH_PREVIEW = 3 / TOTAL_UNITS;
+// Chỉ dùng khi chưa đo được bề rộng container.
+const DEFAULT_LIST_WIDTH_PX = 320;
+const MIN_LIST_WIDTH_PX = 280;
+const MAX_LIST_WIDTH_PX = 640;
+// Phải khớp min-width của .previewPaneColumn trong _PhvbMag.preview.scss
+const MIN_PREVIEW_WIDTH_PX = 360;
+// Phải khớp width của .libraryResizeDivider trong _PhvbMag.animations.scss
+const DIVIDER_WIDTH_PX = 6;
 
 function clampSidebarUnits(units: number): number {
   return Math.max(MIN_UNITS, Math.min(MAX_UNITS, units));
 }
 
-function readStoredUnits(): number {
-  try {
-    const raw = sessionStorage.getItem(LIBRARY_SIDEBAR_UNITS_KEY);
-
-    if (!raw) {
-      return DEFAULT_UNITS;
-    }
-
-    const parsed = parseInt(raw, 10);
-
-    if (isNaN(parsed)) {
-      return DEFAULT_UNITS;
-    }
-
-    return clampSidebarUnits(parsed);
-  } catch {
-    return DEFAULT_UNITS;
-  }
-}
-
-function writeStoredUnits(units: number): void {
-  try {
-    sessionStorage.setItem(LIBRARY_SIDEBAR_UNITS_KEY, String(units));
-  } catch {
-    // Ignore storage quota / private mode failures.
-  }
+function clampListPaneWidth(widthPx: number): number {
+  return Math.max(MIN_LIST_WIDTH_PX, Math.min(MAX_LIST_WIDTH_PX, widthPx));
 }
 
 interface IPhvbMagLibraryViewProps {
@@ -200,12 +203,34 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
   const { documentContext } = props;
   const library = usePhvbLibrary(documentContext);
   const libraryViewRef = React.useRef<HTMLDivElement>(null);
-  const [sidebarWidthUnits, setSidebarWidthUnits] = React.useState<number>(readStoredUnits);
+  const listPaneRef = React.useRef<HTMLElement>(null);
+  const [sidebarWidthUnits, setSidebarWidthUnits] = React.useState<number>(
+    () => readStoredNumber('local', LIBRARY_SIDEBAR_UNITS_KEY, DEFAULT_UNITS, clampSidebarUnits)
+  );
+  const [sidebarWidthUnitsWithPreview, setSidebarWidthUnitsWithPreview] = React.useState<number>(
+    () => readStoredNumber(
+      'local',
+      LIBRARY_SIDEBAR_UNITS_PREVIEW_KEY,
+      DEFAULT_UNITS_WITH_PREVIEW,
+      clampSidebarUnits
+    )
+  );
+  // undefined = user chưa từng kéo divider này, sẽ đo theo tỉ lệ 2:3:5 lúc cột
+  // xem trước mở. Clamp lúc đọc dùng max tĩnh (MAX_LIST_WIDTH_PX): lúc này
+  // listPaneRef chưa attach nên chưa tính được max động theo chỗ trống thực tế.
+  const [listPaneWidthPx, setListPaneWidthPx] = React.useState<number | undefined>(
+    () => readStoredNumberOptional('local', LIBRARY_LIST_WIDTH_KEY, clampListPaneWidth)
+  );
   const [isDragging, setIsDragging] = React.useState<boolean>(false);
   const preview = usePhvbDocumentPreviewOptional();
   const isNarrowViewport = usePhvbNarrowViewport();
   // Below the stacking breakpoint, and in fullscreen, the overlay takes over.
   const isPreviewColumnVisible = !isNarrowViewport && !preview?.isFullscreen;
+  // Bố cục 3 cột: thư mục | danh sách | xem trước, mặc định 2:3:5.
+  const isThreePaneLayout = isPreviewColumnVisible && !!preview?.previewDocument;
+  const activeSidebarUnits = isThreePaneLayout ? sidebarWidthUnitsWithPreview : sidebarWidthUnits;
+  const activeSidebarDefaultUnits = isThreePaneLayout ? DEFAULT_UNITS_WITH_PREVIEW : DEFAULT_UNITS;
+  const effectiveListPaneWidthPx = listPaneWidthPx ?? DEFAULT_LIST_WIDTH_PX;
 
   // Search results mix folders in; only files are previewable.
   usePhvbRegisterPreviewDocuments(React.useMemo(
@@ -243,9 +268,16 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
 
   const applySidebarUnits = React.useCallback((units: number): void => {
     const nextUnits = clampSidebarUnits(units);
+
+    if (isThreePaneLayout) {
+      setSidebarWidthUnitsWithPreview(nextUnits);
+      writeStoredNumber('local', LIBRARY_SIDEBAR_UNITS_PREVIEW_KEY, nextUnits);
+      return;
+    }
+
     setSidebarWidthUnits(nextUnits);
-    writeStoredUnits(nextUnits);
-  }, []);
+    writeStoredNumber('local', LIBRARY_SIDEBAR_UNITS_KEY, nextUnits);
+  }, [isThreePaneLayout]);
 
   const updateUnitsFromClientX = React.useCallback((clientX: number): void => {
     const container = libraryViewRef.current;
@@ -301,36 +333,153 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
   const handleDividerKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
-      applySidebarUnits(sidebarWidthUnits - 1);
+      applySidebarUnits(activeSidebarUnits - 1);
       return;
     }
 
     if (event.key === 'ArrowRight') {
       event.preventDefault();
-      applySidebarUnits(sidebarWidthUnits + 1);
+      applySidebarUnits(activeSidebarUnits + 1);
       return;
     }
 
     if (event.key === 'Home') {
       event.preventDefault();
-      applySidebarUnits(DEFAULT_UNITS);
+      applySidebarUnits(activeSidebarDefaultUnits);
     }
   };
 
   const handleDividerDoubleClick = (): void => {
-    applySidebarUnits(DEFAULT_UNITS);
+    applySidebarUnits(activeSidebarDefaultUnits);
+  };
+
+  const getListPaneMaxWidth = React.useCallback((): number => {
+    const listPane = listPaneRef.current;
+    const container = libraryViewRef.current;
+
+    if (!listPane || !container) {
+      return MAX_LIST_WIDTH_PX;
+    }
+
+    const listPaneRect = listPane.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const availableForListAndPreview = containerRect.right - listPaneRect.left - DIVIDER_WIDTH_PX;
+
+    return Math.max(
+      MIN_LIST_WIDTH_PX,
+      Math.min(MAX_LIST_WIDTH_PX, availableForListAndPreview - MIN_PREVIEW_WIDTH_PX)
+    );
+  }, []);
+
+  const applyListPaneWidth = React.useCallback((widthPx: number): void => {
+    const nextWidth = Math.max(MIN_LIST_WIDTH_PX, Math.min(getListPaneMaxWidth(), widthPx));
+    setListPaneWidthPx(nextWidth);
+    writeStoredNumber('local', LIBRARY_LIST_WIDTH_KEY, nextWidth);
+  }, [getListPaneMaxWidth]);
+
+  /**
+   * Bố cục 3 cột mặc định 2:3:5. Cột thư mục tính theo % nên đã đúng ngay từ
+   * state, riêng cột danh sách đo theo px nên phải chờ biết bề rộng container.
+   *
+   * useLayoutEffect (không phải useEffect) để sửa bề rộng trước khi trình duyệt
+   * paint, tránh nháy DEFAULT_LIST_WIDTH_PX rồi mới nhảy sang giá trị đo được.
+   */
+  React.useLayoutEffect(() => {
+    if (!isThreePaneLayout || listPaneWidthPx !== undefined) {
+      return;
+    }
+
+    const container = libraryViewRef.current;
+    const containerWidth = container ? container.getBoundingClientRect().width : 0;
+
+    if (containerWidth <= 0) {
+      return;
+    }
+
+    // Chỉ set state, KHÔNG ghi localStorage: đây là mặc định chứ chưa phải lựa
+    // chọn của user. Lần mở sau sẽ đo lại theo bề rộng web part lúc đó.
+    setListPaneWidthPx(
+      clampListPaneWidth(Math.round(containerWidth * DEFAULT_LIST_RATIO_WITH_PREVIEW))
+    );
+  }, [isThreePaneLayout, listPaneWidthPx]);
+
+  /** Về mặc định = quên giá trị đã lưu, để layout effect đo lại tỉ lệ 3/10. */
+  const resetListPaneWidth = React.useCallback((): void => {
+    removeStoredKey('local', LIBRARY_LIST_WIDTH_KEY);
+    setListPaneWidthPx(undefined);
+  }, []);
+
+  const updateListPaneWidthFromClientX = React.useCallback((clientX: number): void => {
+    const listPane = listPaneRef.current;
+
+    if (!listPane) {
+      return;
+    }
+
+    const listPaneRect = listPane.getBoundingClientRect();
+    applyListPaneWidth(clientX - listPaneRect.left);
+  }, [applyListPaneWidth]);
+
+  const handleListDividerPointerDown = (event: React.PointerEvent<HTMLDivElement>): void => {
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsDragging(true);
+  };
+
+  const handleListDividerPointerMove = (event: React.PointerEvent<HTMLDivElement>): void => {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+      return;
+    }
+
+    updateListPaneWidthFromClientX(event.clientX);
+  };
+
+  const handleListDividerPointerUp = (event: React.PointerEvent<HTMLDivElement>): void => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    setIsDragging(false);
+  };
+
+  const handleListDividerKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      applyListPaneWidth(effectiveListPaneWidthPx - 20);
+      return;
+    }
+
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      applyListPaneWidth(effectiveListPaneWidthPx + 20);
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      resetListPaneWidth();
+    }
+  };
+
+  const handleListDividerDoubleClick = (): void => {
+    resetListPaneWidth();
   };
 
   const libraryViewClassName = isDragging
     ? `${styles.libraryView} ${styles.libraryViewDragging}`
     : styles.libraryView;
 
-  const libraryViewStyle = isFolderPaneVisible
-    ? ({
-      ['--sidebar-width-units' as string]: sidebarWidthUnits,
+  const libraryViewStyle = {
+    ...(isFolderPaneVisible ? {
+      ['--sidebar-width-units' as string]: activeSidebarUnits,
       ['--total-units' as string]: TOTAL_UNITS
-    } as React.CSSProperties)
-    : undefined;
+    } : {}),
+    ['--list-pane-width-px' as string]: `${effectiveListPaneWidthPx}px`
+  } as React.CSSProperties;
 
   return (
     <div
@@ -442,7 +591,7 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
               aria-orientation="vertical"
               aria-valuemin={MIN_UNITS}
               aria-valuemax={MAX_UNITS}
-              aria-valuenow={sidebarWidthUnits}
+              aria-valuenow={activeSidebarUnits}
               aria-label="Thay đổi kích thước khung thư viện"
               tabIndex={0}
             />
@@ -450,9 +599,10 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
         ) : null}
 
         <section
+          ref={listPaneRef}
           className={[
             styles.libraryContentPane,
-            isPreviewColumnVisible && preview?.previewDocument ? styles.libraryListPaneWithPreview : ''
+            isThreePaneLayout ? styles.libraryListPaneWithPreview : ''
           ].filter(Boolean).join(' ')}
         >
           <div className={styles.libraryColumnHeader}>
@@ -543,7 +693,27 @@ export function PhvbMagLibraryView(props: IPhvbMagLibraryViewProps): React.React
           </div>
         </section>
 
-        {isPreviewColumnVisible && preview?.previewDocument ? (
+        {isThreePaneLayout ? (
+          <div
+            className={styles.libraryResizeDivider}
+            onPointerDown={handleListDividerPointerDown}
+            onPointerMove={handleListDividerPointerMove}
+            onPointerUp={handleListDividerPointerUp}
+            onPointerCancel={handleListDividerPointerUp}
+            onKeyDown={handleListDividerKeyDown}
+            onDoubleClick={handleListDividerDoubleClick}
+            title="Kéo để thay đổi kích thước"
+            role="separator"
+            aria-orientation="vertical"
+            aria-valuemin={MIN_LIST_WIDTH_PX}
+            aria-valuemax={MAX_LIST_WIDTH_PX}
+            aria-valuenow={effectiveListPaneWidthPx}
+            aria-label="Thay đổi kích thước khung danh sách tài liệu"
+            tabIndex={0}
+          />
+        ) : null}
+
+        {isThreePaneLayout && preview?.previewDocument ? (
           <PhvbMagDocumentPreview
             document={preview.previewDocument}
             libraryTitle={resolveIssuanceLibraryTitle(documentContext.issuanceLibraryTitle)}

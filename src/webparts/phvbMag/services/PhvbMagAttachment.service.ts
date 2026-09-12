@@ -71,10 +71,13 @@ interface ISharePointAttachmentItem {
   FileRef?: string;
   FileDirRef?: string;
   Modified?: string;
+  Editor?: { Title?: string };
   FSObjType?: number;
   IsBieuMau?: boolean;
 }
 
+// 'Editor/Title' là lookup: query dùng hằng này BẮT BUỘC kèm $expand=Editor,
+// thiếu expand thì SharePoint trả 400.
 const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'Id',
   'UniqueId',
@@ -82,6 +85,7 @@ const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
   'FileRef',
   'FileDirRef',
   'Modified',
+  'Editor/Title',
   'FSObjType',
   'IsBieuMau'
 ];
@@ -123,6 +127,7 @@ function mapAttachmentItem(item: ISharePointAttachmentItem, siteUrl: string): IA
       fileName
     }),
     modified: item.Modified,
+    editor: item.Editor && item.Editor.Title ? item.Editor.Title : undefined,
     folderPath: fileDirRef,
     isFormAttachment: item.IsBieuMau === true || fileDirRef.indexOf(`/${ATTACHMENT_FORM_SUBFOLDER}`) > -1
   };
@@ -621,7 +626,7 @@ export class PhvbAttachmentService {
       const attachmentContext: IAttachmentServiceContext = { ...context };
 
       try {
-        const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items?$select=${ATTACHMENT_SELECT_FIELDS.join(',')}&$filter=${encodeURIComponent(filter)}&$top=500&$orderby=Modified desc`;
+        const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items?$select=${ATTACHMENT_SELECT_FIELDS.join(',')}&$expand=Editor&$filter=${encodeURIComponent(filter)}&$top=500&$orderby=Modified desc`;
         const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
         await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_GET');
         const data = await response.json() as { value?: ISharePointAttachmentItem[] };

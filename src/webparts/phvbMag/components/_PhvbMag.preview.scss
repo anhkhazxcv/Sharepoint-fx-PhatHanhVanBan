@@ -13,6 +13,7 @@
 
 .previewPaneColumn {
   flex: 1 1 auto;
+  min-width: 360px; // MIN_PREVIEW_WIDTH_PX trong PhvbMagLibraryView.tsx — giữ đồng bộ
   border-left: 1px solid $border-color;
 }
 
@@ -180,6 +181,44 @@
 }
 
 // -------------------------------------------------------------
+// Sheet overflow (mobile) — các action bị đẩy khỏi app bar
+// -------------------------------------------------------------
+
+.previewActionSheet {
+  display: flex;
+  flex-direction: column;
+  padding: $space-2 $space-2 $space-4;
+}
+
+.previewActionSheetItem {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  width: 100%;
+  min-height: $btn-min-height-touch;
+  padding: 0 $space-3;
+  border: none;
+  border-radius: $radius-control;
+  background: transparent;
+  color: $text-ink;
+  font-family: $font-family-base;
+  font-size: $font-size-base2;
+  font-weight: $font-weight-bold;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: $primary-light;
+    color: $primary-color;
+  }
+
+  &:focus-visible {
+    @include phvb-focus-ring;
+  }
+}
+
+// -------------------------------------------------------------
 // Overlay shell — larger than modalContentLg (920px), so a new class
 // -------------------------------------------------------------
 
@@ -211,9 +250,10 @@
 // -------------------------------------------------------------
 
 .libraryListPaneWithPreview {
-  flex: 0 0 320px;
-  min-width: 280px;
-  max-width: 380px;
+  flex: 0 0 var(--list-pane-width-px, 320px);
+  min-width: 280px; // MIN_LIST_WIDTH_PX trong PhvbMagLibraryView.tsx
+  max-width: 640px; // MAX_LIST_WIDTH_PX trong PhvbMagLibraryView.tsx
+  transition: flex-basis 0.15s ease;
 }
 
 @media (max-width: 1180px) {

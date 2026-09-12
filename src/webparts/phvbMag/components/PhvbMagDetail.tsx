@@ -12,6 +12,7 @@ import { buildWorkflowTimelineSteps } from '../utils/PhvbMagWorkflowTimeline.uti
 import styles from './PhvbMag.module.scss';
 import { PhvbMagDetailActivityFeed } from './PhvbMagDetailActivityFeed';
 import { PhvbMagDetailDocumentsTab } from './PhvbMagDetailDocumentsTab';
+import { PhvbMagDetailActionBar, type IPhvbMagDetailActionProps } from './PhvbMagDetailActionBar';
 import { PhvbMagDetailHeader } from './PhvbMagDetailHeader';
 import { PhvbMagDetailInfoTab } from './PhvbMagDetailInfoTab';
 import { PhvbMagDetailRightPanel } from './PhvbMagDetailRightPanel';
@@ -19,6 +20,9 @@ import { PhvbMagDetailStepper } from './PhvbMagDetailStepper';
 import { PhvbMagDetailWorkflowSidebar } from './PhvbMagDetailWorkflowSidebar';
 import { PhvbMagRemindDeadlineDialog } from './PhvbMagRemindDeadlineDialog';
 import type { BanHanhNotifyMode } from './PhvbMagBanHanhNotifyDialog';
+import { usePhvbIsMobile } from '../hooks/usePhvbViewport';
+import { PhvbMagMobileInviteBanner } from './mobile/PhvbMagMobileInviteBanner';
+import { PhvbMagMobileSheet } from './mobile/PhvbMagMobileSheet';
 
 type DetailTabKey = 'info' | 'documents' | 'workflow';
 
@@ -96,6 +100,9 @@ interface IPhvbMagDetailProps {
   dmvlResumeErrorMessage?: string;
   onOpenResumeDmvlBanHanh?: () => void;
   onDuplicate?: () => void;
+  /** Bottom sheet bình luận đang mở — chỉ có nghĩa trên mobile. */
+  isCommentSheetOpen?: boolean;
+  onCloseCommentSheet?: () => void;
 }
 
 const DETAIL_TABS: ReadonlyArray<{ key: DetailTabKey; label: string }> = [
@@ -170,8 +177,11 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     isDmvlResumeBusy,
     dmvlResumeErrorMessage,
     onOpenResumeDmvlBanHanh,
-    onDuplicate
+    onDuplicate,
+    isCommentSheetOpen = false,
+    onCloseCommentSheet
   } = props;
+  const isMobile = usePhvbIsMobile();
   const [activeTab, setActiveTab] = useState<DetailTabKey>('info');
   const [isRemindDialogOpen, setIsRemindDialogOpen] = useState<boolean>(false);
   const title = data.release.Tenvanban || data.release.IdYeuCau || 'Chi tiết văn bản';
@@ -260,59 +270,91 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
     }
   };
 
+  // Gom prop action MỘT LẦN: header (desktop) và sticky footer (mobile) đọc
+  // cùng object này, nên điều kiện hiện nút không thể lệch nhau.
+  const actionProps: IPhvbMagDetailActionProps = {
+    approveLabel,
+    rejectLabel,
+    availableActions,
+    isProcessing: isWorkflowProcessing,
+    errorMessage: workflowErrorMessage,
+    onRunAction: onRunWorkflowAction,
+    transitionLabel,
+    canRunTransition,
+    isTransitionProcessing,
+    transitionErrorMessage,
+    onRunTransition,
+    canAssignDocumentNumber,
+    isCapSoSaving,
+    capSoErrorMessage,
+    onAssignDocumentNumber,
+    canPrepareBanHanh,
+    canPublishBanHanh,
+    canEditBanHanhNotify,
+    isBanHanhSaving,
+    isBanHanhNotifyLoading,
+    banHanhErrorMessage,
+    banHanhNotifyDraft,
+    banHanhNotifyMode,
+    requireMainDocument,
+    mainDocumentReadOnly,
+    mainDocumentCandidates,
+    storedMainDocumentId: data.release.IdVanBanChinh,
+    onOpenPrepareBanHanh,
+    onOpenPublishBanHanh,
+    onOpenEditBanHanhNotify,
+    onPrepareBanHanh,
+    onPublishBanHanh,
+    onUpdateBanHanhNotify,
+    onReturnBanHanhToAdmin,
+    canResumeDmvlBanHanh,
+    isDmvlResumeBusy,
+    dmvlResumeErrorMessage,
+    canDuplicate,
+    onDuplicate,
+    onOpenResumeDmvlBanHanh
+  };
+
+  const activityFeed = (
+    <PhvbMagDetailActivityFeed
+      msGraphClientFactory={msGraphClientFactory}
+      history={data.history}
+      comments={data.comments}
+      selectedFiles={commentSelectedFiles || []}
+      isSaving={isCommentSaving}
+      errorMessage={commentErrorMessage}
+      onAddFiles={onCommentAddFiles || (() => undefined)}
+      onRemoveFile={onCommentRemoveFile || (() => undefined)}
+      onSubmitComment={onSubmitComment || (async () => false)}
+      chromeless={isMobile}
+    />
+  );
+
   return (
     <div className={styles.detailPage}>
       <PhvbMagDetailHeader
         className={styles.detailHeaderArea}
         tabName={tabName}
         title={title}
-        approveLabel={approveLabel}
-        rejectLabel={rejectLabel}
-        availableActions={availableActions}
-        isProcessing={isWorkflowProcessing}
-        errorMessage={workflowErrorMessage}
-        onRunAction={onRunWorkflowAction}
-        transitionLabel={transitionLabel}
-        canRunTransition={canRunTransition}
-        isTransitionProcessing={isTransitionProcessing}
-        transitionErrorMessage={transitionErrorMessage}
-        onRunTransition={onRunTransition}
-        canAssignDocumentNumber={canAssignDocumentNumber}
-        isCapSoSaving={isCapSoSaving}
-        capSoErrorMessage={capSoErrorMessage}
-        onAssignDocumentNumber={onAssignDocumentNumber}
-        canPrepareBanHanh={canPrepareBanHanh}
-        canPublishBanHanh={canPublishBanHanh}
-        canEditBanHanhNotify={canEditBanHanhNotify}
-        isBanHanhSaving={isBanHanhSaving}
-        isBanHanhNotifyLoading={isBanHanhNotifyLoading}
-        banHanhErrorMessage={banHanhErrorMessage}
-        banHanhNotifyDraft={banHanhNotifyDraft}
-        banHanhNotifyMode={banHanhNotifyMode}
-        requireMainDocument={requireMainDocument}
-        mainDocumentReadOnly={mainDocumentReadOnly}
-        mainDocumentCandidates={mainDocumentCandidates}
-        storedMainDocumentId={data.release.IdVanBanChinh}
-        onOpenPrepareBanHanh={onOpenPrepareBanHanh}
-        onOpenPublishBanHanh={onOpenPublishBanHanh}
-        onOpenEditBanHanhNotify={onOpenEditBanHanhNotify}
-        onPrepareBanHanh={onPrepareBanHanh}
-        onPublishBanHanh={onPublishBanHanh}
-        onUpdateBanHanhNotify={onUpdateBanHanhNotify}
-        onReturnBanHanhToAdmin={onReturnBanHanhToAdmin}
-        canResumeDmvlBanHanh={canResumeDmvlBanHanh}
-        isDmvlResumeBusy={isDmvlResumeBusy}
-        dmvlResumeErrorMessage={dmvlResumeErrorMessage}
-        canDuplicate={canDuplicate}
-        onDuplicate={onDuplicate}
-        onOpenResumeDmvlBanHanh={onOpenResumeDmvlBanHanh}
+        hideActions={isMobile}
+        {...actionProps}
       />
 
       <div className={styles.detailBodySplit}>
         <div className={styles.detailLeftColumn}>
-          <div className={styles.detailStepperArea}>
-            <PhvbMagDetailStepper statusApproved={data.release.StatusApproved} />
-          </div>
+          {isMobile ? (
+            <PhvbMagMobileInviteBanner
+              release={data.release}
+              isInvited={Boolean(availableActions?.approve)}
+            />
+          ) : null}
+
+          {/* Mobile: bỏ stepper để nhường chiều cao cho nội dung tab. */}
+          {!isMobile ? (
+            <div className={styles.detailStepperArea}>
+              <PhvbMagDetailStepper statusApproved={data.release.StatusApproved} />
+            </div>
+          ) : null}
 
           <div className={styles.detailMain}>
             <div className={styles.detailTabs} role="tablist" aria-label="Chi tiết yêu cầu">
@@ -341,20 +383,24 @@ export function PhvbMagDetail(props: IPhvbMagDetailProps): React.ReactElement {
           </div>
         </div>
 
-        <PhvbMagDetailRightPanel>
-          <PhvbMagDetailActivityFeed
-            msGraphClientFactory={msGraphClientFactory}
-            history={data.history}
-            comments={data.comments}
-            selectedFiles={commentSelectedFiles || []}
-            isSaving={isCommentSaving}
-            errorMessage={commentErrorMessage}
-            onAddFiles={onCommentAddFiles || (() => undefined)}
-            onRemoveFile={onCommentRemoveFile || (() => undefined)}
-            onSubmitComment={onSubmitComment || (async () => false)}
-          />
-        </PhvbMagDetailRightPanel>
+        {!isMobile ? (
+          <PhvbMagDetailRightPanel>{activityFeed}</PhvbMagDetailRightPanel>
+        ) : null}
       </div>
+
+      {/* Mobile: nhóm nút xuống sticky footer thay vì canh phải header. */}
+      {isMobile ? <PhvbMagDetailActionBar variant="footer" {...actionProps} /> : null}
+
+      {/* Mobile: rail phải thành bottom sheet, mở từ badge trên app bar. */}
+      {isMobile ? (
+        <PhvbMagMobileSheet
+          isOpen={isCommentSheetOpen}
+          title="Bình luận & Hoạt động"
+          onDismiss={() => onCloseCommentSheet?.()}
+        >
+          {activityFeed}
+        </PhvbMagMobileSheet>
+      ) : null}
 
       <PhvbMagRemindDeadlineDialog
         isOpen={isRemindDialogOpen}

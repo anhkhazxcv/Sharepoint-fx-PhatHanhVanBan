@@ -1,5 +1,23 @@
 // Enterprise UI design tokens — spacing, radius, surfaces, motion, z-index
 
+// Breakpoints — nguồn sự thật là hooks/usePhvbViewport.ts (PHVB_VIEWPORT_BREAKPOINTS).
+// Giữ hai bên đồng bộ bằng tay: SCSS không đọc được TS constant.
+$bp-mobile: 768px;   // ranh giới desktop-chrome ↔ mobile-chrome
+$bp-tablet: 1024px;
+$bp-narrow: 1180px;  // = LIBRARY_NARROW_BREAKPOINT_PX (library preview pane)
+
+@mixin on-mobile {
+  @media (max-width: $bp-mobile) {
+    @content;
+  }
+}
+
+@mixin on-tablet-down {
+  @media (max-width: $bp-tablet) {
+    @content;
+  }
+}
+
 $space-1: 4px;
 $space-2: 8px;
 $space-3: 12px;
@@ -43,6 +61,12 @@ $elevation-3: 0 16px 40px rgba(123, 76, 44, 0.08);
 $input-height: 42px;
 $table-row-height: 48px;
 $btn-min-height: 36px;
+
+// Mobile chrome sizing — app-shell 3 tầng (app bar / body scroll / bottom nav)
+$btn-min-height-touch: 44px;   // ngưỡng touch target tối thiểu
+$mobile-appbar-height: 52px;
+$mobile-bottomnav-height: 58px;
+$mobile-gutter: 12px;
 
 // Document spine signature
 $document-spine-width: 3px;

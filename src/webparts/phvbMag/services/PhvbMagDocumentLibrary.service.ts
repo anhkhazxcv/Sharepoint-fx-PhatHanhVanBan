@@ -35,6 +35,11 @@ import {
   isRecentPublishedFolderCandidate,
   toODataDateTimeLiteral
 } from '../utils/PhvbMagRecentPublished.utils';
+import {
+  readStoredJson,
+  removeStoredKeysByPrefix,
+  writeStoredJson
+} from '../utils/PhvbMagStorage.utils';
 import type {
   IBanHanhLibraryItem,
   ILibraryPagedFilesResult,
@@ -491,58 +496,33 @@ function resolveMostViewedStorageKey(context: IPhvbSiteContext): string {
   ].join('|');
 }
 
-function readMostViewedFromStorage(context: IPhvbSiteContext): IMostViewedCacheEntry | undefined {
-  try {
-    const raw = window.localStorage.getItem(resolveMostViewedStorageKey(context));
-
-    if (!raw) {
-      return undefined;
-    }
-
-    const parsed = JSON.parse(raw) as IMostViewedCacheEntry;
-
-    if (!parsed || !Array.isArray(parsed.items) || typeof parsed.fetchedAt !== 'number') {
-      return undefined;
-    }
-
-    if (parsed.schemaVersion !== MOST_VIEWED_SCHEMA_VERSION) {
-      return undefined;
-    }
-
-    return parsed;
-  } catch {
-    return undefined;
+function isMostViewedCacheEntry(parsed: unknown): parsed is IMostViewedCacheEntry {
+  if (!parsed || typeof parsed !== 'object') {
+    return false;
   }
+
+  const entry = parsed as Partial<IMostViewedCacheEntry>;
+
+  return Array.isArray(entry.items)
+    && typeof entry.fetchedAt === 'number'
+    && entry.schemaVersion === MOST_VIEWED_SCHEMA_VERSION;
+}
+
+function readMostViewedFromStorage(context: IPhvbSiteContext): IMostViewedCacheEntry | undefined {
+  return readStoredJson('local', resolveMostViewedStorageKey(context), isMostViewedCacheEntry);
 }
 
 function writeMostViewedToStorage(context: IPhvbSiteContext, entry: IMostViewedCacheEntry): void {
-  try {
-    window.localStorage.setItem(
-      resolveMostViewedStorageKey(context),
-      JSON.stringify({ ...entry, schemaVersion: MOST_VIEWED_SCHEMA_VERSION })
-    );
-  } catch {
-    // Ignore storage quota/availability errors — this is a best-effort perf cache.
-  }
+  writeStoredJson(
+    'local',
+    resolveMostViewedStorageKey(context),
+    { ...entry, schemaVersion: MOST_VIEWED_SCHEMA_VERSION }
+  );
 }
 
 function clearMostViewedStorage(): void {
-  try {
-    const keysToRemove: string[] = [];
-
-    for (let index = 0; index < window.localStorage.length; index += 1) {
-      const key = window.localStorage.key(index);
-
-      // Version-agnostic so clearing also sweeps entries left by older versions.
-      if (key && key.indexOf('phvbMag.mostViewed.') === 0) {
-        keysToRemove.push(key);
-      }
-    }
-
-    keysToRemove.forEach(key => window.localStorage.removeItem(key));
-  } catch {
-    // Ignore storage quota/availability errors — this is a best-effort perf cache.
-  }
+  // Version-agnostic so clearing also sweeps entries left by older versions.
+  removeStoredKeysByPrefix('local', 'phvbMag.mostViewed.');
 }
 
 function buildMostViewedSearchKql(siteUrl: string, libraryRootPath: string): string {

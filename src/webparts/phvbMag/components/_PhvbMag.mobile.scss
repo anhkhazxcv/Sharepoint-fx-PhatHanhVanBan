@@ -1,0 +1,850 @@
+// -------------------------------------------------------------
+// MOBILE CHROME
+//
+// Import CUỐI CÙNG trong PhvbMag.module.scss: nhiều rule ở đây cố ý ghi đè
+// các @media hẹp có sẵn (vd. sidebar-thành-topbar ở 640px trong
+// _PhvbMag.tables.scss) nên phải thắng nhờ thứ tự nguồn.
+//
+// App-shell 3 tầng, chiều cao lấy từ --phvb-available-height do
+// PhvbMagWebPart.ts đo. Bottom nav nằm BÊN TRONG hộp đã đo, không dùng
+// position:fixed theo viewport — nếu fixed thì URL bar của iOS Safari co/giãn
+// sẽ làm nav nhảy.
+// -------------------------------------------------------------
+
+.phvbContainerMobile {
+  flex-direction: column;
+  overflow: hidden;
+
+  // Sidebar không render trên mobile (nav chuyển xuống bottom bar), nhưng
+  // chốt lại cho chắc nếu có nhánh nào vẫn mount nó.
+  .sidebar {
+    display: none;
+  }
+
+  > .contentPane {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  // Trang chi tiết tự quản lý vùng cuộn bên trong để sticky action footer
+  // đứng yên ở đáy; nếu để contentPane cuộn thì footer cuộn theo và mất.
+  &.phvbContainerDetail > .contentPane {
+    overflow: hidden;
+  }
+}
+
+// -------------------------------------------------------------
+// APP BAR
+// -------------------------------------------------------------
+
+.mobileAppBar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  height: $mobile-appbar-height;
+  padding: 0 $mobile-gutter;
+  background-color: $surface-card;
+  border-bottom: 1px solid $border-color;
+  // Nằm trên nội dung đang cuộn, dưới bottom sheet.
+  z-index: $z-sticky;
+}
+
+.mobileAppBarTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-snug;
+  color: $text-ink;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobileAppBarButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: $btn-min-height-touch;
+  height: $btn-min-height-touch;
+  padding: 0;
+  border: 1px solid $border-color;
+  border-radius: $radius-control;
+  background-color: $surface-card;
+  color: $text-main;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    background-color: $bg-folders;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    @include phvb-focus-ring;
+  }
+}
+
+.mobileAppBarBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: $radius-pill;
+  background-color: $primary-color;
+  color: #FFFFFF;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+  line-height: 18px;
+  text-align: center;
+}
+
+// -------------------------------------------------------------
+// BOTTOM NAV
+// -------------------------------------------------------------
+
+.mobileBottomNav {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  height: $mobile-bottomnav-height;
+  background-color: $surface-card;
+  border-top: 1px solid $border-color;
+  // Home indicator trên iPhone: nới đáy nhưng giữ chiều cao vùng bấm.
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: content-box;
+  z-index: $z-sticky;
+}
+
+.mobileBottomNavItem {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 2px;
+  border: none;
+  background: transparent;
+  color: $text-ink3;
+  font-family: inherit;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-medium;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: color $transition-fast, background-color $transition-fast;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:focus-visible {
+    @include phvb-focus-ring;
+  }
+}
+
+.mobileBottomNavItemActive {
+  color: $primary-color;
+  background-color: $bg-folders;
+  font-weight: $font-weight-bold;
+
+  // Chỉ báo tab đang chọn ở cạnh trên, khớp document-spine của desktop.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background-color: $primary-color;
+    border-radius: $radius-pill;
+  }
+}
+
+.mobileBottomNavBadge {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  margin-left: 4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: $radius-pill;
+  background-color: $color-error;
+  color: #FFFFFF;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+  line-height: 17px;
+  text-align: center;
+}
+
+// -------------------------------------------------------------
+// BOTTOM SHEET
+// -------------------------------------------------------------
+
+.mobileSheetOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background-color: $color-overlay;
+}
+
+.mobileSheet {
+  display: flex;
+  flex-direction: column;
+  max-height: 88%;
+  min-height: 40%;
+  background-color: $surface-card;
+  border-radius: $radius-card $radius-card 0 0;
+  box-shadow: $elevation-3;
+  overflow: hidden;
+}
+
+.mobileSheetGrabber {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0 4px;
+  // Vùng bấm để kéo/đóng sheet.
+  touch-action: none;
+  cursor: grab;
+
+  &::after {
+    content: '';
+    width: 40px;
+    height: 4px;
+    border-radius: $radius-pill;
+    background-color: $border-color;
+  }
+}
+
+.mobileSheetHeader {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  padding: 4px $space-4 $space-3;
+  border-bottom: 1px solid $border-color;
+
+  h3 {
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $text-ink;
+  }
+}
+
+.mobileSheetBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+// -------------------------------------------------------------
+// DANH SÁCH DẠNG CARD (thay bảng)
+// -------------------------------------------------------------
+
+.mobileListScreen {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+  padding: $space-4 $mobile-gutter $space-6;
+}
+
+.mobileStatGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.mobileStatCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $space-3;
+  background-color: $surface-card;
+  border: 1px solid $border-subtle;
+  border-radius: $radius-card;
+  border-left: $document-spine-width solid $text-ink3;
+  box-shadow: $shadow-card;
+
+  strong {
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-extrabold;
+    line-height: 1.1;
+    color: $text-ink;
+  }
+
+  span {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    letter-spacing: $letter-spacing-label;
+    text-transform: uppercase;
+    color: $text-muted;
+  }
+}
+
+// Tone khớp IWorkflowMetricCard.tone từ getWorkflowMetricCards().
+.mobileStatInfo {
+  border-left-color: $color-info;
+
+  strong {
+    color: $color-info;
+  }
+}
+
+.mobileStatWarning {
+  border-left-color: $color-warning;
+
+  strong {
+    color: $color-warning;
+  }
+}
+
+.mobileStatSuccess {
+  border-left-color: $color-success;
+
+  strong {
+    color: $color-success;
+  }
+}
+
+.mobileStatDanger {
+  border-left-color: $color-error;
+
+  strong {
+    color: $color-error;
+  }
+}
+
+.mobileChipRow {
+  display: flex;
+  gap: $space-2;
+  // Chip tràn ngang thì cuộn trong chính nó, body không bao giờ cuộn ngang.
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.mobileChip {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 7px 16px;
+  border: 1px solid $border-color;
+  border-radius: $radius-pill;
+  background-color: $surface-card;
+  color: $text-main;
+  font-family: inherit;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-semibold;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color $transition-fast, color $transition-fast;
+
+  &:focus-visible {
+    @include phvb-focus-ring;
+  }
+}
+
+.mobileChipActive {
+  background-color: $primary-color;
+  border-color: $primary-color;
+  color: #FFFFFF;
+}
+
+.mobileCardList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.mobileRequestCard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  border: 1px solid $border-subtle;
+  border-radius: $radius-card;
+  background-color: $surface-card;
+  box-shadow: $shadow-card;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  overflow: hidden;
+
+  &:focus-visible {
+    @include phvb-focus-ring;
+  }
+}
+
+.mobileRequestCardMain {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding: $space-3 $space-3 $space-2;
+}
+
+.mobileRequestCardTitle {
+  margin: 0;
+  font-size: $font-size-sm2;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-snug;
+  color: $text-ink;
+  // Tên văn bản dài — giữ 2 dòng rồi cắt.
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mobileRequestCardMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-2;
+  font-size: $font-size-2xs;
+  color: $text-muted;
+}
+
+.mobileRequestCardDept {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileRequestCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  border-top: 1px solid $border-subtle;
+  background-color: $surface-muted;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-semibold;
+}
+
+.mobileRequestCardChevron {
+  flex: 0 0 auto;
+  color: $text-ink3;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mobileSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  margin: 0;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  color: $text-ink;
+}
+
+.mobileSectionCount {
+  padding: 2px 10px;
+  border-radius: $radius-pill;
+  background-color: $bg-folders;
+  color: $primary-color;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+}
+
+.mobileLoadMore {
+  @include phvb-btn-secondary;
+  width: 100%;
+  min-height: $btn-min-height-touch;
+}
+
+// -------------------------------------------------------------
+// CHI TIẾT — 1 CỘT + STICKY ACTION FOOTER
+// -------------------------------------------------------------
+
+@include on-mobile {
+  // Rail phải (minmax(360px,400px)) đã relax ở 1100px thành flex column;
+  // ở đây chỉ chắc chắn không còn ràng buộc bề rộng nào.
+  .detailPage {
+    height: 100%;
+    min-height: 0;
+    gap: $space-3;
+    overflow: hidden;
+  }
+
+  // Đây mới là vùng cuộn của trang chi tiết trên mobile.
+  .detailBodySplit {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: $space-3;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  // Cột trái cao theo nội dung; .detailBodySplit ở trên lo toàn bộ phần cuộn.
+  .detailLeftColumn {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  // Bỏ clip ở .detailMain để position:sticky của .detailTabs neo vào
+  // .detailBodySplit, chứ không neo vào một scrollport không bao giờ cuộn.
+  .detailMain {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  // Nhường quyền cuộn lên .detailBodySplit — trước đây hai scroller lồng nhau
+  // làm nội dung tràn ra ngoài và vẽ đè lên thanh tab.
+  .detailTabPanel {
+    overflow: visible;
+    padding: $space-4 $space-4 $space-5;
+  }
+
+  .detailHeaderActionsArea {
+    min-width: 0;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  // App bar đã hiển thị tên văn bản + nút back, nên breadcrumb của header
+  // desktop chỉ là chrome trùng lặp trên khổ điện thoại.
+  .phvbContainerMobile .detailHeaderArea {
+    display: none;
+  }
+
+  .detailTabs {
+    // Pin ở đỉnh vùng cuộn để nội dung luôn trôi BÊN DƯỚI thanh tab.
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    // .detailMain hết overflow:hidden nên nền tab phải tự đục và tự bo góc
+    // trên, nếu không nội dung sẽ nhìn xuyên qua khi cuộn.
+    background-color: $surface-card;
+    border-top-left-radius: $radius-card;
+    border-top-right-radius: $radius-card;
+    padding: 0 $space-3;
+
+    // 4 nhãn tiếng Việt không vừa một dòng trên khổ điện thoại.
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .detailTab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: $btn-min-height-touch;
+  }
+
+  // .detailStepperArea không còn override ở đây: PhvbMagDetail không render
+  // stepper dưới 768px nữa.
+
+  .detailInfoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-3;
+  }
+}
+
+.mobileDetailScroll {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding: $space-3 $mobile-gutter $space-4;
+}
+
+.mobileActionFooter {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  // Không có bottom nav ở màn chi tiết nên footer tự tránh home indicator.
+  padding: $space-3 $mobile-gutter calc(#{$space-3} + env(safe-area-inset-bottom, 0px));
+  background-color: $surface-card;
+  border-top: 1px solid $border-color;
+  box-shadow: 0 -4px 16px rgba(123, 76, 44, 0.06);
+  z-index: $z-sticky;
+
+  > * {
+    min-height: $btn-min-height-touch;
+  }
+}
+
+.mobileActionFooterRow {
+  display: flex;
+  gap: $space-2;
+
+  > * {
+    flex: 1 1 0;
+    min-height: $btn-min-height-touch;
+  }
+}
+
+.mobileInviteBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+  padding: $space-3;
+  border: 1px solid $color-warning;
+  border-radius: $radius-card;
+  background-color: $color-warning-bg;
+
+  strong {
+    display: block;
+    font-size: $font-size-sm2;
+    font-weight: $font-weight-bold;
+    color: $primary-color;
+  }
+
+  span {
+    display: block;
+    margin-top: 2px;
+    font-size: $font-size-2xs;
+    color: $text-main;
+  }
+}
+
+// -------------------------------------------------------------
+// DIALOG + TOUCH TARGET
+// -------------------------------------------------------------
+
+@include on-mobile {
+  .modalOverlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  // .modalContent cố định 760px — trên điện thoại cho chiếm toàn khung.
+  .modalContent,
+  .modalContentLg {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  // Đồng bộ idiom với .modalOverlay (đã dính đáy) thay vì canh giữa.
+  .confirmDialogOverlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .confirmDialogContent {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 92dvh;
+    border-radius: $radius-card $radius-card 0 0;
+  }
+
+  .confirmDialogBody {
+    padding: $space-4 $mobile-gutter 0;
+  }
+
+  .confirmDialogActions {
+    padding: $space-3 $mobile-gutter calc(#{$space-3} + env(safe-area-inset-bottom, 0px));
+  }
+
+  // Specificity 0-2-0 để thắng `.confirmDialogActions .btnSecondary{36px}` ở
+  // _PhvbMag.detail.scss — rule .btnSecondary trần (0-1-0) thua bất kể thứ tự
+  // import. Hai nút chia đôi bề ngang, không cần xếp dọc như dialog Ban hành.
+  .confirmDialogActions .btnSecondary,
+  .confirmDialogActions .btnSubmit,
+  .confirmDialogActions .detailActionApprove,
+  .confirmDialogActions .detailActionEdit,
+  .confirmDialogActions .detailActionReject {
+    flex: 1 1 0;
+    min-height: $btn-min-height-touch;
+  }
+
+  .detailCommentAttachBtn {
+    min-height: $btn-min-height-touch;
+  }
+
+  .detailCommentFileRemoveBtn {
+    width: $btn-min-height-touch;
+    height: $btn-min-height-touch;
+  }
+
+  // iOS Safari tự phóng to trang khi focus input có font-size < 16px.
+  .workflowActionDialogTextarea {
+    font-size: 16px;
+    resize: none;
+  }
+
+  // .banHanhNotifyModal đi qua contentClassName nên KHÔNG dính rule
+  // .modalContent ở trên — phải lặp lại xử lý sheet cho riêng nó.
+  .banHanhNotifyModal {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+
+  // Vùng cuộn DUY NHẤT của sheet; header/footer flex 0 0 auto đứng yên.
+  .banHanhNotifyBody {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: $space-4 $mobile-gutter $space-2;
+  }
+
+  // Bỏ cuộn lồng: hai ô này tự cuộn bên trong một sheet vốn đã cuộn.
+  .banHanhNotifyHtmlEditor,
+  .banHanhNotifyMainDocList {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .banHanhNotifyHtmlEditor {
+    min-height: 0;
+  }
+
+  // Hành động chính chiếm trọn 1 hàng, Từ chối + Thoát chia đôi hàng dưới.
+  // Thứ tự render trên mobile đã là send → return → cancel nên wrap tự rơi đúng
+  // hàng, không cần order/row-reverse (vốn làm lệch thứ tự focus).
+  .banHanhNotifyActions {
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: stretch;
+    padding: $space-3 $mobile-gutter calc(#{$space-3} + env(safe-area-inset-bottom, 0px));
+  }
+
+  .banHanhNotifySendBtn {
+    flex: 1 1 100%;
+  }
+
+  // flex-basis 0 để hai nút chia đều bất kể độ dài nhãn; khi không có nút Từ
+  // chối thì Thoát tự chiếm trọn hàng.
+  .banHanhNotifyCancelBtn,
+  .banHanhNotifyReturnBtn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .banHanhNotifyCancelBtn,
+  .banHanhNotifyReturnBtn,
+  .banHanhNotifySendBtn {
+    min-height: $btn-min-height-touch;
+  }
+
+  .banHanhNotifyModal .formInput {
+    min-height: $btn-min-height-touch;
+  }
+
+  // .previewOverlayContent cũng đi qua contentClassName nên KHÔNG dính rule
+  // .modalContent ở trên — cùng cái bẫy như .banHanhNotifyModal.
+  .previewOverlayContent {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    // Sheet full-bleed không hợp animation phóng to; bỏ transform để nó không
+    // thành containing block cho position:fixed của sheet overflow bên trong.
+    animation: none;
+  }
+
+  .previewHeader {
+    gap: $space-2;
+    padding: 0 $mobile-gutter;
+  }
+
+  .previewIconButton {
+    width: $btn-min-height-touch;
+    height: $btn-min-height-touch;
+    flex-shrink: 0;
+  }
+
+  // Trên mobile h3 nằm thẳng trong .previewHeader — không còn wrapper
+  // .previewIdentity lẫn div.ms-TooltipHost — nên NÓ là flex item co giãn.
+  // Thiếu min-width:0 ở đây thì ellipsis vô dụng và tiêu đề đẩy nút ra ngoài.
+  .previewTitle {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+  }
+
+  .previewNav {
+    flex-shrink: 0;
+  }
+
+  // Nhường từng pixel ngang cho tài liệu.
+  .previewBody {
+    padding: 0;
+  }
+
+  .previewLoading {
+    inset: 0;
+  }
+
+  .previewFrame {
+    border: none;
+    border-radius: 0;
+  }
+
+  .formRowTwoCol {
+    grid-template-columns: 1fr;
+  }
+
+  // Ngưỡng touch target cho control tương tác.
+  .btnSecondary,
+  .btnSubmit,
+  .btnHeaderOutline,
+  .btnHeaderPrimary {
+    min-height: $btn-min-height-touch;
+  }
+}

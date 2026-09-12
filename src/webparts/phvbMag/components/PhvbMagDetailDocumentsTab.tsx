@@ -6,6 +6,7 @@ import {
 } from '../config/PhvbMag.configuration';
 import type { IAttachmentLibraryItem } from '../models/PhvbMag.models';
 import type { DetailDocumentUploadKind } from '../hooks/usePhvbDetailDocuments';
+import { formatExecutionDateTime } from '../utils/PhvbMagDateTime.utils';
 import { DeleteFileIcon, UploadDocumentIcon } from './PhvbMagIcons';
 import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import styles from './PhvbMag.module.scss';
@@ -200,77 +201,74 @@ export function PhvbMagDetailDocumentsTab(props: IPhvbMagDetailDocumentsTabProps
         {files.length === 0 ? (
           <p className={styles.detailDocEmpty}>Không có file.</p>
         ) : (
-          <table className={styles.detailDocTable}>
-            <thead>
-              <tr>
-                {canManage ? (
-                  <th className={styles.detailDocCheckCol}>
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      disabled={isMutating}
-                      aria-label={`Chọn tất cả ${title}`}
-                      onChange={event => {
-                        if (event.target.checked) {
-                          setSelectedIds(new Set(files.map(file => file.id)));
-                        } else {
-                          setSelectedIds(new Set());
-                        }
-                      }}
-                    />
-                  </th>
-                ) : null}
-                <th className={styles.detailDocNameCol}>Tên file</th>
-                <th className={styles.detailDocFolder}>Thư mục</th>
-                <th className={styles.detailDocActionsCol} />
-              </tr>
-            </thead>
-            <tbody>
-              {files.map(file => (
-                <tr key={file.id}>
+          <div className={styles.detailDocTableWrap}>
+            <table className={styles.detailDocTable}>
+              <thead>
+                <tr>
                   {canManage ? (
-                    <td className={styles.detailDocCheckCol}>
+                    <th className={styles.detailDocCheckCol}>
                       <input
                         type="checkbox"
-                        checked={selectedIds.has(file.id)}
+                        checked={allSelected}
                         disabled={isMutating}
-                        aria-label={`Chọn file ${file.name}`}
+                        aria-label={`Chọn tất cả ${title}`}
                         onChange={event => {
-                          setSelectedIds(previous => toggleIdInSet(previous, file.id, event.target.checked));
+                          if (event.target.checked) {
+                            setSelectedIds(new Set(files.map(file => file.id)));
+                          } else {
+                            setSelectedIds(new Set());
+                          }
                         }}
                       />
-                    </td>
+                    </th>
                   ) : null}
-                  <td className={styles.detailDocNameCol} title={file.name}>
-                    <PhvbMagExternalLink href={file.fileUrl} className={styles.detailDocLink}>
-                      {file.name}
-                    </PhvbMagExternalLink>
-                  </td>
-                  <td className={styles.detailDocFolder} title={file.folderPath || '---'}>{file.folderPath || '---'}</td>
-                  <td className={`${styles.detailDocActions} ${styles.detailDocActionsCol}`}>
-                    {file.fileUrl ? (
-                      <PhvbMagExternalLink href={file.fileUrl} className={styles.detailDocLink}>
-                        Mở
-                      </PhvbMagExternalLink>
-                    ) : (
-                      '---'
-                    )}
-                    {canManage ? (
-                      <button
-                        type="button"
-                        className={styles.detailDocDeleteBtn}
-                        disabled={isMutating}
-                        aria-label={`Xóa file ${file.name}`}
-                        onClick={() => handleDeleteOne(file)}
-                      >
-                        <DeleteFileIcon />
-                      </button>
-                    ) : null}
-                  </td>
+                  <th className={styles.detailDocNameCol}>Tên file</th>
+                  <th className={styles.detailDocEditorCol}>Người chỉnh sửa</th>
+                  <th className={styles.detailDocModifiedCol}>Ngày chỉnh sửa</th>
+                  {canManage ? <th className={styles.detailDocActionsCol} /> : null}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {files.map(file => (
+                  <tr key={file.id}>
+                    {canManage ? (
+                      <td className={styles.detailDocCheckCol}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(file.id)}
+                          disabled={isMutating}
+                          aria-label={`Chọn file ${file.name}`}
+                          onChange={event => {
+                            setSelectedIds(previous => toggleIdInSet(previous, file.id, event.target.checked));
+                          }}
+                        />
+                      </td>
+                    ) : null}
+                    <td className={styles.detailDocNameCol} title={file.name}>
+                      <PhvbMagExternalLink href={file.fileUrl} className={styles.detailDocLink}>
+                        {file.name}
+                      </PhvbMagExternalLink>
+                    </td>
+                    <td className={styles.detailDocEditorCol} title={file.editor || '---'}>{file.editor || '---'}</td>
+                    <td className={styles.detailDocModifiedCol}>{formatExecutionDateTime(file.modified) || '---'}</td>
+                    {canManage ? (
+                      <td className={`${styles.detailDocActions} ${styles.detailDocActionsCol}`}>
+                        <button
+                          type="button"
+                          className={styles.detailDocDeleteBtn}
+                          disabled={isMutating}
+                          aria-label={`Xóa file ${file.name}`}
+                          onClick={() => handleDeleteOne(file)}
+                        >
+                          <DeleteFileIcon />
+                        </button>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     );

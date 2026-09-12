@@ -4,8 +4,10 @@ import type { IPhvbSiteContext } from '../models/PhvbMag.models';
 import { usePhvbGuide } from '../hooks/usePhvbGuide';
 import { CreateActionIcon, DownloadIcon } from './PhvbMagIcons';
 import { PhvbMagEmptyState } from './PhvbMagEmptyState';
+import { PhvbMagExternalLink } from './PhvbMagExternalLink';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import { PhvbMagPageHeader } from './PhvbMagPageHeader';
+import { PhvbMagPreviewFrame } from './PhvbMagPreviewFrame';
 import styles from './PhvbMag.module.scss';
 
 interface IPhvbMagGuideViewProps {
@@ -18,7 +20,6 @@ interface IPhvbMagGuideViewProps {
 export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElement {
   const { siteContext, canCreate, onOpenTemplate, onOpenCreate } = props;
   const guide = usePhvbGuide(siteContext);
-  const iframeTitle = 'Hướng dẫn';
 
   return (
     <div className={styles.recentView}>
@@ -50,11 +51,19 @@ export function PhvbMagGuideView(props: IPhvbMagGuideViewProps): React.ReactElem
           <PhvbMagEmptyState message={guide.errorMessage} role="alert" />
         ) : null}
 
+        {/* Cùng khung xem trước với thư viện: skeleton khi tải, panel lỗi kèm
+            lối thoát khi nhúng chết. Sổ tay chỉ có một URL nên không có
+            fallbackUrl để thử lần hai. */}
         {!guide.isLoading && !guide.errorMessage && guide.pdfUrl ? (
-          <iframe
-            className={styles.guidePdfFrame}
-            src={guide.pdfUrl}
-            title={iframeTitle}
+          <PhvbMagPreviewFrame
+            attemptUrl={guide.pdfUrl}
+            title="Xem trước sổ tay hướng dẫn"
+            errorMessage="Không hiển thị được sổ tay hướng dẫn."
+            errorActions={(
+              <PhvbMagExternalLink href={guide.pdfUrl} className={styles.btnSecondary}>
+                Mở trong tab mới
+              </PhvbMagExternalLink>
+            )}
           />
         ) : null}
       </div>

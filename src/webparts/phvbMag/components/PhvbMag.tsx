@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { ALL_FILTER_VALUE, cloneDefaultRequestForm, PHVB_ROLES, resolveIssuanceLibraryTitle } from '../config/PhvbMag.configuration';
+import { ALL_FILTER_VALUE, cloneDefaultRequestForm, PHVB_ROLES, resolveIssuanceLibraryTitle, TAB_LABELS } from '../config/PhvbMag.configuration';
 import { usePhvbBanHanh } from '../hooks/usePhvbBanHanh';
 import { usePhvbCapSo } from '../hooks/usePhvbCapSo';
 import { usePhvbComments } from '../hooks/usePhvbComments';
@@ -44,6 +44,10 @@ import { PhvbMagDetail } from './PhvbMagDetail';
 import { PhvbMagLoadingOverlay } from './PhvbMagLoadingOverlay';
 import { PhvbMagSidebar } from './PhvbMagSidebar';
 import { PhvbMagTable } from './PhvbMagTable';
+import { usePhvbIsMobile } from '../hooks/usePhvbViewport';
+import { PhvbMagMobileAppBar } from './mobile/PhvbMagMobileAppBar';
+import { PhvbMagMobileBottomNav } from './mobile/PhvbMagMobileBottomNav';
+import { PhvbMagMobileRequestList } from './mobile/PhvbMagMobileRequestList';
 import { PhvbMagTemplateModal } from './PhvbMagTemplateModal';
 import { PhvbMagToolbar } from './PhvbMagToolbar';
 import { PhvbMagWorkflowParticipantModal } from './PhvbMagWorkflowParticipantModal';
@@ -212,9 +216,16 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
   const canAccessQLVanBan = canAccessQLVanBanTab(roles, userEmail);
   const canAccessDmvlFeature = canAccessDmvl(userDisplayName, roles, userEmail);
   const canActOnBehalfOfParticipant = hasRole(PHVB_ROLES.ADMIN);
+
+  // Phải chuẩn hoá trước mọi cổng quyền: so khớp thẳng trên `tabName` thô sẽ
+  // bỏ lọt URL sai hoa thường (#/tab/capso) hoặc tab không tồn tại.
+  const resolvedTabName = useMemo((): TabType => {
+    return resolveTabFromPathname(location.pathname, tabName, activeTab);
+  }, [activeTab, location.pathname, tabName]);
+
   const isProtectedRouteBlocked =
-    (tabName === 'CapSo' && (isRolesLoading || !canAccessCapSo)) ||
-    (tabName === 'QLVanBan' && (isRolesLoading || !canAccessQLVanBan));
+    (resolvedTabName === 'CapSo' && (isRolesLoading || !canAccessCapSo)) ||
+    (resolvedTabName === 'QLVanBan' && (isRolesLoading || !canAccessQLVanBan));
 
   const {
     data: detailData,
@@ -674,28 +685,25 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     }
 
     const isUnauthorizedTab =
-      (tabName === 'CapSo' && !canAccessCapSo) ||
-      (tabName === 'QLVanBan' && !canAccessQLVanBan);
+      (resolvedTabName === 'CapSo' && !canAccessCapSo) ||
+      (resolvedTabName === 'QLVanBan' && !canAccessQLVanBan);
 
     if (isUnauthorizedTab) {
       navigate('/tab/ViecCanLam', { replace: true });
       return;
     }
 
-    const routeTab = resolveTabFromPathname(location.pathname, tabName, activeTab);
-
-    if (routeTab !== activeTab) {
-      setActiveTab(routeTab);
+    if (resolvedTabName !== activeTab) {
+      setActiveTab(resolvedTabName);
     }
   }, [
-    tabName,
+    resolvedTabName,
     activeTab,
     setActiveTab,
     isRolesLoading,
     canAccessCapSo,
     canAccessQLVanBan,
-    navigate,
-    location.pathname
+    navigate
   ]);
 
   const processedItems = useMemo(() => selectFilteredItems(items, {
@@ -757,11 +765,16 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     return true;
   };
 
-  const resolvedTabName = useMemo((): TabType => {
-    return resolveTabFromPathname(location.pathname, tabName, activeTab);
-  }, [activeTab, location.pathname, tabName]);
   const isLibraryTab = resolvedTabName === 'ThuVienTaiLieu';
   const isNarrowViewport = usePhvbNarrowViewport();
+  const isMobile = usePhvbIsMobile();
+  const [isCommentSheetOpen, setIsCommentSheetOpen] = useState<boolean>(false);
+
+  // Rời màn chi tiết (hoặc đổi sang văn bản khác) thì đóng sheet — nếu không,
+  // lần vào chi tiết kế tiếp sẽ mở sẵn sheet của văn bản trước.
+  useEffect(() => {
+    setIsCommentSheetOpen(false);
+  }, [idYeuCau]);
   const isGuideTab = resolvedTabName === 'HuongDan';
   const isRecentTab = resolvedTabName === 'MoiBanHanh';
   const isSavedTab = resolvedTabName === 'DaLuu';
@@ -782,11 +795,25 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     <PhvbRecentViewsProvider documentContext={documentContext} activeTab={resolvedTabName}>
     <PhvbSavedDocumentsProvider documentContext={documentContext} activeTab={resolvedTabName}>
     <PhvbDocumentPreviewProvider documentContext={documentContext}>
-    <div className={[styles.phvbContainer, isDetailRoute ? styles.phvbContainerDetail : ''].filter(Boolean).join(' ')}>
+    <div className={[
+      styles.phvbContainer,
+      isDetailRoute ? styles.phvbContainerDetail : '',
+      isMobile ? styles.phvbContainerMobile : ''
+    ].filter(Boolean).join(' ')}>
       <PhvbMagLibrarySidebarAutoCollapseSync
         isLibraryTab={isLibraryTab}
         onPreviewOpenChange={handleLibraryPreviewOpenChange}
       />
+      {isMobile ? (
+        <PhvbMagMobileAppBar
+          title={isDetailRoute ? (detailData?.release.Tenvanban || 'Chi tiết văn bản') : TAB_LABELS[resolvedTabName]}
+          onBack={isDetailRoute ? () => navigate(`/tab/${resolvedTabName}`) : undefined}
+          onOpenComments={isDetailRoute && detailData ? () => setIsCommentSheetOpen(true) : undefined}
+          commentCount={detailData ? detailData.comments.length + detailData.history.length : 0}
+        />
+      ) : null}
+
+      {!isMobile ? (
       <PhvbMagSidebar
         activeTab={resolvedTabName}
         counts={counts}
@@ -807,6 +834,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
         showCapSoTab={canAccessCapSo}
         showQLVanBanTab={canAccessQLVanBan}
       />
+      ) : null}
 
       <main
         className={[
@@ -927,6 +955,8 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
                 dmvlResumeErrorMessage={!isDmvlNotifyOpen ? dmvlErrorMessage : undefined}
                 onOpenResumeDmvlBanHanh={handleOpenResumeDmvlBanHanh}
                 onDuplicate={handleDuplicateRequest}
+                isCommentSheetOpen={isCommentSheetOpen}
+                onCloseCommentSheet={() => setIsCommentSheetOpen(false)}
               />
             )}
             <PhvbMagWorkflowParticipantModal
@@ -959,29 +989,51 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
           <PhvbMagRecentViewsView documentContext={documentContext} />
         ) : (
           <>
-            <PhvbMagToolbar
-              activeTab={activeTab}
-              canCreate={Boolean(currentWebUrl || siteCollectionUrl || sourceSiteUrl)}
-              canAccessDmvl={canAccessDmvlFeature}
-              onOpenCreate={() => navigate(`/tab/${activeTab}/create`)}
-              onOpenDmvl={() => navigate(`/tab/${activeTab}/create-dmvl`)}
-              onOpenTemplate={() => setIsTemplateModalOpen(true)}
-            />
+            {isMobile ? (
+              <PhvbMagMobileRequestList
+                activeTab={activeTab}
+                items={processedItems}
+                isLoading={isLoading}
+                onSelectItem={handleSelectItem}
+                showStatusMetrics={activeTab === 'ViecCanLam'}
+              />
+            ) : (
+              <>
+                <PhvbMagToolbar
+                  activeTab={activeTab}
+                  canCreate={Boolean(currentWebUrl || siteCollectionUrl || sourceSiteUrl)}
+                  canAccessDmvl={canAccessDmvlFeature}
+                  onOpenCreate={() => navigate(`/tab/${activeTab}/create`)}
+                  onOpenDmvl={() => navigate(`/tab/${activeTab}/create-dmvl`)}
+                  onOpenTemplate={() => setIsTemplateModalOpen(true)}
+                />
 
-            <PhvbMagTable
-              activeTab={activeTab}
-              items={processedItems}
-              isLoading={isLoading}
-              searchQuery={searchQuery}
-              filterOptions={workflowFilters}
-              onSearchChange={setSearchQuery}
-              onSelectItem={handleSelectItem}
-              canDeleteItem={activeTab === 'QLVanBan' && canAccessQLVanBan}
-              onDeleteItem={handleDeleteVanBanRequest}
-            />
+                <PhvbMagTable
+                  activeTab={activeTab}
+                  items={processedItems}
+                  isLoading={isLoading}
+                  searchQuery={searchQuery}
+                  filterOptions={workflowFilters}
+                  onSearchChange={setSearchQuery}
+                  onSelectItem={handleSelectItem}
+                  canDeleteItem={activeTab === 'QLVanBan' && canAccessQLVanBan}
+                  onDeleteItem={handleDeleteVanBanRequest}
+                />
+              </>
+            )}
           </>
         )}
       </main>
+
+      {isMobile && !isDetailRoute ? (
+        <PhvbMagMobileBottomNav
+          activeTab={resolvedTabName}
+          counts={counts}
+          onSelectTab={handleSelectTab}
+          showCapSoTab={canAccessCapSo}
+          showQLVanBanTab={canAccessQLVanBan}
+        />
+      ) : null}
 
       <PhvbMagLoadingOverlay isOpen={isEditRoute && isDraftLoading} message="Đang tải bản nháp..." />
       <PhvbMagLoadingOverlay isOpen={isDuplicateRoute && isDuplicateLoading} message="Đang tải dữ liệu để tạo bản sao..." />

@@ -26,6 +26,8 @@ interface IPhvbMagDetailActivityFeedProps {
   onAddFiles: (files: FileList | File[]) => string | undefined;
   onRemoveFile: (fileIndex: number) => void;
   onSubmitComment: (text: string) => Promise<boolean>;
+  /** Bỏ header accordion khi container ngoài đã có tiêu đề (bottom sheet). */
+  chromeless?: boolean;
 }
 
 const ACTIVITY_FILTERS: ReadonlyArray<{ key: ActivityFilter; label: string }> = [
@@ -283,7 +285,8 @@ export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps
     errorMessage,
     onAddFiles,
     onRemoveFile,
-    onSubmitComment
+    onSubmitComment,
+    chromeless = false
   } = props;
   const [activeFilter, setActiveFilter] = useState<ActivityFilter>('all');
 
@@ -320,6 +323,7 @@ export function PhvbMagDetailActivityFeed(props: IPhvbMagDetailActivityFeedProps
 
   return (
     <PhvbMagSidebarAccordion
+      hideHeader={chromeless}
       title="Bình luận & nhật ký hoạt động"
       badge={totalCount}
       fillHeight

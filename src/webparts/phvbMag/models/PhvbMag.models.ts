@@ -76,6 +76,8 @@ export interface IAttachmentLibraryItem {
   name: string;
   fileUrl: string;
   modified?: string;
+  /** Editor/Title của list item — tên hiển thị người sửa gần nhất. */
+  editor?: string;
   folderPath?: string;
   isFormAttachment?: boolean;
 }

@@ -9,6 +9,12 @@ import {
   resolveHistoryRetryDelayMs,
   waitHistoryRetry
 } from '../utils/PhvbMagHistoryRetry.utils';
+import {
+  listStoredKeysByPrefix,
+  readStoredJson,
+  removeStoredKey,
+  writeStoredJson
+} from '../utils/PhvbMagStorage.utils';
 import { ToastService } from '../utils/ToastService';
 import { toRuntimeMessage } from './PhvbMag.error';
 import type { IPhvbLogContext, IPhvbSiteContext } from '../models/PhvbMag.models';
@@ -68,31 +74,29 @@ function getInFlightKey(item: IQueuedHistoryItem): string {
   ].join('|');
 }
 
-function readQueue(idYeuCau: string): IQueuedHistoryItem[] {
-  try {
-    const raw = window.sessionStorage.getItem(getQueueKey(idYeuCau));
-    if (!raw) {
-      return [];
-    }
+/**
+ * CHỦ ĐÍCH chỉ kiểm tra shape mảng, KHÔNG validate từng field: queue này tồn
+ * tại để không mất record audit. Item lệch shape sẽ fail ở bước ghi và nằm lại
+ * queue (fail-safe); validate chặt sẽ drop cả mảng — kể cả queue do bundle
+ * phiên bản trước ghi ra khi IQueuedHistoryItem được thêm field.
+ */
+function isQueuedHistoryItemArray(parsed: unknown): parsed is IQueuedHistoryItem[] {
+  return Array.isArray(parsed);
+}
 
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as IQueuedHistoryItem[]) : [];
-  } catch {
-    return [];
-  }
+function readQueue(idYeuCau: string): IQueuedHistoryItem[] {
+  return readStoredJson('session', getQueueKey(idYeuCau), isQueuedHistoryItemArray) ?? [];
 }
 
 function writeQueue(idYeuCau: string, items: IQueuedHistoryItem[]): void {
-  try {
-    if (items.length === 0) {
-      window.sessionStorage.removeItem(getQueueKey(idYeuCau));
-      return;
-    }
-
-    window.sessionStorage.setItem(getQueueKey(idYeuCau), JSON.stringify(items));
-  } catch {
-    // sessionStorage có thể bị chặn (private mode, quota...) — không chặn luồng chính.
+  // Mảng rỗng phải xoá key, không ghi "[]": key rác sẽ khiến
+  // drainAllHistoryQueues mãi tái phát hiện và không bao giờ thu hồi được.
+  if (items.length === 0) {
+    removeStoredKey('session', getQueueKey(idYeuCau));
+    return;
   }
+
+  writeStoredJson('session', getQueueKey(idYeuCau), items);
 }
 
 function buildPayload(
@@ -222,19 +226,18 @@ export async function drainHistoryQueue(context: IAppendHistoryContext, idYeuCau
 }
 
 export async function drainAllHistoryQueues(context: IAppendHistoryContext): Promise<void> {
+  // Snapshot key trước khi drain: drainHistoryQueue -> writeQueue sẽ xoá key
+  // trong lúc chạy, nên không được vừa duyệt storage vừa drain.
+  const keys = listStoredKeysByPrefix('session', HISTORY_QUEUE_KEY_PREFIX);
   const idYeuCauList: string[] = [];
 
-  try {
-    for (let index = 0; index < window.sessionStorage.length; index += 1) {
-      const key = window.sessionStorage.key(index);
-      const idYeuCau = key ? resolveQueueIdFromKey(key) : undefined;
+  for (let index = 0; index < keys.length; index += 1) {
+    const idYeuCau = resolveQueueIdFromKey(keys[index]);
 
-      if (idYeuCau) {
-        idYeuCauList.push(idYeuCau);
-      }
+    // Loại key đúng bằng prefix (idYeuCau rỗng).
+    if (idYeuCau) {
+      idYeuCauList.push(idYeuCau);
     }
-  } catch {
-    return;
   }
 
   for (let index = 0; index < idYeuCauList.length; index += 1) {

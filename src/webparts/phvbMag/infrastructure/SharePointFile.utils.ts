@@ -62,6 +62,22 @@ function isOfficeOnlineFile(fileName: string, fileRef: string): boolean {
   return Boolean(fromRef && OFFICE_ONLINE_EXTENSIONS.has(fromRef));
 }
 
+/**
+ * embed.aspx render được Word/PowerPoint/PDF/ảnh nhưng KHÔNG phục vụ workbook
+ * Excel — Excel phải đi đường Excel Online (Doc.aspx?action=embedview).
+ */
+const EXCEL_EXTENSIONS: ReadonlySet<string> = new Set(['xls', 'xlsx']);
+
+export function isExcelFile(fileName: string, fileRef: string): boolean {
+  const fromName = getFileExtension(fileName);
+  if (fromName && EXCEL_EXTENSIONS.has(fromName)) {
+    return true;
+  }
+
+  const fromRef = getFileExtension(fileRef.split('/').pop() || '');
+  return Boolean(fromRef && EXCEL_EXTENSIONS.has(fromRef));
+}
+
 function appendWebViewQuery(fileUrl: string): string {
   if (!fileUrl) {
     return '';

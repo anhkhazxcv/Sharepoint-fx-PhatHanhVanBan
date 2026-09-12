@@ -14,6 +14,12 @@ interface IPhvbMagSidebarAccordionProps {
   fillHeight?: boolean;
   compact?: boolean;
   footer?: React.ReactNode;
+  /**
+   * Bỏ hẳn thanh header (tiêu đề + badge + nút collapse) và luôn mở. Dùng khi
+   * container bên ngoài đã có tiêu đề riêng — vd. bottom sheet trên mobile,
+   * nơi header accordion vừa trùng tiêu đề vừa để lại nút collapse vô nghĩa.
+   */
+  hideHeader?: boolean;
   children: React.ReactNode;
 }
 
@@ -29,16 +35,19 @@ export function PhvbMagSidebarAccordion(props: IPhvbMagSidebarAccordionProps): R
     fillHeight = false,
     compact = false,
     footer,
+    hideHeader = false,
     children
   } = props;
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  // hideHeader thì không còn cách nào mở lại, nên buộc luôn mở.
+  const isExpanded = hideHeader || (isOpen && !compact);
   const panelId = `sidebar-accordion-${title.replace(/\s+/g, '-').toLowerCase()}`;
 
   const sectionClassName = [
     styles.detailSidebarAccordion,
     fillHeight ? styles.detailSidebarAccordionFill : '',
     compact ? styles.detailSidebarAccordionCompact : '',
-    !isOpen || compact ? styles.detailSidebarAccordionCollapsed : '',
+    !isExpanded ? styles.detailSidebarAccordionCollapsed : '',
     className || ''
   ].filter(Boolean).join(' ');
 
@@ -48,6 +57,7 @@ export function PhvbMagSidebarAccordion(props: IPhvbMagSidebarAccordionProps): R
 
   return (
     <section className={sectionClassName}>
+      {!hideHeader ? (
       <button
         type="button"
         className={styles.detailSidebarAccordionHeader}
@@ -81,8 +91,9 @@ export function PhvbMagSidebarAccordion(props: IPhvbMagSidebarAccordionProps): R
           />
         </span>
       </button>
+      ) : null}
 
-      {isOpen && !compact ? (
+      {isExpanded ? (
         <>
           <div
             id={panelId}
