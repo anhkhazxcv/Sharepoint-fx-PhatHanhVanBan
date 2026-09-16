@@ -1,0 +1,1617 @@
+{
+  "name": "c2c4360a-b4e1-4f7a-9c11-08587b410001",
+  "id": "/providers/Microsoft.Flow/flows/c2c4360a-b4e1-4f7a-9c11-08587b410001",
+  "type": "Microsoft.Flow/flows",
+  "properties": {
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+    "displayName": "PHVB Ban hành HTTP 202",
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "10.0.0.1",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Http",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "siteUrl": {
+                  "type": "string"
+                },
+                "itemId": {
+                  "type": "integer"
+                },
+                "endPointSendMail": {
+                  "type": "string"
+                },
+                "endPointShortUrl": {
+                  "type": "string"
+                },
+                "webPartPageUrl": {
+                  "type": "string"
+                },
+                "roleGroupID": {
+                  "type": "string"
+                },
+                "nguoiThucHien": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "siteUrl",
+                "itemId",
+                "endPointSendMail",
+                "endPointShortUrl",
+                "webPartPageUrl",
+                "roleGroupID",
+                "nguoiThucHien"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Respond_Accepted": {
+          "type": "Response",
+          "kind": "Http",
+          "inputs": {
+            "statusCode": 202,
+            "body": {
+              "accepted": true,
+              "itemId": "@triggerBody()?['itemId']"
+            }
+          },
+          "runAfter": {}
+        },
+        "Init_issuanceCurrentPath": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "issuanceCurrentPath",
+                "type": "string",
+                "value": ""
+              }
+            ]
+          },
+          "runAfter": {
+            "Respond_Accepted": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Condition_Missing_Required": {
+          "type": "If",
+          "expression": "@or(empty(trim(string(triggerBody()?['siteUrl']))),empty(string(triggerBody()?['itemId'])),empty(trim(string(triggerBody()?['endPointSendMail']))),empty(trim(string(triggerBody()?['endPointShortUrl']))),empty(trim(string(triggerBody()?['webPartPageUrl']))),empty(trim(string(triggerBody()?['roleGroupID']))),empty(trim(string(triggerBody()?['nguoiThucHien']))))",
+          "actions": {
+            "Terminate_Missing_Required": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "Terminate_Missing_Required",
+                  "message": "Thiếu field bắt buộc trên body: siteUrl, itemId, endPointSendMail, endPointShortUrl, webPartPageUrl, roleGroupID, nguoiThucHien."
+                }
+              },
+              "runAfter": {}
+            }
+          },
+          "else": {
+            "actions": {
+              "Get_Release_Item": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "host": {
+                    "connectionName": "shared_sharepointonline",
+                    "operationId": "HttpRequest",
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                  },
+                  "parameters": {
+                    "dataset": "@triggerBody()?['siteUrl']",
+                    "parameters/method": "GET",
+                    "parameters/uri": "@concat('_api/web/lists/getByTitle(''InDoc_Release'')/items(', string(triggerBody()?['itemId']), ')?$select=Id,Title,Tenvanban,NgayPhatHanh,HieuLucTu,HieuLucDen,NoiLuuBanCung,TomTatNoiDung,NguoiTao,EmailNguoiTao,KhoaPhongNguoiTao,IdYeuCau,PheDuyet,LienHe,StatusApproved,LoaiYeuCau,Created,ThamDinh,NguoiGopY,SoVanBan,TenVanBan_ENG,DC_CapSo_Name,DC_CapSo_Email,Loai_SLA,Date_GopY,Date_ThamDinh,Date_PheDuyet,ThuMucBanHanh,IDFolderOld,IdVanBanChinh,GhiChuChoThamDinh,IsSendMailNotify,EmailNhanBanHanh,SubjectBanHanh,BodyEmail')",
+                    "parameters/headers": {
+                      "Accept": "application/json;odata=nometadata",
+                      "Content-Type": "application/json;odata=nometadata"
+                    }
+                  },
+                  "authentication": "@parameters('$authentication')"
+                },
+                "runAfter": {}
+              },
+              "Condition_Missing_IdYeuCau": {
+                "type": "If",
+                "expression": "@empty(trim(string(body('Get_Release_Item')?['IdYeuCau'])))",
+                "actions": {
+                  "Terminate_Missing_IdYeuCau": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Failed",
+                      "runError": {
+                        "code": "Terminate_Missing_IdYeuCau",
+                        "message": "Item InDoc_Release thiếu IdYeuCau."
+                      }
+                    },
+                    "runAfter": {}
+                  }
+                },
+                "else": {
+                  "actions": {
+                    "Condition_Is_Full_Issuance": {
+                      "type": "If",
+                      "expression": "@or(equals(trim(string(body('Get_Release_Item')?['LoaiYeuCau'])), 'Tạo mới'),equals(trim(string(body('Get_Release_Item')?['LoaiYeuCau'])), 'Điều chỉnh'))",
+                      "actions": {
+                        "Scope_BanHanh": {
+                          "type": "Scope",
+                          "actions": {
+                            "Get_Attachment_Root": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "host": {
+                                  "connectionName": "shared_sharepointonline",
+                                  "operationId": "HttpRequest",
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                },
+                                "parameters": {
+                                  "dataset": "@triggerBody()?['siteUrl']",
+                                  "parameters/method": "GET",
+                                  "parameters/uri": "_api/web/lists/getByTitle('VanBanGopYThamDinh')/RootFolder?$select=ServerRelativeUrl",
+                                  "parameters/headers": {
+                                    "Accept": "application/json;odata=nometadata",
+                                    "Content-Type": "application/json;odata=nometadata"
+                                  }
+                                },
+                                "authentication": "@parameters('$authentication')"
+                              },
+                              "runAfter": {}
+                            },
+                            "Get_Issuance_Root": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "host": {
+                                  "connectionName": "shared_sharepointonline",
+                                  "operationId": "HttpRequest",
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                },
+                                "parameters": {
+                                  "dataset": "@triggerBody()?['siteUrl']",
+                                  "parameters/method": "GET",
+                                  "parameters/uri": "_api/web/lists/getByTitle('VanBanBanHanh_Ver02')/RootFolder?$select=ServerRelativeUrl",
+                                  "parameters/headers": {
+                                    "Accept": "application/json;odata=nometadata",
+                                    "Content-Type": "application/json;odata=nometadata"
+                                  }
+                                },
+                                "authentication": "@parameters('$authentication')"
+                              },
+                              "runAfter": {
+                                "Get_Attachment_Root": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "Compose_Sanitized_Tenvanban": {
+                              "type": "Compose",
+                              "inputs": "@trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(trim(string(body('Get_Release_Item')?['Tenvanban'])), '\"', ''), '*', ''), ':', ''), '<', ''), '>', ''), '?', ''), '/', ''), '\\\\', ''), '|', ''), '#', ''), '%', ''), '  ', ' '), '  ', ' '))",
+                              "runAfter": {
+                                "Get_Issuance_Root": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "Compose_Sanitized_IdYeuCau": {
+                              "type": "Compose",
+                              "inputs": "@trim(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(trim(string(body('Get_Release_Item')?['IdYeuCau'])), '\"', ''), '*', ''), ':', ''), '<', ''), '>', ''), '?', ''), '/', ''), '\\\\', ''), '|', ''), '#', ''), '%', ''), '  ', ' '), '  ', ' '))",
+                              "runAfter": {
+                                "Compose_Sanitized_Tenvanban": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "Compose_Source_Folder": {
+                              "type": "Compose",
+                              "inputs": "@concat(trim(body('Get_Attachment_Root')?['ServerRelativeUrl']), '/', outputs('Compose_Sanitized_IdYeuCau'))",
+                              "runAfter": {
+                                "Compose_Sanitized_IdYeuCau": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "Compose_Target_Relative": {
+                              "type": "Compose",
+                              "inputs": "@trim(concat(trim(string(body('Get_Release_Item')?['ThuMucBanHanh'])), '/', outputs('Compose_Sanitized_Tenvanban')))",
+                              "runAfter": {
+                                "Compose_Source_Folder": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "Compose_Folder_Segments": {
+                              "type": "Compose",
+                              "inputs": "@split(replace(replace(outputs('Compose_Target_Relative'), '\\\\', '/'), '//', '/'), '/')",
+                              "runAfter": {
+                                "Compose_Target_Relative": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "Set_issuanceCurrentPath_Root": {
+                              "type": "SetVariable",
+                              "inputs": {
+                                "name": "issuanceCurrentPath",
+                                "value": "@trim(body('Get_Issuance_Root')?['ServerRelativeUrl'])"
+                              },
+                              "runAfter": {
+                                "Compose_Folder_Segments": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "Ensure_Target_Folder_Segments": {
+                              "type": "Foreach",
+                              "foreach": "@outputs('Compose_Folder_Segments')",
+                              "actions": {
+                                "Skip_Empty_Segment": {
+                                  "type": "If",
+                                  "expression": "@empty(trim(items('Ensure_Target_Folder_Segments')))",
+                                  "actions": {},
+                                  "else": {
+                                    "actions": {
+                                      "Compose_Next_Folder_Path": {
+                                        "type": "Compose",
+                                        "inputs": "@concat(variables('issuanceCurrentPath'), '/', items('Ensure_Target_Folder_Segments'))",
+                                        "runAfter": {}
+                                      },
+                                      "Get_Folder_Segment": {
+                                        "type": "OpenApiConnection",
+                                        "inputs": {
+                                          "host": {
+                                            "connectionName": "shared_sharepointonline",
+                                            "operationId": "HttpRequest",
+                                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                          },
+                                          "parameters": {
+                                            "dataset": "@triggerBody()?['siteUrl']",
+                                            "parameters/method": "GET",
+                                            "parameters/uri": "@concat('_api/web/GetFolderByServerRelativeUrl(@folderPath)?@folderPath=''',encodeUriComponent(outputs('Compose_Next_Folder_Path')),'''')",
+                                            "parameters/headers": {
+                                              "Accept": "application/json;odata=nometadata",
+                                              "Content-Type": "application/json;odata=nometadata"
+                                            }
+                                          },
+                                          "authentication": "@parameters('$authentication')"
+                                        },
+                                        "runAfter": {
+                                          "Compose_Next_Folder_Path": [
+                                            "Succeeded"
+                                          ]
+                                        }
+                                      },
+                                      "Create_Folder_Segment": {
+                                        "type": "OpenApiConnection",
+                                        "inputs": {
+                                          "host": {
+                                            "connectionName": "shared_sharepointonline",
+                                            "operationId": "HttpRequest",
+                                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                          },
+                                          "parameters": {
+                                            "dataset": "@triggerBody()?['siteUrl']",
+                                            "parameters/method": "POST",
+                                            "parameters/uri": "@concat('_api/web/GetFolderByServerRelativeUrl(@parentPath)/folders/add(@folderName)?@parentPath=''',encodeUriComponent(variables('issuanceCurrentPath')),'''&@folderName=''',encodeUriComponent(items('Ensure_Target_Folder_Segments')),'''')",
+                                            "parameters/headers": {
+                                              "Accept": "application/json;odata=nometadata",
+                                              "Content-Type": "application/json;odata=nometadata"
+                                            }
+                                          },
+                                          "authentication": "@parameters('$authentication')"
+                                        },
+                                        "runAfter": {
+                                          "Get_Folder_Segment": [
+                                            "Failed",
+                                            "TimedOut"
+                                          ]
+                                        }
+                                      },
+                                      "Set_issuanceCurrentPath": {
+                                        "type": "SetVariable",
+                                        "inputs": {
+                                          "name": "issuanceCurrentPath",
+                                          "value": "@outputs('Compose_Next_Folder_Path')"
+                                        },
+                                        "runAfter": {
+                                          "Get_Folder_Segment": [
+                                            "Succeeded",
+                                            "Failed",
+                                            "TimedOut",
+                                            "Skipped"
+                                          ],
+                                          "Create_Folder_Segment": [
+                                            "Succeeded",
+                                            "Failed",
+                                            "TimedOut",
+                                            "Skipped"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "runAfter": {}
+                                }
+                              },
+                              "runAfter": {
+                                "Set_issuanceCurrentPath_Root": [
+                                  "Succeeded"
+                                ]
+                              },
+                              "runtimeConfiguration": {
+                                "concurrency": {
+                                  "repetitions": 1
+                                }
+                              }
+                            },
+                            "Get_Existing_Target_Files": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "host": {
+                                  "connectionName": "shared_sharepointonline",
+                                  "operationId": "HttpRequest",
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                },
+                                "parameters": {
+                                  "dataset": "@triggerBody()?['siteUrl']",
+                                  "parameters/method": "GET",
+                                  "parameters/uri": "@concat('_api/web/lists/getByTitle(''VanBanBanHanh_Ver02'')/items?$select=Id,FileRef&$top=1&$filter=FSObjType eq 0 and startswith(FileRef,''', replace(concat(variables('issuanceCurrentPath'), '/'), '''', ''''''), ''')')",
+                                  "parameters/headers": {
+                                    "Accept": "application/json;odata=nometadata",
+                                    "Content-Type": "application/json;odata=nometadata"
+                                  }
+                                },
+                                "authentication": "@parameters('$authentication')"
+                              },
+                              "runAfter": {
+                                "Ensure_Target_Folder_Segments": [
+                                  "Succeeded"
+                                ]
+                              }
+                            },
+                            "Condition_Already_Published": {
+                              "type": "If",
+                              "expression": "@and(not(contains(string(body('Get_Release_Item')?['BodyEmail']), '{{LinkFile}}')),greater(length(body('Get_Existing_Target_Files')?['value']), 0))",
+                              "actions": {
+                                "Terminate_Already_Published": {
+                                  "type": "Terminate",
+                                  "inputs": {
+                                    "runStatus": "Succeeded",
+                                    "runError": {
+                                      "code": "Terminate_Already_Published",
+                                      "message": "Idempotent skip: BodyEmail no longer has {{LinkFile}} and target folder already has files."
+                                    }
+                                  },
+                                  "runAfter": {}
+                                }
+                              },
+                              "else": {
+                                "actions": {
+                                  "Get_Source_Files": {
+                                    "type": "OpenApiConnection",
+                                    "inputs": {
+                                      "host": {
+                                        "connectionName": "shared_sharepointonline",
+                                        "operationId": "HttpRequest",
+                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                      },
+                                      "parameters": {
+                                        "dataset": "@triggerBody()?['siteUrl']",
+                                        "parameters/method": "GET",
+                                        "parameters/uri": "@concat('_api/web/lists/getByTitle(''VanBanGopYThamDinh'')/items?$select=Id,FileLeafRef,FileRef,FileDirRef,FSObjType,IsBieuMau&$top=500&$orderby=Modified desc&$filter=FileDirRef eq ''', replace(outputs('Compose_Source_Folder'), '''', ''''''), ''' and FSObjType eq 0')",
+                                        "parameters/headers": {
+                                          "Accept": "application/json;odata=nometadata",
+                                          "Content-Type": "application/json;odata=nometadata"
+                                        }
+                                      },
+                                      "authentication": "@parameters('$authentication')"
+                                    },
+                                    "runAfter": {}
+                                  },
+                                  "Condition_No_Source_Files": {
+                                    "type": "If",
+                                    "expression": "@empty(body('Get_Source_Files')?['value'])",
+                                    "actions": {
+                                      "Terminate_No_Source_Files": {
+                                        "type": "Terminate",
+                                        "inputs": {
+                                          "runStatus": "Failed",
+                                          "runError": {
+                                            "code": "Terminate_No_Source_Files",
+                                            "message": "Không tìm thấy file đính kèm để chuyển sang thư viện ban hành."
+                                          }
+                                        },
+                                        "runAfter": {}
+                                      }
+                                    },
+                                    "else": {
+                                      "actions": {
+                                        "Filter_Main_Document": {
+                                          "type": "Query",
+                                          "inputs": {
+                                            "from": "@body('Get_Source_Files')?['value']",
+                                            "where": "@equals(string(item()?['Id']), string(body('Get_Release_Item')?['IdVanBanChinh']))"
+                                          },
+                                          "runAfter": {}
+                                        },
+                                        "Condition_No_Main_Document": {
+                                          "type": "If",
+                                          "expression": "@or(empty(body('Get_Release_Item')?['IdVanBanChinh']),empty(body('Filter_Main_Document')))",
+                                          "actions": {
+                                            "Terminate_No_Main_Document": {
+                                              "type": "Terminate",
+                                              "inputs": {
+                                                "runStatus": "Failed",
+                                                "runError": {
+                                                  "code": "Terminate_No_Main_Document",
+                                                  "message": "Văn bản chính (IdVanBanChinh) không thuộc file đính kèm của yêu cầu."
+                                                }
+                                              },
+                                              "runAfter": {}
+                                            }
+                                          },
+                                          "else": {
+                                            "actions": {
+                                              "Filter_Form_Files": {
+                                                "type": "Query",
+                                                "inputs": {
+                                                  "from": "@body('Get_Source_Files')?['value']",
+                                                  "where": "@equals(item()?['IsBieuMau'], true)"
+                                                },
+                                                "runAfter": {}
+                                              },
+                                              "Filter_Draft_Files": {
+                                                "type": "Query",
+                                                "inputs": {
+                                                  "from": "@body('Get_Source_Files')?['value']",
+                                                  "where": "@not(equals(item()?['IsBieuMau'], true))"
+                                                },
+                                                "runAfter": {
+                                                  "Filter_Form_Files": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Condition_Archive_DieuChinh": {
+                                                "type": "If",
+                                                "expression": "@and(equals(trim(string(body('Get_Release_Item')?['LoaiYeuCau'])), 'Điều chỉnh'),greater(int(coalesce(body('Get_Release_Item')?['IDFolderOld'], 0)), 0))",
+                                                "actions": {
+                                                  "Get_Old_Folder_Item": {
+                                                    "type": "OpenApiConnection",
+                                                    "inputs": {
+                                                      "host": {
+                                                        "connectionName": "shared_sharepointonline",
+                                                        "operationId": "HttpRequest",
+                                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                      },
+                                                      "parameters": {
+                                                        "dataset": "@triggerBody()?['siteUrl']",
+                                                        "parameters/method": "GET",
+                                                        "parameters/uri": "@concat('_api/web/lists/getByTitle(''VanBanBanHanh_Ver02'')/items(', string(body('Get_Release_Item')?['IDFolderOld']), ')?$select=Id,FileRef,FileLeafRef,FSObjType')",
+                                                        "parameters/headers": {
+                                                          "Accept": "application/json;odata=nometadata",
+                                                          "Content-Type": "application/json;odata=nometadata"
+                                                        }
+                                                      },
+                                                      "authentication": "@parameters('$authentication')"
+                                                    },
+                                                    "runAfter": {}
+                                                  },
+                                                  "Compose_Expired_Folder_Name": {
+                                                    "type": "Compose",
+                                                    "inputs": "@concat('Expired_', formatDateTime(convertFromUtc(utcNow(), 'SE Asia Standard Time'), 'yyyyMMdd'), '_', outputs('Compose_Sanitized_Tenvanban'))",
+                                                    "runAfter": {
+                                                      "Get_Old_Folder_Item": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  },
+                                                  "Compose_Expired_Folder_Path": {
+                                                    "type": "Compose",
+                                                    "inputs": "@concat(body('Get_Old_Folder_Item')?['FileRef'], '/', outputs('Compose_Expired_Folder_Name'))",
+                                                    "runAfter": {
+                                                      "Compose_Expired_Folder_Name": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  },
+                                                  "Create_Expired_Folder": {
+                                                    "type": "OpenApiConnection",
+                                                    "inputs": {
+                                                      "host": {
+                                                        "connectionName": "shared_sharepointonline",
+                                                        "operationId": "HttpRequest",
+                                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                      },
+                                                      "parameters": {
+                                                        "dataset": "@triggerBody()?['siteUrl']",
+                                                        "parameters/method": "POST",
+                                                        "parameters/uri": "@concat('_api/web/GetFolderByServerRelativeUrl(@parentPath)/folders/add(@folderName)?@parentPath=''',encodeUriComponent(body('Get_Old_Folder_Item')?['FileRef']),'''&@folderName=''',encodeUriComponent(outputs('Compose_Expired_Folder_Name')),'''')",
+                                                        "parameters/headers": {
+                                                          "Accept": "application/json;odata=nometadata",
+                                                          "Content-Type": "application/json;odata=nometadata"
+                                                        }
+                                                      },
+                                                      "authentication": "@parameters('$authentication')"
+                                                    },
+                                                    "runAfter": {
+                                                      "Compose_Expired_Folder_Path": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  },
+                                                  "List_Old_Files": {
+                                                    "type": "OpenApiConnection",
+                                                    "inputs": {
+                                                      "host": {
+                                                        "connectionName": "shared_sharepointonline",
+                                                        "operationId": "HttpRequest",
+                                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                      },
+                                                      "parameters": {
+                                                        "dataset": "@triggerBody()?['siteUrl']",
+                                                        "parameters/method": "GET",
+                                                        "parameters/uri": "@concat('_api/web/GetFolderByServerRelativeUrl(@folderPath)/Files?$select=Name,ServerRelativeUrl&@folderPath=''',encodeUriComponent(body('Get_Old_Folder_Item')?['FileRef']),'''')",
+                                                        "parameters/headers": {
+                                                          "Accept": "application/json;odata=nometadata",
+                                                          "Content-Type": "application/json;odata=nometadata"
+                                                        }
+                                                      },
+                                                      "authentication": "@parameters('$authentication')"
+                                                    },
+                                                    "runAfter": {
+                                                      "Create_Expired_Folder": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  },
+                                                  "List_Old_Folders": {
+                                                    "type": "OpenApiConnection",
+                                                    "inputs": {
+                                                      "host": {
+                                                        "connectionName": "shared_sharepointonline",
+                                                        "operationId": "HttpRequest",
+                                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                      },
+                                                      "parameters": {
+                                                        "dataset": "@triggerBody()?['siteUrl']",
+                                                        "parameters/method": "GET",
+                                                        "parameters/uri": "@concat('_api/web/GetFolderByServerRelativeUrl(@folderPath)/Folders?$select=Name,ServerRelativeUrl&@folderPath=''',encodeUriComponent(body('Get_Old_Folder_Item')?['FileRef']),'''')",
+                                                        "parameters/headers": {
+                                                          "Accept": "application/json;odata=nometadata",
+                                                          "Content-Type": "application/json;odata=nometadata"
+                                                        }
+                                                      },
+                                                      "authentication": "@parameters('$authentication')"
+                                                    },
+                                                    "runAfter": {
+                                                      "List_Old_Files": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  },
+                                                  "Move_Old_Files": {
+                                                    "type": "Foreach",
+                                                    "foreach": "@body('List_Old_Files')?['value']",
+                                                    "actions": {
+                                                      "Move_One_Old_File": {
+                                                        "type": "OpenApiConnection",
+                                                        "inputs": {
+                                                          "host": {
+                                                            "connectionName": "shared_sharepointonline",
+                                                            "operationId": "HttpRequest",
+                                                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                          },
+                                                          "parameters": {
+                                                            "dataset": "@triggerBody()?['siteUrl']",
+                                                            "parameters/method": "POST",
+                                                            "parameters/uri": "@concat('_api/web/GetFileByServerRelativeUrl(@fileUrl)/moveto(newurl=@newUrl,flags=1)?@fileUrl=''',encodeUriComponent(items('Move_Old_Files')?['ServerRelativeUrl']),'''&@newUrl=''',encodeUriComponent(concat(outputs('Compose_Expired_Folder_Path'), '/', items('Move_Old_Files')?['Name'])),'''')",
+                                                            "parameters/headers": {
+                                                              "Accept": "application/json;odata=nometadata",
+                                                              "Content-Type": "application/json;odata=nometadata"
+                                                            }
+                                                          },
+                                                          "authentication": "@parameters('$authentication')"
+                                                        },
+                                                        "runAfter": {}
+                                                      }
+                                                    },
+                                                    "runAfter": {
+                                                      "List_Old_Folders": [
+                                                        "Succeeded"
+                                                      ]
+                                                    },
+                                                    "runtimeConfiguration": {
+                                                      "concurrency": {
+                                                        "repetitions": 4
+                                                      }
+                                                    }
+                                                  },
+                                                  "Move_Old_SubFolders": {
+                                                    "type": "Foreach",
+                                                    "foreach": "@body('List_Old_Folders')?['value']",
+                                                    "actions": {
+                                                      "Skip_Forms_Or_Expired": {
+                                                        "type": "If",
+                                                        "expression": "@or(equals(items('Move_Old_SubFolders')?['Name'], 'Forms'),equals(items('Move_Old_SubFolders')?['Name'], outputs('Compose_Expired_Folder_Name')))",
+                                                        "actions": {},
+                                                        "else": {
+                                                          "actions": {
+                                                            "Move_One_Old_Folder": {
+                                                              "type": "OpenApiConnection",
+                                                              "inputs": {
+                                                                "host": {
+                                                                  "connectionName": "shared_sharepointonline",
+                                                                  "operationId": "HttpRequest",
+                                                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                                },
+                                                                "parameters": {
+                                                                  "dataset": "@triggerBody()?['siteUrl']",
+                                                                  "parameters/method": "POST",
+                                                                  "parameters/uri": "@concat('_api/web/GetFolderByServerRelativeUrl(@folderUrl)/moveto(newUrl=@newUrl)?@folderUrl=''',encodeUriComponent(items('Move_Old_SubFolders')?['ServerRelativeUrl']),'''&@newUrl=''',encodeUriComponent(concat(outputs('Compose_Expired_Folder_Path'), '/', items('Move_Old_SubFolders')?['Name'])),'''')",
+                                                                  "parameters/headers": {
+                                                                    "Accept": "application/json;odata=nometadata",
+                                                                    "Content-Type": "application/json;odata=nometadata"
+                                                                  }
+                                                                },
+                                                                "authentication": "@parameters('$authentication')"
+                                                              },
+                                                              "runAfter": {}
+                                                            }
+                                                          }
+                                                        },
+                                                        "runAfter": {}
+                                                      }
+                                                    },
+                                                    "runAfter": {
+                                                      "Move_Old_Files": [
+                                                        "Succeeded"
+                                                      ]
+                                                    },
+                                                    "runtimeConfiguration": {
+                                                      "concurrency": {
+                                                        "repetitions": 1
+                                                      }
+                                                    }
+                                                  },
+                                                  "List_Expired_Files": {
+                                                    "type": "OpenApiConnection",
+                                                    "inputs": {
+                                                      "host": {
+                                                        "connectionName": "shared_sharepointonline",
+                                                        "operationId": "HttpRequest",
+                                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                      },
+                                                      "parameters": {
+                                                        "dataset": "@triggerBody()?['siteUrl']",
+                                                        "parameters/method": "GET",
+                                                        "parameters/uri": "@concat('_api/web/GetFolderByServerRelativeUrl(@folderPath)/Files?$select=Name,ServerRelativeUrl&@folderPath=''',encodeUriComponent(outputs('Compose_Expired_Folder_Path')),'''')",
+                                                        "parameters/headers": {
+                                                          "Accept": "application/json;odata=nometadata",
+                                                          "Content-Type": "application/json;odata=nometadata"
+                                                        }
+                                                      },
+                                                      "authentication": "@parameters('$authentication')"
+                                                    },
+                                                    "runAfter": {
+                                                      "Move_Old_SubFolders": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  },
+                                                  "Stamp_Expired_Files": {
+                                                    "type": "Foreach",
+                                                    "foreach": "@body('List_Expired_Files')?['value']",
+                                                    "actions": {
+                                                      "Get_Expired_File_Item": {
+                                                        "type": "OpenApiConnection",
+                                                        "inputs": {
+                                                          "host": {
+                                                            "connectionName": "shared_sharepointonline",
+                                                            "operationId": "HttpRequest",
+                                                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                          },
+                                                          "parameters": {
+                                                            "dataset": "@triggerBody()?['siteUrl']",
+                                                            "parameters/method": "GET",
+                                                            "parameters/uri": "@concat('_api/web/GetFileByServerRelativeUrl(@fileUrl)/ListItemAllFields?$select=Id&@fileUrl=''',encodeUriComponent(items('Stamp_Expired_Files')?['ServerRelativeUrl']),'''')",
+                                                            "parameters/headers": {
+                                                              "Accept": "application/json;odata=nometadata",
+                                                              "Content-Type": "application/json;odata=nometadata"
+                                                            }
+                                                          },
+                                                          "authentication": "@parameters('$authentication')"
+                                                        },
+                                                        "runAfter": {}
+                                                      },
+                                                      "Stamp_Expired_HieuLucDen": {
+                                                        "type": "OpenApiConnection",
+                                                        "inputs": {
+                                                          "host": {
+                                                            "connectionName": "shared_sharepointonline",
+                                                            "operationId": "HttpRequest",
+                                                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                          },
+                                                          "parameters": {
+                                                            "dataset": "@triggerBody()?['siteUrl']",
+                                                            "parameters/method": "POST",
+                                                            "parameters/uri": "@concat('_api/web/lists/getByTitle(''VanBanBanHanh_Ver02'')/items(', string(body('Get_Expired_File_Item')?['Id']), ')/ValidateUpdateListItem')",
+                                                            "parameters/headers": {
+                                                              "Accept": "application/json;odata=nometadata",
+                                                              "Content-Type": "application/json;odata=nometadata"
+                                                            },
+                                                            "parameters/body": {
+                                                              "formValues": [
+                                                                {
+                                                                  "FieldName": "HieuLucDen",
+                                                                  "FieldValue": "@formatDateTime(addDays(convertFromUtc(utcNow(), 'SE Asia Standard Time'), -1), 'yyyy-MM-dd')"
+                                                                }
+                                                              ],
+                                                              "bNewDocumentUpdate": false
+                                                            }
+                                                          },
+                                                          "authentication": "@parameters('$authentication')"
+                                                        },
+                                                        "runAfter": {
+                                                          "Get_Expired_File_Item": [
+                                                            "Succeeded"
+                                                          ]
+                                                        }
+                                                      }
+                                                    },
+                                                    "runAfter": {
+                                                      "List_Expired_Files": [
+                                                        "Succeeded"
+                                                      ]
+                                                    },
+                                                    "runtimeConfiguration": {
+                                                      "concurrency": {
+                                                        "repetitions": 4
+                                                      }
+                                                    }
+                                                  },
+                                                  "Get_Expired_Folder_ListItem": {
+                                                    "type": "OpenApiConnection",
+                                                    "inputs": {
+                                                      "host": {
+                                                        "connectionName": "shared_sharepointonline",
+                                                        "operationId": "HttpRequest",
+                                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                      },
+                                                      "parameters": {
+                                                        "dataset": "@triggerBody()?['siteUrl']",
+                                                        "parameters/method": "GET",
+                                                        "parameters/uri": "@concat('_api/web/GetFolderByServerRelativeUrl(@folderPath)/ListItemAllFields?$select=Id&@folderPath=''',encodeUriComponent(outputs('Compose_Expired_Folder_Path')),'''')",
+                                                        "parameters/headers": {
+                                                          "Accept": "application/json;odata=nometadata",
+                                                          "Content-Type": "application/json;odata=nometadata"
+                                                        }
+                                                      },
+                                                      "authentication": "@parameters('$authentication')"
+                                                    },
+                                                    "runAfter": {
+                                                      "Stamp_Expired_Files": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  },
+                                                  "Break_Expired_Folder_ACL": {
+                                                    "type": "OpenApiConnection",
+                                                    "inputs": {
+                                                      "host": {
+                                                        "connectionName": "shared_sharepointonline",
+                                                        "operationId": "HttpRequest",
+                                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                      },
+                                                      "parameters": {
+                                                        "dataset": "@triggerBody()?['siteUrl']",
+                                                        "parameters/method": "POST",
+                                                        "parameters/uri": "@concat('_api/web/lists/getByTitle(''VanBanBanHanh_Ver02'')/items(', string(body('Get_Expired_Folder_ListItem')?['Id']), ')/breakroleinheritance(copyRoleAssignments=false,clearSubscopes=true)')",
+                                                        "parameters/headers": {
+                                                          "Accept": "application/json;odata=nometadata",
+                                                          "Content-Type": "application/json;odata=nometadata"
+                                                        }
+                                                      },
+                                                      "authentication": "@parameters('$authentication')"
+                                                    },
+                                                    "runAfter": {
+                                                      "Get_Expired_Folder_ListItem": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "else": {
+                                                  "actions": {}
+                                                },
+                                                "runAfter": {
+                                                  "Filter_Draft_Files": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Copy_Draft_Files": {
+                                                "type": "Foreach",
+                                                "foreach": "@body('Filter_Draft_Files')",
+                                                "actions": {
+                                                  "Compose_Target_File_Path_Copy_Draft_Files": {
+                                                    "type": "Compose",
+                                                    "inputs": "@concat(variables('issuanceCurrentPath'), substring(items('Copy_Draft_Files')?['FileRef'], length(outputs('Compose_Source_Folder'))))",
+                                                    "runAfter": {}
+                                                  },
+                                                  "Copy_File_Copy_Draft_Files": {
+                                                    "type": "OpenApiConnection",
+                                                    "inputs": {
+                                                      "host": {
+                                                        "connectionName": "shared_sharepointonline",
+                                                        "operationId": "HttpRequest",
+                                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                      },
+                                                      "parameters": {
+                                                        "dataset": "@triggerBody()?['siteUrl']",
+                                                        "parameters/method": "POST",
+                                                        "parameters/uri": "@concat('_api/web/GetFileByServerRelativeUrl(@fileUrl)/copyTo(strnewurl=@newUrl,boverwrite=true)?@fileUrl=''',encodeUriComponent(items('Copy_Draft_Files')?['FileRef']),'''&@newUrl=''',encodeUriComponent(outputs('Compose_Target_File_Path_Copy_Draft_Files')),'''')",
+                                                        "parameters/headers": {
+                                                          "Accept": "application/json;odata=nometadata",
+                                                          "Content-Type": "application/json;odata=nometadata"
+                                                        }
+                                                      },
+                                                      "authentication": "@parameters('$authentication')"
+                                                    },
+                                                    "runAfter": {
+                                                      "Compose_Target_File_Path_Copy_Draft_Files": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "runAfter": {
+                                                  "Condition_Archive_DieuChinh": [
+                                                    "Succeeded"
+                                                  ]
+                                                },
+                                                "runtimeConfiguration": {
+                                                  "concurrency": {
+                                                    "repetitions": 4
+                                                  }
+                                                }
+                                              },
+                                              "Copy_Form_Files": {
+                                                "type": "Foreach",
+                                                "foreach": "@body('Filter_Form_Files')",
+                                                "actions": {
+                                                  "Compose_Target_File_Path_Copy_Form_Files": {
+                                                    "type": "Compose",
+                                                    "inputs": "@concat(variables('issuanceCurrentPath'), '/', items('Copy_Form_Files')?['FileLeafRef'])",
+                                                    "runAfter": {}
+                                                  },
+                                                  "Copy_File_Copy_Form_Files": {
+                                                    "type": "OpenApiConnection",
+                                                    "inputs": {
+                                                      "host": {
+                                                        "connectionName": "shared_sharepointonline",
+                                                        "operationId": "HttpRequest",
+                                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                      },
+                                                      "parameters": {
+                                                        "dataset": "@triggerBody()?['siteUrl']",
+                                                        "parameters/method": "POST",
+                                                        "parameters/uri": "@concat('_api/web/GetFileByServerRelativeUrl(@fileUrl)/copyTo(strnewurl=@newUrl,boverwrite=true)?@fileUrl=''',encodeUriComponent(items('Copy_Form_Files')?['FileRef']),'''&@newUrl=''',encodeUriComponent(outputs('Compose_Target_File_Path_Copy_Form_Files')),'''')",
+                                                        "parameters/headers": {
+                                                          "Accept": "application/json;odata=nometadata",
+                                                          "Content-Type": "application/json;odata=nometadata"
+                                                        }
+                                                      },
+                                                      "authentication": "@parameters('$authentication')"
+                                                    },
+                                                    "runAfter": {
+                                                      "Compose_Target_File_Path_Copy_Form_Files": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "runAfter": {
+                                                  "Copy_Draft_Files": [
+                                                    "Succeeded"
+                                                  ]
+                                                },
+                                                "runtimeConfiguration": {
+                                                  "concurrency": {
+                                                    "repetitions": 4
+                                                  }
+                                                }
+                                              },
+                                              "Compose_Today": {
+                                                "type": "Compose",
+                                                "inputs": "@formatDateTime(convertFromUtc(utcNow(), 'SE Asia Standard Time'), 'yyyy-MM-dd')",
+                                                "runAfter": {
+                                                  "Copy_Form_Files": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Compose_HieuLucTu": {
+                                                "type": "Compose",
+                                                "inputs": "@if(empty(body('Get_Release_Item')?['HieuLucTu']), outputs('Compose_Today'), formatDateTime(body('Get_Release_Item')?['HieuLucTu'], 'yyyy-MM-dd'))",
+                                                "runAfter": {
+                                                  "Compose_Today": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Compose_LienHe": {
+                                                "type": "Compose",
+                                                "inputs": "@trim(coalesce(body('Get_Release_Item')?['LienHe'], coalesce(body('Get_Release_Item')?['NguoiTao'], body('Get_Release_Item')?['EmailNguoiTao'])))",
+                                                "runAfter": {
+                                                  "Compose_HieuLucTu": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Compose_Metadata_Base": {
+                                                "type": "Compose",
+                                                "inputs": [
+                                                  {
+                                                    "FieldName": "TomTatVanban",
+                                                    "FieldValue": "@{trim(string(coalesce(body('Get_Release_Item')?['TomTatNoiDung'], '')))}"
+                                                  },
+                                                  {
+                                                    "FieldName": "NgayPhatHanh",
+                                                    "FieldValue": "@{outputs('Compose_Today')}"
+                                                  },
+                                                  {
+                                                    "FieldName": "HieuLucTu",
+                                                    "FieldValue": "@{outputs('Compose_HieuLucTu')}"
+                                                  },
+                                                  {
+                                                    "FieldName": "LienHe",
+                                                    "FieldValue": "@{outputs('Compose_LienHe')}"
+                                                  }
+                                                ],
+                                                "runAfter": {
+                                                  "Compose_LienHe": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Compose_Metadata_Values": {
+                                                "type": "Compose",
+                                                "inputs": "@if(empty(body('Get_Release_Item')?['HieuLucDen']), outputs('Compose_Metadata_Base'), union(outputs('Compose_Metadata_Base'), createArray(json(concat('{\"FieldName\":\"HieuLucDen\",\"FieldValue\":\"', formatDateTime(body('Get_Release_Item')?['HieuLucDen'], 'yyyy-MM-dd'), '\"}')))))",
+                                                "runAfter": {
+                                                  "Compose_Metadata_Base": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Get_Reader_Role": {
+                                                "type": "OpenApiConnection",
+                                                "inputs": {
+                                                  "host": {
+                                                    "connectionName": "shared_sharepointonline",
+                                                    "operationId": "HttpRequest",
+                                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                  },
+                                                  "parameters": {
+                                                    "dataset": "@triggerBody()?['siteUrl']",
+                                                    "parameters/method": "GET",
+                                                    "parameters/uri": "_api/web/roledefinitions/getByType(2)?$select=Id",
+                                                    "parameters/headers": {
+                                                      "Accept": "application/json;odata=nometadata",
+                                                      "Content-Type": "application/json;odata=nometadata"
+                                                    }
+                                                  },
+                                                  "authentication": "@parameters('$authentication')"
+                                                },
+                                                "runAfter": {
+                                                  "Compose_Metadata_Values": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Stamp_Copied_Files": {
+                                                "type": "Foreach",
+                                                "foreach": "@body('Get_Source_Files')?['value']",
+                                                "actions": {
+                                                  "Compose_Copied_Path": {
+                                                    "type": "Compose",
+                                                    "inputs": "@if(equals(items('Stamp_Copied_Files')?['IsBieuMau'], true), concat(variables('issuanceCurrentPath'), '/', items('Stamp_Copied_Files')?['FileLeafRef']), concat(variables('issuanceCurrentPath'), substring(items('Stamp_Copied_Files')?['FileRef'], length(outputs('Compose_Source_Folder')))))",
+                                                    "runAfter": {}
+                                                  },
+                                                  "Get_Copied_Item_Fields": {
+                                                    "type": "OpenApiConnection",
+                                                    "inputs": {
+                                                      "host": {
+                                                        "connectionName": "shared_sharepointonline",
+                                                        "operationId": "HttpRequest",
+                                                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                      },
+                                                      "parameters": {
+                                                        "dataset": "@triggerBody()?['siteUrl']",
+                                                        "parameters/method": "GET",
+                                                        "parameters/uri": "@concat('_api/web/GetFileByServerRelativeUrl(@fileUrl)/ListItemAllFields?$select=Id&@fileUrl=''',encodeUriComponent(outputs('Compose_Copied_Path')),'''')",
+                                                        "parameters/headers": {
+                                                          "Accept": "application/json;odata=nometadata",
+                                                          "Content-Type": "application/json;odata=nometadata"
+                                                        }
+                                                      },
+                                                      "authentication": "@parameters('$authentication')"
+                                                    },
+                                                    "runAfter": {
+                                                      "Compose_Copied_Path": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  },
+                                                  "Condition_Is_Form_File": {
+                                                    "type": "If",
+                                                    "expression": "@equals(items('Stamp_Copied_Files')?['IsBieuMau'], true)",
+                                                    "actions": {
+                                                      "Stamp_Form_Metadata": {
+                                                        "type": "OpenApiConnection",
+                                                        "inputs": {
+                                                          "host": {
+                                                            "connectionName": "shared_sharepointonline",
+                                                            "operationId": "HttpRequest",
+                                                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                          },
+                                                          "parameters": {
+                                                            "dataset": "@triggerBody()?['siteUrl']",
+                                                            "parameters/method": "POST",
+                                                            "parameters/uri": "@concat('_api/web/lists/getByTitle(''VanBanBanHanh_Ver02'')/items(', string(body('Get_Copied_Item_Fields')?['Id']), ')/ValidateUpdateListItem')",
+                                                            "parameters/headers": {
+                                                              "Accept": "application/json;odata=nometadata",
+                                                              "Content-Type": "application/json;odata=nometadata"
+                                                            },
+                                                            "parameters/body": {
+                                                              "formValues": "@union(outputs('Compose_Metadata_Values'), createArray(json('{\"FieldName\":\"IsBieuMau\",\"FieldValue\":\"1\"}')))",
+                                                              "bNewDocumentUpdate": false
+                                                            }
+                                                          },
+                                                          "authentication": "@parameters('$authentication')"
+                                                        },
+                                                        "runAfter": {}
+                                                      },
+                                                      "Break_Form_ACL": {
+                                                        "type": "OpenApiConnection",
+                                                        "inputs": {
+                                                          "host": {
+                                                            "connectionName": "shared_sharepointonline",
+                                                            "operationId": "HttpRequest",
+                                                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                          },
+                                                          "parameters": {
+                                                            "dataset": "@triggerBody()?['siteUrl']",
+                                                            "parameters/method": "POST",
+                                                            "parameters/uri": "@concat('_api/web/lists/getByTitle(''VanBanBanHanh_Ver02'')/items(', string(body('Get_Copied_Item_Fields')?['Id']), ')/breakroleinheritance(copyRoleAssignments=false,clearSubscopes=true)')",
+                                                            "parameters/headers": {
+                                                              "Accept": "application/json;odata=nometadata",
+                                                              "Content-Type": "application/json;odata=nometadata"
+                                                            }
+                                                          },
+                                                          "authentication": "@parameters('$authentication')"
+                                                        },
+                                                        "runAfter": {
+                                                          "Stamp_Form_Metadata": [
+                                                            "Succeeded"
+                                                          ]
+                                                        }
+                                                      },
+                                                      "Grant_Form_Read": {
+                                                        "type": "OpenApiConnection",
+                                                        "inputs": {
+                                                          "host": {
+                                                            "connectionName": "shared_sharepointonline",
+                                                            "operationId": "HttpRequest",
+                                                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                          },
+                                                          "parameters": {
+                                                            "dataset": "@triggerBody()?['siteUrl']",
+                                                            "parameters/method": "POST",
+                                                            "parameters/uri": "@concat('_api/web/lists/getByTitle(''VanBanBanHanh_Ver02'')/items(', string(body('Get_Copied_Item_Fields')?['Id']), ')/roleassignments/addroleassignment(principalid=', string(int(triggerBody()?['roleGroupID'])), ',roleDefId=', string(body('Get_Reader_Role')?['Id']), ')')",
+                                                            "parameters/headers": {
+                                                              "Accept": "application/json;odata=nometadata",
+                                                              "Content-Type": "application/json;odata=nometadata"
+                                                            }
+                                                          },
+                                                          "authentication": "@parameters('$authentication')"
+                                                        },
+                                                        "runAfter": {
+                                                          "Break_Form_ACL": [
+                                                            "Succeeded"
+                                                          ]
+                                                        }
+                                                      }
+                                                    },
+                                                    "else": {
+                                                      "actions": {
+                                                        "Stamp_Draft_Metadata": {
+                                                          "type": "OpenApiConnection",
+                                                          "inputs": {
+                                                            "host": {
+                                                              "connectionName": "shared_sharepointonline",
+                                                              "operationId": "HttpRequest",
+                                                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                            },
+                                                            "parameters": {
+                                                              "dataset": "@triggerBody()?['siteUrl']",
+                                                              "parameters/method": "POST",
+                                                              "parameters/uri": "@concat('_api/web/lists/getByTitle(''VanBanBanHanh_Ver02'')/items(', string(body('Get_Copied_Item_Fields')?['Id']), ')/ValidateUpdateListItem')",
+                                                              "parameters/headers": {
+                                                                "Accept": "application/json;odata=nometadata",
+                                                                "Content-Type": "application/json;odata=nometadata"
+                                                              },
+                                                              "parameters/body": {
+                                                                "formValues": "@outputs('Compose_Metadata_Values')",
+                                                                "bNewDocumentUpdate": false
+                                                              }
+                                                            },
+                                                            "authentication": "@parameters('$authentication')"
+                                                          },
+                                                          "runAfter": {}
+                                                        }
+                                                      }
+                                                    },
+                                                    "runAfter": {
+                                                      "Get_Copied_Item_Fields": [
+                                                        "Succeeded"
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "runAfter": {
+                                                  "Get_Reader_Role": [
+                                                    "Succeeded"
+                                                  ]
+                                                },
+                                                "runtimeConfiguration": {
+                                                  "concurrency": {
+                                                    "repetitions": 4
+                                                  }
+                                                }
+                                              },
+                                              "Get_Target_Folder_ListItem": {
+                                                "type": "OpenApiConnection",
+                                                "inputs": {
+                                                  "host": {
+                                                    "connectionName": "shared_sharepointonline",
+                                                    "operationId": "HttpRequest",
+                                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                  },
+                                                  "parameters": {
+                                                    "dataset": "@triggerBody()?['siteUrl']",
+                                                    "parameters/method": "GET",
+                                                    "parameters/uri": "@concat('_api/web/GetFolderByServerRelativeUrl(@folderPath)/ListItemAllFields?$select=Id&@folderPath=''',encodeUriComponent(variables('issuanceCurrentPath')),'''')",
+                                                    "parameters/headers": {
+                                                      "Accept": "application/json;odata=nometadata",
+                                                      "Content-Type": "application/json;odata=nometadata"
+                                                    }
+                                                  },
+                                                  "authentication": "@parameters('$authentication')"
+                                                },
+                                                "runAfter": {
+                                                  "Stamp_Copied_Files": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Stamp_Target_Folder": {
+                                                "type": "OpenApiConnection",
+                                                "inputs": {
+                                                  "host": {
+                                                    "connectionName": "shared_sharepointonline",
+                                                    "operationId": "HttpRequest",
+                                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                  },
+                                                  "parameters": {
+                                                    "dataset": "@triggerBody()?['siteUrl']",
+                                                    "parameters/method": "POST",
+                                                    "parameters/uri": "@concat('_api/web/lists/getByTitle(''VanBanBanHanh_Ver02'')/items(', string(body('Get_Target_Folder_ListItem')?['Id']), ')/ValidateUpdateListItem')",
+                                                    "parameters/headers": {
+                                                      "Accept": "application/json;odata=nometadata",
+                                                      "Content-Type": "application/json;odata=nometadata"
+                                                    },
+                                                    "parameters/body": {
+                                                      "formValues": "@outputs('Compose_Metadata_Values')",
+                                                      "bNewDocumentUpdate": false
+                                                    }
+                                                  },
+                                                  "authentication": "@parameters('$authentication')"
+                                                },
+                                                "runAfter": {
+                                                  "Get_Target_Folder_ListItem": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Get_ShortUrl_ApiKey": {
+                                                "type": "OpenApiConnection",
+                                                "inputs": {
+                                                  "host": {
+                                                    "connectionName": "shared_sharepointonline",
+                                                    "operationId": "HttpRequest",
+                                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                  },
+                                                  "parameters": {
+                                                    "dataset": "@triggerBody()?['siteUrl']",
+                                                    "parameters/method": "GET",
+                                                    "parameters/uri": "_api/web/lists/getByTitle('lstConfigLabelCustom')/items?$select=Label,Value&$filter=Label eq 'apiKeyShortLink'&$top=1",
+                                                    "parameters/headers": {
+                                                      "Accept": "application/json;odata=nometadata",
+                                                      "Content-Type": "application/json;odata=nometadata"
+                                                    }
+                                                  },
+                                                  "authentication": "@parameters('$authentication')"
+                                                },
+                                                "runAfter": {
+                                                  "Stamp_Target_Folder": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              },
+                                              "Condition_Missing_ApiKey": {
+                                                "type": "If",
+                                                "expression": "@empty(first(body('Get_ShortUrl_ApiKey')?['value'])?['Value'])",
+                                                "actions": {
+                                                  "Terminate_Missing_ApiKey": {
+                                                    "type": "Terminate",
+                                                    "inputs": {
+                                                      "runStatus": "Failed",
+                                                      "runError": {
+                                                        "code": "Terminate_Missing_ApiKey",
+                                                        "message": "Thiếu apiKeyShortLink trên lstConfigLabelCustom."
+                                                      }
+                                                    },
+                                                    "runAfter": {}
+                                                  }
+                                                },
+                                                "else": {
+                                                  "actions": {
+                                                    "Compose_Site_Origin": {
+                                                      "type": "Compose",
+                                                      "inputs": "@concat(split(triggerBody()?['siteUrl'], '/')[0], '//', split(triggerBody()?['siteUrl'], '/')[2])",
+                                                      "runAfter": {}
+                                                    },
+                                                    "Compose_Main_File_Path": {
+                                                      "type": "Compose",
+                                                      "inputs": "@concat(variables('issuanceCurrentPath'), substring(first(body('Filter_Main_Document'))?['FileRef'], length(outputs('Compose_Source_Folder'))))",
+                                                      "runAfter": {
+                                                        "Compose_Site_Origin": [
+                                                          "Succeeded"
+                                                        ]
+                                                      }
+                                                    },
+                                                    "Compose_File_Long_Url": {
+                                                      "type": "Compose",
+                                                      "inputs": "@concat(outputs('Compose_Site_Origin'), replace(encodeUriComponent(outputs('Compose_Main_File_Path')), '%2F', '/'), '?web=1')",
+                                                      "runAfter": {
+                                                        "Compose_Main_File_Path": [
+                                                          "Succeeded"
+                                                        ]
+                                                      }
+                                                    },
+                                                    "Compose_Folder_Long_Url": {
+                                                      "type": "Compose",
+                                                      "inputs": "@concat(first(split(triggerBody()?['webPartPageUrl'], '#')), '#/tab/ThuVienTaiLieu/folder/', string(body('Get_Target_Folder_ListItem')?['Id']))",
+                                                      "runAfter": {
+                                                        "Compose_File_Long_Url": [
+                                                          "Succeeded"
+                                                        ]
+                                                      }
+                                                    },
+                                                    "Create_ShortUrl_LinkFile": {
+                                                      "type": "Http",
+                                                      "inputs": {
+                                                        "method": "POST",
+                                                        "uri": "@triggerBody()?['endPointShortUrl']",
+                                                        "headers": {
+                                                          "Accept": "application/json",
+                                                          "Content-Type": "application/json",
+                                                          "X-Api-Key": "@first(body('Get_ShortUrl_ApiKey')?['value'])?['Value']"
+                                                        },
+                                                        "body": {
+                                                          "longUrl": "@outputs('Compose_File_Long_Url')",
+                                                          "tags": [
+                                                            "mas_phvb"
+                                                          ],
+                                                          "shortCodeLength": 9,
+                                                          "forwardQuery": true
+                                                        }
+                                                      },
+                                                      "runAfter": {
+                                                        "Compose_Folder_Long_Url": [
+                                                          "Succeeded"
+                                                        ]
+                                                      }
+                                                    },
+                                                    "Create_ShortUrl_LinkTatCaTaiLieu": {
+                                                      "type": "Http",
+                                                      "inputs": {
+                                                        "method": "POST",
+                                                        "uri": "@triggerBody()?['endPointShortUrl']",
+                                                        "headers": {
+                                                          "Accept": "application/json",
+                                                          "Content-Type": "application/json",
+                                                          "X-Api-Key": "@first(body('Get_ShortUrl_ApiKey')?['value'])?['Value']"
+                                                        },
+                                                        "body": {
+                                                          "longUrl": "@outputs('Compose_Folder_Long_Url')",
+                                                          "tags": [
+                                                            "mas_phvb"
+                                                          ],
+                                                          "shortCodeLength": 9,
+                                                          "forwardQuery": true
+                                                        }
+                                                      },
+                                                      "runAfter": {
+                                                        "Create_ShortUrl_LinkFile": [
+                                                          "Succeeded"
+                                                        ]
+                                                      }
+                                                    },
+                                                    "Compose_Resolved_Body": {
+                                                      "type": "Compose",
+                                                      "inputs": "@replace(replace(string(coalesce(body('Get_Release_Item')?['BodyEmail'], '')), '{{LinkFile}}', string(body('Create_ShortUrl_LinkFile')?['shortUrl'])), '{{LinkTatCaTaiLieu}}', string(body('Create_ShortUrl_LinkTatCaTaiLieu')?['shortUrl']))",
+                                                      "runAfter": {
+                                                        "Create_ShortUrl_LinkTatCaTaiLieu": [
+                                                          "Succeeded"
+                                                        ]
+                                                      }
+                                                    },
+                                                    "Patch_BodyEmail": {
+                                                      "type": "OpenApiConnection",
+                                                      "inputs": {
+                                                        "host": {
+                                                          "connectionName": "shared_sharepointonline",
+                                                          "operationId": "HttpRequest",
+                                                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                        },
+                                                        "parameters": {
+                                                          "dataset": "@triggerBody()?['siteUrl']",
+                                                          "parameters/method": "POST",
+                                                          "parameters/uri": "@concat('_api/web/lists/getByTitle(''InDoc_Release'')/items(', string(body('Get_Release_Item')?['Id']), ')')",
+                                                          "parameters/headers": {
+                                                            "Accept": "application/json;odata=nometadata",
+                                                            "Content-Type": "application/json;odata=nometadata",
+                                                            "IF-MATCH": "*",
+                                                            "X-HTTP-Method": "MERGE"
+                                                          },
+                                                          "parameters/body": {
+                                                            "BodyEmail": "@outputs('Compose_Resolved_Body')"
+                                                          }
+                                                        },
+                                                        "authentication": "@parameters('$authentication')"
+                                                      },
+                                                      "runAfter": {
+                                                        "Compose_Resolved_Body": [
+                                                          "Succeeded"
+                                                        ]
+                                                      }
+                                                    },
+                                                    "Condition_Can_Send_Confirm_Mail": {
+                                                      "type": "If",
+                                                      "expression": "@and(not(empty(trim(string(body('Get_Release_Item')?['EmailNhanBanHanh'])))),not(empty(trim(string(body('Get_Release_Item')?['SubjectBanHanh'])))),not(empty(trim(outputs('Compose_Resolved_Body')))),not(empty(trim(string(body('Get_Release_Item')?['SoVanBan'])))))",
+                                                      "actions": {
+                                                        "Send_Confirm_Mail": {
+                                                          "type": "Http",
+                                                          "inputs": {
+                                                            "method": "POST",
+                                                            "uri": "@triggerBody()?['endPointSendMail']",
+                                                            "headers": {
+                                                              "Accept": "application/json",
+                                                              "Content-Type": "application/json"
+                                                            },
+                                                            "body": {
+                                                              "EmailTo": "@body('Get_Release_Item')?['EmailNhanBanHanh']",
+                                                              "Subject": "@body('Get_Release_Item')?['SubjectBanHanh']",
+                                                              "Body": "@outputs('Compose_Resolved_Body')"
+                                                            }
+                                                          },
+                                                          "runAfter": {}
+                                                        }
+                                                      },
+                                                      "else": {
+                                                        "actions": {
+                                                          "Terminate_Missing_Confirm_Mail": {
+                                                            "type": "Terminate",
+                                                            "inputs": {
+                                                              "runStatus": "Failed",
+                                                              "runError": {
+                                                                "code": "Terminate_Missing_Confirm_Mail",
+                                                                "message": "Không tạo được nội dung email xác nhận ban hành (thiếu EmailNhanBanHanh, SubjectBanHanh, Body hoặc SoVanBan)."
+                                                              }
+                                                            },
+                                                            "runAfter": {}
+                                                          }
+                                                        }
+                                                      },
+                                                      "runAfter": {
+                                                        "Patch_BodyEmail": [
+                                                          "Succeeded"
+                                                        ]
+                                                      }
+                                                    },
+                                                    "Condition_Can_Send_Storage_Mail": {
+                                                      "type": "If",
+                                                      "expression": "@and(not(empty(trim(string(body('Get_Release_Item')?['EmailNguoiTao'])))),not(empty(trim(string(body('Get_Release_Item')?['NguoiTao'])))))",
+                                                      "actions": {
+                                                        "Get_Storage_Mail_Template": {
+                                                          "type": "OpenApiConnection",
+                                                          "inputs": {
+                                                            "host": {
+                                                              "connectionName": "shared_sharepointonline",
+                                                              "operationId": "HttpRequest",
+                                                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                                                            },
+                                                            "parameters": {
+                                                              "dataset": "@triggerBody()?['siteUrl']",
+                                                              "parameters/method": "GET",
+                                                              "parameters/uri": "_api/web/lists/getByTitle('lstConfigNoiDungMail')/items?$select=MaLoaiMail,TieuDeMail,NoiDungMail&$filter=MaLoaiMail eq 'THONG_BAO_LUU_TRU'&$top=1",
+                                                              "parameters/headers": {
+                                                                "Accept": "application/json;odata=nometadata",
+                                                                "Content-Type": "application/json;odata=nometadata"
+                                                              }
+                                                            },
+                                                            "authentication": "@parameters('$authentication')"
+                                                          },
+                                                          "runAfter": {}
+                                                        },
+                                                        "Compose_Storage_Subject": {
+                                                          "type": "Compose",
+                                                          "inputs": "@replace(replace(replace(replace(replace(string(coalesce(first(body('Get_Storage_Mail_Template')?['value'])?['TieuDeMail'], '')), '{{TenVanBan}}', string(body('Get_Release_Item')?['Tenvanban'])), '{{TomTatNoiDung}}', string(coalesce(body('Get_Release_Item')?['TomTatNoiDung'], ''))), '{{IDYeuCau}}', string(body('Get_Release_Item')?['IdYeuCau'])), '{{NguoiThucHien}}', string(triggerBody()?['nguoiThucHien'])), '{{NguoiTao}}', string(body('Get_Release_Item')?['NguoiTao']))",
+                                                          "runAfter": {
+                                                            "Get_Storage_Mail_Template": [
+                                                              "Succeeded"
+                                                            ]
+                                                          }
+                                                        },
+                                                        "Compose_Storage_Body": {
+                                                          "type": "Compose",
+                                                          "inputs": "@replace(replace(replace(replace(replace(replace(string(coalesce(first(body('Get_Storage_Mail_Template')?['value'])?['NoiDungMail'], '')), '{{TenVanBan}}', string(body('Get_Release_Item')?['Tenvanban'])), '{{TomTatNoiDung}}', replace(replace(string(coalesce(body('Get_Release_Item')?['TomTatNoiDung'], '')), '\n', '<br/>'), '\r', '')), '{{IDYeuCau}}', string(body('Get_Release_Item')?['IdYeuCau'])), '{{NguoiThucHien}}', string(triggerBody()?['nguoiThucHien'])), '{{NguoiTao}}', string(body('Get_Release_Item')?['NguoiTao'])), '{{SoVanBan}}', string(coalesce(body('Get_Release_Item')?['SoVanBan'], '')))",
+                                                          "runAfter": {
+                                                            "Compose_Storage_Subject": [
+                                                              "Succeeded"
+                                                            ]
+                                                          }
+                                                        },
+                                                        "Condition_Storage_Template_Ready": {
+                                                          "type": "If",
+                                                          "expression": "@and(not(empty(trim(outputs('Compose_Storage_Subject')))),not(empty(trim(outputs('Compose_Storage_Body')))))",
+                                                          "actions": {
+                                                            "Send_Storage_Mail": {
+                                                              "type": "Http",
+                                                              "inputs": {
+                                                                "method": "POST",
+                                                                "uri": "@triggerBody()?['endPointSendMail']",
+                                                                "headers": {
+                                                                  "Accept": "application/json",
+                                                                  "Content-Type": "application/json"
+                                                                },
+                                                                "body": {
+                                                                  "EmailTo": "@body('Get_Release_Item')?['EmailNguoiTao']",
+                                                                  "Subject": "@outputs('Compose_Storage_Subject')",
+                                                                  "Body": "@outputs('Compose_Storage_Body')"
+                                                                }
+                                                              },
+                                                              "runAfter": {}
+                                                            }
+                                                          },
+                                                          "else": {
+                                                            "actions": {}
+                                                          },
+                                                          "runAfter": {
+                                                            "Compose_Storage_Body": [
+                                                              "Succeeded"
+                                                            ]
+                                                          }
+                                                        }
+                                                      },
+                                                      "else": {
+                                                        "actions": {}
+                                                      },
+                                                      "runAfter": {
+                                                        "Condition_Can_Send_Confirm_Mail": [
+                                                          "Succeeded"
+                                                        ]
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "runAfter": {
+                                                  "Get_ShortUrl_ApiKey": [
+                                                    "Succeeded"
+                                                  ]
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "runAfter": {
+                                            "Filter_Main_Document": [
+                                              "Succeeded"
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "runAfter": {
+                                      "Get_Source_Files": [
+                                        "Succeeded"
+                                      ]
+                                    }
+                                  }
+                                }
+                              },
+                              "runAfter": {
+                                "Get_Existing_Target_Files": [
+                                  "Succeeded"
+                                ]
+                              }
+                            }
+                          },
+                          "runAfter": {}
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Terminate_Not_Full_Issuance": {
+                            "type": "Terminate",
+                            "inputs": {
+                              "runStatus": "Cancelled",
+                              "runError": {
+                                "code": "Terminate_Not_Full_Issuance",
+                                "message": "LoaiYeuCau không phải Tạo mới hoặc Điều chỉnh. Flow không xử lý Thu hồi."
+                              }
+                            },
+                            "runAfter": {}
+                          }
+                        }
+                      },
+                      "runAfter": {}
+                    }
+                  }
+                },
+                "runAfter": {
+                  "Get_Release_Item": [
+                    "Succeeded"
+                  ]
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Init_issuanceCurrentPath": [
+              "Succeeded"
+            ]
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+        "displayName": "SharePoint",
+        "isProcessWide": false
+      }
+    },
+    "flowFailureAlertSubscribed": false
+  }
+}

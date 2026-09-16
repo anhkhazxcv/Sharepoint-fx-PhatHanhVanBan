@@ -1,9 +1,10 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
-import { ATTACHMENT_FORM_SUBFOLDER, ATTACHMENT_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
+import { ATTACHMENT_LIBRARY_TITLE } from '../config/PhvbMag.configuration';
 import { escapeODataValue, getCandidateSiteUrls, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { buildSharePointFileOpenUrl } from '../infrastructure/SharePointFile.utils';
 import { ensureSharePointResponseOk } from '../infrastructure/SharePointHttp.utils';
 import { buildApiLogParams } from './PhvbMagLog.service';
+import { SharePointRequestError } from './PhvbMag.error';
 import { assertValidateUpdateSucceeded } from '../utils/PhvbMagSharePoint.utils';
 import type { IAttachmentLibraryItem, ICreateRequestInput, IPhvbLogContext, IPhvbSiteContext } from '../models/PhvbMag.models';
 
@@ -64,31 +65,40 @@ function splitRelativePath(value: string): string[] {
     .filter(segment => Boolean(segment));
 }
 
-interface ISharePointAttachmentItem {
-  Id: number;
+interface ISharePointFolderFileListItem {
+  Id?: number;
   UniqueId?: string;
-  FileLeafRef?: string;
-  FileRef?: string;
-  FileDirRef?: string;
+  IsBieuMau?: boolean;
   Modified?: string;
   Editor?: { Title?: string };
-  FSObjType?: number;
-  IsBieuMau?: boolean;
 }
 
-// 'Editor/Title' là lookup: query dùng hằng này BẮT BUỘC kèm $expand=Editor,
-// thiếu expand thì SharePoint trả 400.
-const ATTACHMENT_SELECT_FIELDS: ReadonlyArray<string> = [
-  'Id',
+interface ISharePointFolderFileItem {
+  Name?: string;
+  ServerRelativeUrl?: string;
+  TimeLastModified?: string;
+  UniqueId?: string;
+  ListItemAllFields?: ISharePointFolderFileListItem;
+}
+
+/**
+ * Query danh sách file bằng cách đọc trực tiếp folder (`GetFolderByServerRelativeUrl(...)/Files`)
+ * thay vì list item collection — tránh lệch dữ liệu ngay sau khi upload/stamp metadata.
+ * `ListItemAllFields/Editor` là lookup lồng qua Files API, một số tenant trả 400; khi đó bỏ Editor
+ * và thử lại (xem `fetchFolderFiles`).
+ */
+const ATTACHMENT_FOLDER_FILES_BASE_SELECT: ReadonlyArray<string> = [
+  'Name',
+  'ServerRelativeUrl',
+  'TimeLastModified',
   'UniqueId',
-  'FileLeafRef',
-  'FileRef',
-  'FileDirRef',
-  'Modified',
-  'Editor/Title',
-  'FSObjType',
-  'IsBieuMau'
+  'ListItemAllFields/Id',
+  'ListItemAllFields/UniqueId',
+  'ListItemAllFields/IsBieuMau',
+  'ListItemAllFields/Modified'
 ];
+
+const ATTACHMENT_LIST_RETRY_DELAYS_MS: ReadonlyArray<number> = [300, 500, 500];
 
 function buildRequestIdFormValue(requestReferenceId: string): IListFormValue {
   return {
@@ -113,24 +123,62 @@ function sanitizeSharePointFolderName(value: string): string {
     .trim();
 }
 
-function mapAttachmentItem(item: ISharePointAttachmentItem, siteUrl: string): IAttachmentLibraryItem {
-  const fileRef = item.FileRef || '';
-  const fileDirRef = item.FileDirRef || '';
-  const fileName = item.FileLeafRef || '';
+/** Trả về undefined khi list item chưa có `Id` (metadata chưa ổn định) — caller quyết định retry/omit. */
+function mapFolderFileToAttachment(
+  item: ISharePointFolderFileItem,
+  siteUrl: string,
+  folderPath: string
+): IAttachmentLibraryItem | undefined {
+  const listItem = item.ListItemAllFields;
+  const listItemId = listItem && listItem.Id ? listItem.Id : 0;
+  const fileName = item.Name || '';
+  const fileRef = item.ServerRelativeUrl || '';
+
+  if (!listItemId || !fileName) {
+    return undefined;
+  }
 
   return {
-    id: item.Id,
+    id: listItemId,
     name: fileName,
     fileUrl: buildSharePointFileOpenUrl(siteUrl, {
-      uniqueId: item.UniqueId,
+      uniqueId: item.UniqueId || (listItem && listItem.UniqueId),
       fileRef,
       fileName
     }),
-    modified: item.Modified,
-    editor: item.Editor && item.Editor.Title ? item.Editor.Title : undefined,
-    folderPath: fileDirRef,
-    isFormAttachment: item.IsBieuMau === true || fileDirRef.indexOf(`/${ATTACHMENT_FORM_SUBFOLDER}`) > -1
+    modified: (listItem && listItem.Modified) || item.TimeLastModified,
+    editor: listItem && listItem.Editor && listItem.Editor.Title ? listItem.Editor.Title : undefined,
+    folderPath,
+    isFormAttachment: Boolean(listItem && listItem.IsBieuMau === true)
   };
+}
+
+function waitAttachmentListRetry(ms: number): Promise<void> {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/** Files collection không hỗ trợ $orderby ổn định — sắp xếp Modified desc phía client như trước. */
+function sortAttachmentsByModifiedDesc(items: IAttachmentLibraryItem[]): IAttachmentLibraryItem[] {
+  return items.slice().sort((left, right) => {
+    const leftTime = left.modified ? Date.parse(left.modified) : NaN;
+    const rightTime = right.modified ? Date.parse(right.modified) : NaN;
+
+    if (isNaN(leftTime) && isNaN(rightTime)) {
+      return 0;
+    }
+
+    if (isNaN(leftTime)) {
+      return 1;
+    }
+
+    if (isNaN(rightTime)) {
+      return -1;
+    }
+
+    return rightTime - leftTime;
+  });
 }
 
 function resolveDocumentFolderName(requestReferenceId: string): string {
@@ -530,62 +578,51 @@ export class PhvbAttachmentService {
     throw lastError || new Error('Unable to upload attachment files.');
   }
 
-  private async listFilesInFolder(
-    siteUrl: string,
-    context: IAttachmentServiceContext,
-    folderPath: string,
-    isFormAttachment: boolean
-  ): Promise<IAttachmentLibraryItem[]> {
-    const exists = await this.folderExists(siteUrl, context, folderPath);
-    if (!exists) {
-      return [];
+  private buildFolderFilesUrl(siteUrl: string, folderPath: string, includeEditor: boolean): string {
+    const selectFields = ATTACHMENT_FOLDER_FILES_BASE_SELECT.slice();
+    const expandFields = ['ListItemAllFields'];
+
+    if (includeEditor) {
+      selectFields.push('ListItemAllFields/Editor/Title');
+      expandFields.push('ListItemAllFields/Editor');
     }
 
-    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/Files?$select=Name,ServerRelativeUrl,TimeLastModified,UniqueId,ListItemAllFields/Id,ListItemAllFields/UniqueId&$expand=ListItemAllFields&${buildODataParameterQuery({
-      '@folderPath': folderPath
-    })}`;
-    const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-    await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_GET');
-    const data = await response.json() as {
-      value?: Array<{
-        Name?: string;
-        ServerRelativeUrl?: string;
-        TimeLastModified?: string;
-        UniqueId?: string;
-        ListItemAllFields?: { Id?: number; UniqueId?: string };
-      }>;
-    };
-
-    const files = data.value || [];
-    const mapped: IAttachmentLibraryItem[] = [];
-
-    for (let index = 0; index < files.length; index += 1) {
-      const file = files[index];
-      const listItemId = file.ListItemAllFields && file.ListItemAllFields.Id ? file.ListItemAllFields.Id : 0;
-      const fileName = (file.Name || '').trim();
-      const fileRef = (file.ServerRelativeUrl || '').trim();
-
-      if (!listItemId || !fileName || !fileRef) {
-        continue;
-      }
-
-      mapped.push({
-        id: listItemId,
-        name: fileName,
-        fileUrl: buildSharePointFileOpenUrl(siteUrl, {
-          uniqueId: file.UniqueId || file.ListItemAllFields?.UniqueId,
-          fileRef,
-          fileName
-        }),
-        modified: file.TimeLastModified,
-        folderPath,
-        isFormAttachment
-      });
-    }
-
-    return mapped;
+    return `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/Files` +
+      `?$select=${selectFields.join(',')}` +
+      `&$expand=${expandFields.join(',')}` +
+      `&$top=5000&${buildODataParameterQuery({ '@folderPath': folderPath })}`;
   }
 
+  /**
+   * `ListItemAllFields/Editor` là lookup lồng hai cấp qua Files API — một số tenant SharePoint
+   * trả 400 với select/expand này. Khi gặp 400, thử lại không có Editor (chỉ mất cột "Người
+   * chỉnh sửa", không mất file).
+   */
+  private async fetchFolderFiles(
+    siteUrl: string,
+    context: IAttachmentServiceContext,
+    folderPath: string
+  ): Promise<ISharePointFolderFileItem[]> {
+    const requestUrl = this.buildFolderFilesUrl(siteUrl, folderPath, true);
+    let response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
+
+    if (!response.ok && response.status === 400) {
+      const fallbackUrl = this.buildFolderFilesUrl(siteUrl, folderPath, false);
+      response = await context.spHttpClient.get(fallbackUrl, SPHttpClient.configurations.v1);
+      await ensureAttachmentResponseOk(response, fallbackUrl, context, 'SP_GET');
+    } else {
+      await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_GET');
+    }
+
+    const data = await response.json() as { value?: ISharePointFolderFileItem[] };
+    return data.value || [];
+  }
+
+  /**
+   * Đọc file trực tiếp từ folder của yêu cầu (không qua list item collection filter) để tránh lệch
+   * dữ liệu ngay sau upload. Retry ngắn khi lỗi tạm thời (429/5xx) hoặc khi file vừa upload chưa có
+   * `ListItemAllFields.Id` ổn định — không retry lỗi quyền (403), không retry vô hạn.
+   */
   private async listRequestFilesByFolder(
     siteUrl: string,
     context: IAttachmentServiceContext,
@@ -596,14 +633,45 @@ export class PhvbAttachmentService {
       libraryRootPath,
       resolveDocumentFolderName(requestReferenceId)
     );
-    const formFolderPath = joinServerRelativePath(documentFolderPath, ATTACHMENT_FORM_SUBFOLDER);
 
-    const [draftFiles, formFiles] = await Promise.all([
-      this.listFilesInFolder(siteUrl, context, documentFolderPath, false),
-      this.listFilesInFolder(siteUrl, context, formFolderPath, true)
-    ]);
+    if (!(await this.folderExists(siteUrl, context, documentFolderPath))) {
+      return [];
+    }
 
-    return draftFiles.concat(formFiles);
+    const maxAttempts = ATTACHMENT_LIST_RETRY_DELAYS_MS.length;
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const rawItems = await this.fetchFolderFiles(siteUrl, context, documentFolderPath);
+        const mapped = rawItems
+          .map(item => mapFolderFileToAttachment(item, siteUrl, documentFolderPath))
+          .filter((item): item is IAttachmentLibraryItem => Boolean(item));
+
+        const hasUnresolvedMetadata = mapped.length < rawItems.length;
+        const isLastAttempt = attempt === maxAttempts;
+
+        if (!hasUnresolvedMetadata || isLastAttempt) {
+          return sortAttachmentsByModifiedDesc(mapped);
+        }
+
+        await waitAttachmentListRetry(ATTACHMENT_LIST_RETRY_DELAYS_MS[attempt]);
+      } catch (error) {
+        lastError = error;
+
+        if (error instanceof SharePointRequestError && error.status === 403) {
+          throw error;
+        }
+
+        if (attempt === maxAttempts) {
+          throw error;
+        }
+
+        await waitAttachmentListRetry(ATTACHMENT_LIST_RETRY_DELAYS_MS[attempt]);
+      }
+    }
+
+    throw lastError || new Error(`Unable to load attachment files for folder ${documentFolderPath}.`);
   }
 
   public async listRequestFiles(context: IPhvbSiteContext, requestReferenceId: string): Promise<IAttachmentLibraryItem[]> {
@@ -618,25 +686,11 @@ export class PhvbAttachmentService {
       throw new Error('Missing SharePoint site context.');
     }
 
-    const filterValue = escapeODataValue(requestReferenceId);
-    const filter = `IDYeuCau eq '${filterValue}' and FSObjType eq 0`;
-
     for (let index = 0; index < candidates.length; index += 1) {
       const siteUrl = candidates[index];
-      const attachmentContext: IAttachmentServiceContext = { ...context };
 
       try {
-        const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(ATTACHMENT_LIBRARY_TITLE)}')/items?$select=${ATTACHMENT_SELECT_FIELDS.join(',')}&$expand=Editor&$filter=${encodeURIComponent(filter)}&$top=500&$orderby=Modified desc`;
-        const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-        await ensureAttachmentResponseOk(response, requestUrl, context, 'SP_GET');
-        const data = await response.json() as { value?: ISharePointAttachmentItem[] };
-        const items = data.value || [];
-
-        if (items.length > 0) {
-          return items.map(item => mapAttachmentItem(item, siteUrl));
-        }
-
-        return await this.listRequestFilesByFolder(siteUrl, attachmentContext, requestReferenceId);
+        return await this.listRequestFilesByFolder(siteUrl, { ...context }, requestReferenceId);
       } catch (error) {
         lastError = error;
       }
@@ -690,7 +744,7 @@ export class PhvbAttachmentService {
     throw lastError || new Error('Unable to delete attachment files.');
   }
 
-  /** Xóa toàn bộ thư mục tài liệu/biểu mẫu của một yêu cầu (kể cả subfolder Biểu Mẫu) trong một lần gọi. */
+  /** Xóa toàn bộ thư mục tài liệu/biểu mẫu của một yêu cầu trong một lần gọi. */
   public async deleteRequestFolder(context: IAttachmentServiceContext, requestReferenceId: string): Promise<void> {
     if (!requestReferenceId.trim()) {
       return;

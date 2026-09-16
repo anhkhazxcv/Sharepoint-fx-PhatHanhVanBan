@@ -4,8 +4,10 @@ import {
   hasSharePointSiteContext,
   PHVB_ROLES,
   REQUEST_STATUS,
+  SHORT_URL_DEFAULT_ENDPOINT,
   TRANG_THAI_THUC_HIEN
 } from '../config/PhvbMag.configuration';
+import { escapeODataValue, normalizeSiteUrl } from '../infrastructure/SharePointSite.utils';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
 import { toRuntimeMessage } from './PhvbMag.error';
 import {
@@ -176,23 +178,30 @@ async function sendThongBaoLuuTruMail(
     return;
   }
 
+  const mailUrl = (context.endPointSendMail || '').trim();
+
   try {
     await phvbSendMailService.sendMail(context, mailPayload, logContext);
     await auditLogger.logSendMail(
       {
         TypeSendMail: mailPayload.TypeSendMail,
-        EmailTo: mailPayload.EmailTo
+        EmailTo: mailPayload.EmailTo,
+        subject: mailPayload.Subject || ''
       },
-      'success'
+      'success',
+      undefined,
+      mailUrl
     );
   } catch (error) {
     await auditLogger.logSendMail(
       {
         TypeSendMail: mailPayload.TypeSendMail,
-        EmailTo: mailPayload.EmailTo
+        EmailTo: mailPayload.EmailTo,
+        subject: mailPayload.Subject || ''
       },
       'failed',
-      error instanceof Error ? error.message : String(error)
+      error instanceof Error ? error.message : String(error),
+      mailUrl
     );
   }
 }
@@ -222,15 +231,28 @@ export async function publishIssuanceWithNotify(
     throw new Error('Chưa cấu hình endpoint gửi mail (endPointSendMail).');
   }
 
-  const publishResult = await phvbIssuancePublishService.publishTaoMoi(
-    { ...context, logContext },
-    detail.release,
-    mainDocumentId as number,
-    auditLogger
-  );
+  auditLogger.setHeader({
+    loaiYeuCau: detail.release.LoaiYeuCau,
+    tomTatNoiDung: (detail.release.TomTatNoiDung || '').trim(),
+    mainDocumentId: mainDocumentId as number
+  });
 
-  const labelConfig = await phvbBanHanhConfigService.loadLabelCustomConfig(context);
-  const { apiKey, source: apiKeySource } = resolveShortUrlApiKey(labelConfig);
+  const [publishResult, labelConfig] = await Promise.all([
+    phvbIssuancePublishService.publishTaoMoi(
+      { ...context, logContext },
+      detail.release,
+      mainDocumentId as number,
+      auditLogger
+    ),
+    phvbBanHanhConfigService.loadLabelCustomConfig(context)
+  ]);
+
+  const { apiKey } = resolveShortUrlApiKey(labelConfig);
+  const shortUrlEndpoint = (context.endPointShortUrl || SHORT_URL_DEFAULT_ENDPOINT).trim();
+  const mailUrl = (context.endPointSendMail || '').trim();
+  const releaseItemUrl =
+    `${normalizeSiteUrl(context.currentWebUrl)}/_api/web/lists/getByTitle('${escapeODataValue(DEFAULT_LIST_TITLE)}')` +
+    `/items(${detail.release.Id})`;
 
   const mainFileLongUrl = buildDirectFileUrl(
     publishResult.siteUrl,
@@ -238,42 +260,52 @@ export async function publishIssuanceWithNotify(
   );
   const folderLongUrl = buildLibraryFolderDeepLinkUrl(publishResult.folderListItemId);
 
-  let linkFile = '';
-  let linkTatCaTaiLieu = '';
-
-  try {
-    linkFile = await phvbShortUrlService.createShortUrl(context, mainFileLongUrl, apiKey, logContext);
-    await auditLogger.logCreateShortUrl(
-      'BanHanh_CreateShortUrl_LinkFile',
-      auditLogger.buildShortUrlAuditPayload(mainFileLongUrl, linkFile, apiKeySource, apiKey),
-      'success'
-    );
-  } catch (error) {
-    await auditLogger.logCreateShortUrl(
-      'BanHanh_CreateShortUrl_LinkFile',
-      auditLogger.buildShortUrlAuditPayload(mainFileLongUrl, '', apiKeySource, apiKey),
-      'failed',
-      error instanceof Error ? error.message : String(error)
-    );
-    throw error;
-  }
-
-  try {
-    linkTatCaTaiLieu = await phvbShortUrlService.createShortUrl(context, folderLongUrl, apiKey, logContext);
-    await auditLogger.logCreateShortUrl(
-      'BanHanh_CreateShortUrl_LinkTatCaTaiLieu',
-      auditLogger.buildShortUrlAuditPayload(folderLongUrl, linkTatCaTaiLieu, apiKeySource, apiKey),
-      'success'
-    );
-  } catch (error) {
-    await auditLogger.logCreateShortUrl(
-      'BanHanh_CreateShortUrl_LinkTatCaTaiLieu',
-      auditLogger.buildShortUrlAuditPayload(folderLongUrl, '', apiKeySource, apiKey),
-      'failed',
-      error instanceof Error ? error.message : String(error)
-    );
-    throw error;
-  }
+  const [linkFile, linkTatCaTaiLieu] = await Promise.all([
+    (async () => {
+      try {
+        const shortUrl = await phvbShortUrlService.createShortUrl(context, mainFileLongUrl, apiKey, logContext);
+        await auditLogger.logCreateShortUrl(
+          'BanHanh_CreateShortUrl_LinkFile',
+          auditLogger.buildShortUrlAuditPayload(mainFileLongUrl, shortUrl),
+          'success',
+          undefined,
+          shortUrlEndpoint
+        );
+        return shortUrl;
+      } catch (error) {
+        await auditLogger.logCreateShortUrl(
+          'BanHanh_CreateShortUrl_LinkFile',
+          auditLogger.buildShortUrlAuditPayload(mainFileLongUrl, ''),
+          'failed',
+          error instanceof Error ? error.message : String(error),
+          shortUrlEndpoint
+        );
+        throw error;
+      }
+    })(),
+    (async () => {
+      try {
+        const shortUrl = await phvbShortUrlService.createShortUrl(context, folderLongUrl, apiKey, logContext);
+        await auditLogger.logCreateShortUrl(
+          'BanHanh_CreateShortUrl_LinkTatCaTaiLieu',
+          auditLogger.buildShortUrlAuditPayload(folderLongUrl, shortUrl),
+          'success',
+          undefined,
+          shortUrlEndpoint
+        );
+        return shortUrl;
+      } catch (error) {
+        await auditLogger.logCreateShortUrl(
+          'BanHanh_CreateShortUrl_LinkTatCaTaiLieu',
+          auditLogger.buildShortUrlAuditPayload(folderLongUrl, ''),
+          'failed',
+          error instanceof Error ? error.message : String(error),
+          shortUrlEndpoint
+        );
+        throw error;
+      }
+    })()
+  ]);
 
   const resolvedBody = replaceBanHanhLinkTokens((detail.release.BodyEmail || '').trim(), {
     linkFile,
@@ -298,31 +330,32 @@ export async function publishIssuanceWithNotify(
     await auditLogger.logUpdateRelease(
       {
         StatusApproved: REQUEST_STATUS.BAN_HANH,
-        itemId: detail.release.Id,
-        LienHe: lienHe,
-        hasReplacedBodyLinks: true,
-        linkFile,
-        linkTatCaTaiLieu
+        LienHe: lienHe
       },
-      'success'
+      'success',
+      undefined,
+      releaseItemUrl
     );
   } catch (error) {
     await auditLogger.logUpdateRelease(
       {
         StatusApproved: REQUEST_STATUS.BAN_HANH,
-        itemId: detail.release.Id,
-        LienHe: lienHe,
-        hasReplacedBodyLinks: true,
-        linkFile,
-        linkTatCaTaiLieu
+        LienHe: lienHe
       },
       'failed',
-      error instanceof Error ? error.message : String(error)
+      error instanceof Error ? error.message : String(error),
+      releaseItemUrl
     );
     throw error;
   }
 
-  await appendHistory(
+  const mailPayload = buildXacNhanBanHanhPayload(context.userDisplayName, detail.release, resolvedBody);
+
+  if (!mailPayload) {
+    throw new Error('Không tạo được nội dung email xác nhận ban hành.');
+  }
+
+  const historyTask = appendHistory(
     { ...context, logContext },
     {
       idYeuCau,
@@ -331,35 +364,41 @@ export async function publishIssuanceWithNotify(
       department: detail.release.KhoaPhongNguoiTao,
       isComment: false
     }
-  );
+  ).then(() => undefined).catch((error: unknown) => error);
 
-  const mailPayload = buildXacNhanBanHanhPayload(context.userDisplayName, detail.release, resolvedBody);
+  const mailTask = phvbSendMailService.sendMail(context, mailPayload, logContext)
+    .then(() => undefined)
+    .catch((error: unknown) => error);
 
-  if (!mailPayload) {
-    throw new Error('Không tạo được nội dung email xác nhận ban hành.');
-  }
+  const [historyError, mailError] = await Promise.all([historyTask, mailTask]);
 
-  try {
-    await phvbSendMailService.sendMail(context, mailPayload, logContext);
+  if (mailError) {
     await auditLogger.logSendMail(
       {
         TypeSendMail: mailPayload.TypeSendMail,
         EmailTo: mailPayload.EmailTo,
-        hasLinkFile: Boolean(linkFile),
-        hasLinkTatCaTaiLieu: Boolean(linkTatCaTaiLieu)
-      },
-      'success'
-    );
-  } catch (error) {
-    await auditLogger.logSendMail(
-      {
-        TypeSendMail: mailPayload.TypeSendMail,
-        EmailTo: mailPayload.EmailTo
+        subject: mailPayload.Subject || ''
       },
       'failed',
-      error instanceof Error ? error.message : String(error)
+      mailError instanceof Error ? mailError.message : String(mailError),
+      mailUrl
     );
-    throw error;
+    throw mailError;
+  }
+
+  await auditLogger.logSendMail(
+    {
+      TypeSendMail: mailPayload.TypeSendMail,
+      EmailTo: mailPayload.EmailTo,
+      subject: mailPayload.Subject || ''
+    },
+    'success',
+    undefined,
+    mailUrl
+  );
+
+  if (historyError) {
+    throw historyError;
   }
 
   await sendThongBaoLuuTruMail(context, detail.release, logContext, auditLogger);
@@ -433,7 +472,7 @@ export class PhvbBanHanhService {
       )
     });
 
-    await appendHistory(
+    const historyTask = appendHistory(
       { ...context, logContext },
       {
         idYeuCau,
@@ -442,9 +481,21 @@ export class PhvbBanHanhService {
         department: detail.release.KhoaPhongNguoiTao,
         isComment: false
       }
-    );
+    ).then(() => undefined).catch((error: unknown) => error);
 
-    await phvbSendMailService.sendMail(context, mailPayload, logContext);
+    const mailTask = phvbSendMailService.sendMail(context, mailPayload, logContext)
+      .then(() => undefined)
+      .catch((error: unknown) => error);
+
+    const [historyError, mailError] = await Promise.all([historyTask, mailTask]);
+
+    if (mailError) {
+      throw mailError;
+    }
+
+    if (historyError) {
+      throw historyError;
+    }
   }
 
   public async updateBanHanhNotifyContent(
@@ -618,18 +669,19 @@ export class PhvbBanHanhService {
         }
       });
 
-      await appendHistory(
-        { ...context, logContext },
-        {
-          idYeuCau,
-          trangThaiThucHien: TRANG_THAI_THUC_HIEN.BAN_HANH,
-          noiDung: '',
-          department: detail.release.KhoaPhongNguoiTao,
-          isComment: false
-        }
-      );
-
-      await sendThongBaoLuuTruMail(context, detail.release, logContext, auditLogger);
+      await Promise.all([
+        appendHistory(
+          { ...context, logContext },
+          {
+            idYeuCau,
+            trangThaiThucHien: TRANG_THAI_THUC_HIEN.BAN_HANH,
+            noiDung: '',
+            department: detail.release.KhoaPhongNguoiTao,
+            isComment: false
+          }
+        ),
+        sendThongBaoLuuTruMail(context, detail.release, logContext, auditLogger)
+      ]);
 
       await auditLogger.logSuccess({
         loaiYeuCau: detail.release.LoaiYeuCau,

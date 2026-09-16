@@ -1,0 +1,36 @@
+{
+  "packageSchemaVersion": "1.0",
+  "details": {
+    "displayName": "PHVB Ban hành HTTP 202",
+    "description": "HTTP fire-and-forget Ban hành PHVB: Response 202 rồi copy/stamp/archive/short URL/mail. Chỉ Tạo mới và Điều chỉnh (kể cả DMVL). Không ghi Log, không ghi LichSuThucHien, không PATCH StatusApproved.",
+    "createdTime": "2026-09-15T00:00:00Z",
+    "packageTelemetryId": "c2c4360a-b4e1-4f7a-9c11-08587b410001"
+  },
+  "resources": {
+    "c2c4360a-b4e1-4f7a-9c11-08587b410001": {
+      "type": "Microsoft.Flow/flows",
+      "suggestedCreationType": "New",
+      "displayName": "PHVB Ban hành HTTP 202",
+      "details": {
+        "displayName": "PHVB Ban hành HTTP 202"
+      },
+      "configurableBy": "User",
+      "hierarchy": "Root",
+      "dependsOn": [
+        "shared_sharepointonline"
+      ]
+    },
+    "shared_sharepointonline": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+      "name": "shared_sharepointonline",
+      "type": "Microsoft.PowerApps/apis",
+      "suggestedCreationType": "Existing",
+      "details": {
+        "displayName": "SharePoint"
+      },
+      "configurableBy": "User",
+      "hierarchy": "Child",
+      "dependsOn": []
+    }
+  }
+}

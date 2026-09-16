@@ -1,6 +1,5 @@
 import { SPHttpClient } from '@microsoft/sp-http';
 import {
-  ATTACHMENT_FORM_SUBFOLDER,
   LIBRARY_CACHE_STALE_MS,
   LIBRARY_FILES_PAGE_SIZE,
   LIBRARY_SEARCH_PAGE_SIZE,
@@ -31,7 +30,6 @@ import { buildLibraryFolderChildrenIndex } from '../utils/PhvbMagBanHanh.tree';
 import {
   getRecentPublishedStartDate,
   isExpiredArchivePath,
-  isFormAttachmentPath,
   isRecentPublishedFolderCandidate,
   toODataDateTimeLiteral
 } from '../utils/PhvbMagRecentPublished.utils';
@@ -333,7 +331,7 @@ function mapBanHanhLibraryItem(
     viewCount: extras?.viewCount,
     canDownload,
     downloadUrl: downloadUrl || undefined,
-    isFormAttachment: item.IsBieuMau === true || isFormAttachmentPath(item.FileDirRef || '')
+    isFormAttachment: item.IsBieuMau === true
   };
 }
 
@@ -388,7 +386,6 @@ function buildRecentPublishedFileDirRefFilter(folderPaths: string[]): string | u
     }
 
     clauses.push(`FileDirRef eq '${escapeODataStringLiteral(normalizedFolderPath)}'`);
-    clauses.push(`FileDirRef eq '${escapeODataStringLiteral(`${normalizedFolderPath}/${ATTACHMENT_FORM_SUBFOLDER}`)}'`);
   });
 
   if (clauses.length === 0) {

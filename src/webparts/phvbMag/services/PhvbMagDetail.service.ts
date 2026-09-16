@@ -283,8 +283,11 @@ export class PhvbDetailService {
     }
 
     if (uniqueScopes.indexOf('attachments') > -1) {
+      // Không catch(() => []) ở đây: nếu load lỗi, promise reject để Promise.all(loaders) throw,
+      // partial refresh giữ nguyên `attachments` cũ (không set result.attachments) và báo lỗi lên UI
+      // thay vì hiện "Không có file".
       loaders.push(
-        phvbAttachmentService.listRequestFiles(context, normalizedId).catch(() => []).then(attachments => {
+        phvbAttachmentService.listRequestFiles(context, normalizedId).then(attachments => {
           result.attachments = attachments;
         })
       );
@@ -330,7 +333,9 @@ export class PhvbDetailService {
       pheDuyetUsers
     ] = await Promise.all([
       fetchReleaseItem(context, normalizedId),
-      phvbAttachmentService.listRequestFiles(context, normalizedId).catch(() => []),
+      // Không catch(() => []) ở đây: lỗi attachment (403/429/5xx) phải làm loadRequestDetailFull
+      // throw để màn detail báo lỗi rõ, không hiển thị "Không có file" do nuốt lỗi thành mảng rỗng.
+      phvbAttachmentService.listRequestFiles(context, normalizedId),
       fetchHistoryItemsByIdYeuCau(context, normalizedId).catch(() => []),
       fetchAllUserItemsByIdYeuCau(context, normalizedId, ALL_USER_GOPY_LIST_TITLE).catch(() => []),
       fetchAllUserItemsByIdYeuCau(context, normalizedId, ALL_USER_THAMDINH_LIST_TITLE).catch(() => []),

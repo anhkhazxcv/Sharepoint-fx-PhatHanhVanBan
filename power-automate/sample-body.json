@@ -1,0 +1,9 @@
+{
+  "siteUrl": "https://contoso.sharepoint.com/sites/phvb",
+  "itemId": 123,
+  "endPointSendMail": "https://prod-xx.region.logic.azure.com/workflows/.../triggers/manual/paths/invoke",
+  "endPointShortUrl": "https://s.masterisehomes.com/rest/v3/short-urls",
+  "webPartPageUrl": "https://contoso.sharepoint.com/sites/phvb/SitePages/PHVB.aspx",
+  "roleGroupID": "10",
+  "nguoiThucHien": "Nguyen Van A"
+}

@@ -309,7 +309,7 @@ export default class PhvbMagWebPart extends BaseClientSideWebPart<IPhvbMagWebPar
                 }),
                 PropertyPaneTextField('roleGroupID', {
                   label: 'Role Group ID',
-                  description: 'SharePoint group ID được gán quyền Read cho thư mục Biểu Mẫu khi ban hành.'
+                  description: 'SharePoint group ID được gán quyền Read cho file Biểu Mẫu khi ban hành.'
                 })
               ]
             }

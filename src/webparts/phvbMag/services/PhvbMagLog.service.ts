@@ -14,7 +14,9 @@ export interface IApiLogParams {
   requestUrl?: string;
 }
 
-const DEFAULT_PAYLOAD_MAX_LENGTH = 12000;
+/** SharePoint list Note / Multiple lines of text max characters. */
+export const SHAREPOINT_NOTE_MAX_CHARS = 63999;
+const LOG_TRUNCATION_SUFFIX = '... [truncated]';
 
 export function createFlowRunId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -24,7 +26,16 @@ export function createFlowRunId(): string {
   return `run-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
 }
 
-export function serializeLogPayload(value: unknown, maxLength: number = DEFAULT_PAYLOAD_MAX_LENGTH): string {
+export function clipSharePointNote(value: string, maxLength: number = SHAREPOINT_NOTE_MAX_CHARS): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  const keep = Math.max(0, maxLength - LOG_TRUNCATION_SUFFIX.length);
+  return `${value.substring(0, keep)}${LOG_TRUNCATION_SUFFIX}`;
+}
+
+export function serializeLogPayload(value: unknown, maxLength: number = SHAREPOINT_NOTE_MAX_CHARS): string {
   if (value === undefined || value === null) {
     return '';
   }
@@ -37,11 +48,7 @@ export function serializeLogPayload(value: unknown, maxLength: number = DEFAULT_
     serialized = String(value);
   }
 
-  if (serialized.length <= maxLength) {
-    return serialized;
-  }
-
-  return `${serialized.substring(0, maxLength)}... [truncated]`;
+  return clipSharePointNote(serialized, maxLength);
 }
 
 function getLogItemsEndpoint(siteUrl: string): string {
@@ -56,7 +63,7 @@ function mapLogEntryToPayload(entry: IPhvbLogEntry): Record<string, string> {
     ActionName: entry.actionName || '',
     ListName: entry.listName || '',
     ItemId: entry.itemId !== undefined && entry.itemId !== null ? String(entry.itemId) : '',
-    ErrorMessage: entry.errorMessage || '',
+    ErrorMessage: clipSharePointNote(entry.errorMessage || ''),
     RequestFields: entry.requestFields || '',
     RequestPayload: entry.requestPayload || '',
     FlowRunId: entry.flowRunId || ''

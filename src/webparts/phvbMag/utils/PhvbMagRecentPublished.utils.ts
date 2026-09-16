@@ -1,4 +1,3 @@
-import { ATTACHMENT_FORM_SUBFOLDER } from '../config/PhvbMag.configuration';
 import type { IBanHanhLibraryItem } from '../models/PhvbMag.models';
 import { getStoragePathAfterLibrary } from './PhvbMagBanHanh.tree';
 import { parseDateOnlyToLocalMidnight } from './PhvbMagLibrary.utils';
@@ -45,15 +44,6 @@ export function isExpiredArchivePath(fileDirRefOrFileRef: string): boolean {
   return normalizePath(fileDirRefOrFileRef).indexOf(EXPIRED_FOLDER_PATH_MARKER) > -1;
 }
 
-export function isFormAttachmentPath(fileDirRef: string): boolean {
-  const normalized = normalizePath(fileDirRef);
-  const suffix = `/${ATTACHMENT_FORM_SUBFOLDER}`;
-
-  return normalized === ATTACHMENT_FORM_SUBFOLDER
-    || (normalized.length >= suffix.length
-      && normalized.substring(normalized.length - suffix.length) === suffix);
-}
-
 export function isRecentPublishedFolderCandidate(fileDirRef: string, fileName: string): boolean {
   const normalizedPath = normalizePath(fileDirRef);
   const normalizedName = (fileName || '').trim().toLowerCase();
@@ -62,7 +52,7 @@ export function isRecentPublishedFolderCandidate(fileDirRef: string, fileName: s
     return false;
   }
 
-  if (normalizedName === 'forms' || isFormAttachmentPath(normalizedPath)) {
+  if (normalizedName === 'forms') {
     return false;
   }
 
@@ -70,14 +60,7 @@ export function isRecentPublishedFolderCandidate(fileDirRef: string, fileName: s
 }
 
 export function resolveDocumentFolderKey(fileDirRef: string): string {
-  const normalized = normalizePath(fileDirRef);
-
-  if (isFormAttachmentPath(normalized)) {
-    const lastSlashIndex = normalized.lastIndexOf('/');
-    return lastSlashIndex === -1 ? '' : normalized.substring(0, lastSlashIndex);
-  }
-
-  return normalized;
+  return normalizePath(fileDirRef);
 }
 
 export function resolveDocumentFolderDisplayName(documentFolderKey: string): string {

@@ -40,7 +40,6 @@ export const TAB_COUNTS_CACHE_STALE_MS = 60 * 1000;
 export const ALL_USER_GOPY_LIST_TITLE = 'AllUser_GopY';
 export const ALL_USER_THAMDINH_LIST_TITLE = 'AllUser_ThamDinh';
 export const ALL_USER_PHEDUYET_LIST_TITLE = 'AllUser_PheDuyet';
-export const ATTACHMENT_FORM_SUBFOLDER = 'Biểu Mẫu';
 export const DRAFT_DOCUMENT_ACCEPT = '.docx,.pdf,.xlsx,.xls';
 export const FORM_ATTACHMENT_ACCEPT = '.docx,.pdf,.xlsx,.xls';
 export const ALL_FILTER_VALUE = 'All';
