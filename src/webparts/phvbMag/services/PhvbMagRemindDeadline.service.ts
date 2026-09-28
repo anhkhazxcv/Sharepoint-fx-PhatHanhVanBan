@@ -58,9 +58,14 @@ export class PhvbRemindDeadlineService {
       throw new Error('Vui lòng chọn ít nhất một người nhận.');
     }
 
+    const nguoiThucHien = (detail.release.EmailNguoiTao || '').trim();
+    if (!nguoiThucHien) {
+      throw new Error('Yêu cầu chưa có email người tạo nên không thể gửi nhắc hạn.');
+    }
+
     const documentInfo = resolveRemindDeadlineDocumentInfo(detail.release);
     const mailPayload = buildRemindDeadlinePayload(
-      options.userDisplayName,
+      nguoiThucHien,
       selectedEmails,
       remindContext,
       documentInfo

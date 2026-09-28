@@ -20,10 +20,6 @@ export function getRequestStatusTone(status: string): StatusTone {
     case REQUEST_STATUS.TU_CHOI_THAM_DINH:
     case REQUEST_STATUS.TU_CHOI_PHE_DUYET:
       return 'error';
-    case REQUEST_STATUS.THU_HOI:
-    case REQUEST_STATUS.CHO_ADMIN_THU_HOI:
-    case REQUEST_STATUS.CHO_SUPER_ADMIN_THU_HOI:
-      return 'archived';
     default:
       return 'draft';
   }

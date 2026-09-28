@@ -3,12 +3,15 @@ import {
   ALL_USER_PHEDUYET_LIST_TITLE,
   ALL_USER_THAMDINH_LIST_TITLE,
   DEFAULT_LIST_TITLE,
+  ENABLE_LOG_GET_TAI_LIEU_LABEL,
   hasSharePointSiteContext,
   HISTORY_LIST_TITLE
 } from '../config/PhvbMag.configuration';
 import { phvbRepository } from '../repositories/PhvbMag.repository';
+import { getLabelValue } from '../utils/PhvbMagBanHanhNotify.utils';
 import { toRuntimeMessage } from './PhvbMag.error';
 import { phvbAttachmentService } from './PhvbMagAttachment.service';
+import { phvbBanHanhConfigService } from './PhvbMagBanHanhConfig.service';
 import { phvbCommentAttachmentService } from './PhvbMagCommentAttachment.service';
 import { RELEASE_SELECT_FIELDS } from './PhvbMag.service';
 import { groupCommentAttachmentsByCommentId } from '../utils/PhvbMagCommentAttachment.utils';
@@ -43,6 +46,23 @@ const HISTORY_SELECT_FIELDS: ReadonlyArray<string> = [
 ];
 
 const WORKFLOW_STAGE_ORDER: ReadonlyArray<WorkflowStage> = ['gopy', 'thamdinh', 'pheduyet'];
+const LOG_GET_TAI_LIEU_DISABLED_VALUES: ReadonlyArray<string> = ['false', '0', 'no'];
+
+/** Value trống hoặc không đọc được label → ghi log. Chỉ `false` / `0` / `no` tắt. */
+async function resolveAuditGetTaiLieu(context: IPhvbSiteContext): Promise<boolean> {
+  try {
+    const items = await phvbBanHanhConfigService.loadLabelCustomConfig(context);
+    const value = getLabelValue(items, ENABLE_LOG_GET_TAI_LIEU_LABEL).trim().toLowerCase();
+
+    if (!value) {
+      return true;
+    }
+
+    return LOG_GET_TAI_LIEU_DISABLED_VALUES.indexOf(value) === -1;
+  } catch {
+    return true;
+  }
+}
 
 function escapeODataValue(value: string): string {
   return value.replace(/'/g, "''");
@@ -237,8 +257,12 @@ async function enrichHistoryWithAttachments(
 }
 
 export class PhvbDetailService {
-  public async loadRequestDetail(context: IPhvbSiteContext, idYeuCau: string): Promise<IRequestDetailData | undefined> {
-    const partial = await this.loadRequestDetailPartial(context, idYeuCau, ['full']);
+  public async loadRequestDetail(
+    context: IPhvbSiteContext,
+    idYeuCau: string,
+    userEmail?: string
+  ): Promise<IRequestDetailData | undefined> {
+    const partial = await this.loadRequestDetailPartial(context, idYeuCau, ['full'], userEmail);
 
     if (!partial.release) {
       return undefined;
@@ -256,7 +280,8 @@ export class PhvbDetailService {
   public async loadRequestDetailPartial(
     context: IPhvbSiteContext,
     idYeuCau: string,
-    scopes: ReadonlyArray<DetailRefreshScope>
+    scopes: ReadonlyArray<DetailRefreshScope>,
+    userEmail?: string
   ): Promise<Partial<IRequestDetailData>> {
     if (!hasSharePointSiteContext(context) || !idYeuCau.trim()) {
       return {};
@@ -266,7 +291,7 @@ export class PhvbDetailService {
     const uniqueScopes = scopes.filter((scope, index, array) => array.indexOf(scope) === index);
 
     if (uniqueScopes.length === 0 || uniqueScopes.indexOf('full') > -1) {
-      return this.loadRequestDetailFull(context, normalizedId);
+      return this.loadRequestDetailFull(context, normalizedId, userEmail);
     }
 
     const result: Partial<IRequestDetailData> = {};
@@ -283,13 +308,15 @@ export class PhvbDetailService {
     }
 
     if (uniqueScopes.indexOf('attachments') > -1) {
-      // Không catch(() => []) ở đây: nếu load lỗi, promise reject để Promise.all(loaders) throw,
-      // partial refresh giữ nguyên `attachments` cũ (không set result.attachments) và báo lỗi lên UI
-      // thay vì hiện "Không có file".
       loaders.push(
-        phvbAttachmentService.listRequestFiles(context, normalizedId).then(attachments => {
-          result.attachments = attachments;
-        })
+        resolveAuditGetTaiLieu(context)
+          .then(auditGetTaiLieu => phvbAttachmentService.listRequestFiles(context, normalizedId, {
+            auditGetTaiLieu,
+            userEmail
+          }))
+          .then(attachments => {
+            result.attachments = attachments;
+          })
       );
     }
 
@@ -323,7 +350,12 @@ export class PhvbDetailService {
     return result;
   }
 
-  private async loadRequestDetailFull(context: IPhvbSiteContext, normalizedId: string): Promise<Partial<IRequestDetailData>> {
+  private async loadRequestDetailFull(
+    context: IPhvbSiteContext,
+    normalizedId: string,
+    userEmail?: string
+  ): Promise<Partial<IRequestDetailData>> {
+    const auditGetTaiLieu = await resolveAuditGetTaiLieu(context);
     const [
       release,
       attachments,
@@ -333,9 +365,7 @@ export class PhvbDetailService {
       pheDuyetUsers
     ] = await Promise.all([
       fetchReleaseItem(context, normalizedId),
-      // Không catch(() => []) ở đây: lỗi attachment (403/429/5xx) phải làm loadRequestDetailFull
-      // throw để màn detail báo lỗi rõ, không hiển thị "Không có file" do nuốt lỗi thành mảng rỗng.
-      phvbAttachmentService.listRequestFiles(context, normalizedId),
+      phvbAttachmentService.listRequestFiles(context, normalizedId, { auditGetTaiLieu, userEmail }),
       fetchHistoryItemsByIdYeuCau(context, normalizedId).catch(() => []),
       fetchAllUserItemsByIdYeuCau(context, normalizedId, ALL_USER_GOPY_LIST_TITLE).catch(() => []),
       fetchAllUserItemsByIdYeuCau(context, normalizedId, ALL_USER_THAMDINH_LIST_TITLE).catch(() => []),

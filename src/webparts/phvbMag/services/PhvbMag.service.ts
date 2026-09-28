@@ -285,7 +285,7 @@ async function fetchTabCountsUncached(options: IPhvbDocumentContext): Promise<IT
 }
 
 function shouldIncludeFolderOldId(requestType: ICreateRequestInput['requestType']): boolean {
-  return requestType === 'Điều chỉnh' || requestType === 'Thu hồi';
+  return requestType === 'Điều chỉnh';
 }
 
 function buildWorkflowParticipantSnapshot(input: ICreateRequestInput): IWorkflowStageParticipants {

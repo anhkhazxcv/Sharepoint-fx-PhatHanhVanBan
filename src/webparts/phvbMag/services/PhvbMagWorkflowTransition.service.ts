@@ -40,7 +40,7 @@ function resolveTransitionHistoryStatus(nextStatus: string): TrangThaiThucHien {
     case REQUEST_STATUS.CHO_CAP_SO:
       return TRANG_THAI_THUC_HIEN.CHUYEN_CAP_SO;
     default:
-      // Các trường hợp còn lại (chuyển thẳng CHO_ADMIN_THU_HOI/DA_CAP_SO khi bỏ qua
+      // Các trường hợp còn lại (chuyển thẳng DA_CAP_SO khi bỏ qua
       // bước trung gian) — không có mã trạng thái riêng trong 23 Choice value, dùng
       // CAP_NHAT_YEU_CAU (kind=system, cần NoiDung — xem chỗ gọi appendHistory).
       return TRANG_THAI_THUC_HIEN.CAP_NHAT_YEU_CAU;

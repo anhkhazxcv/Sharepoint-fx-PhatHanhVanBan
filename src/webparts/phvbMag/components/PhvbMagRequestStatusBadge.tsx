@@ -11,7 +11,6 @@ import {
   StatusPheDuyetIcon,
   StatusPublishedIcon,
   StatusRejectedIcon,
-  StatusRevokedIcon,
   StatusThamDinhIcon
 } from './PhvbMagIcons';
 
@@ -43,10 +42,6 @@ export function resolveRequestStatusClassName(statusApproved?: string): string {
       return styles.requestStatusTuChoiThamDinh;
     case REQUEST_STATUS.TU_CHOI_PHE_DUYET:
       return styles.requestStatusTuChoiPheDuyet;
-    case REQUEST_STATUS.THU_HOI:
-    case REQUEST_STATUS.CHO_ADMIN_THU_HOI:
-    case REQUEST_STATUS.CHO_SUPER_ADMIN_THU_HOI:
-      return styles.requestStatusThuHoi;
     default:
       return styles.requestStatusDefault;
   }
@@ -74,10 +69,6 @@ export function resolveRequestStatusIcon(
     case REQUEST_STATUS.TU_CHOI_THAM_DINH:
     case REQUEST_STATUS.TU_CHOI_PHE_DUYET:
       return <StatusRejectedIcon />;
-    case REQUEST_STATUS.THU_HOI:
-    case REQUEST_STATUS.CHO_ADMIN_THU_HOI:
-    case REQUEST_STATUS.CHO_SUPER_ADMIN_THU_HOI:
-      return <StatusRevokedIcon />;
     default:
       return undefined;
   }

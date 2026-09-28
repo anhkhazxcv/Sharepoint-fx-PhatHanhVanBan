@@ -88,7 +88,7 @@ export function toInputDateValue(value?: string): string {
 }
 
 function resolveRequestType(value?: string): ICreateRequestInput['requestType'] {
-  return (value || '').trim() as ICreateRequestInput['requestType'];
+  return (value || '').trim() === 'Điều chỉnh' ? 'Điều chỉnh' : 'Tạo mới';
 }
 
 export interface IMapDraftFormOptions {

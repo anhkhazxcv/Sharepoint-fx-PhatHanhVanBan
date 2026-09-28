@@ -52,7 +52,7 @@ const TABLE_COLUMNS: ReadonlyArray<ITableColumnDefinition> = [
   { key: 'title', label: 'TÊN VĂN BẢN', sortKey: 'Tenvanban', headerClassName: styles.requestTitleCell },
   { key: 'code', label: 'MÃ HIỆU', sortKey: 'SoVanBan' },
   { key: 'type', label: 'LOẠI TÁC VỤ', sortKey: 'LoaiYeuCau' },
-  { key: 'department', label: 'PHÒNG BAN', sortKey: 'KhoaPhongNguoiTao' },
+  { key: 'creator', label: 'NGƯỜI TẠO', sortKey: 'NguoiTao' },
   { key: 'created', label: 'NGÀY TẠO', sortKey: 'Created' },
   { key: 'status', label: 'TRẠNG THÁI', sortKey: 'StatusApproved' }
 ];
@@ -408,7 +408,7 @@ function RequestBoardTable(props: IRequestBoardTableProps): React.ReactElement {
                           '---'
                         )}
                       </td>
-                      <td>{item.KhoaPhongNguoiTao || '---'}</td>
+                      <td>{item.NguoiTao || '---'}</td>
                       <td>{createdLabel}</td>
                       <td>
                         <span className={[styles.requestStatusBadge, requestStatus.className].join(' ')}>

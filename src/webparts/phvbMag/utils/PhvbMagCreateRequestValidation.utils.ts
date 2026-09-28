@@ -1,6 +1,5 @@
 import type { IAttachmentLibraryItem, ICreateRequestInput } from '../models/PhvbMag.models';
-import { findDuplicateAttachmentGroupFileName, shouldSkipGopYStage, type IRequestTypeFormRules } from './PhvbMagRequestForm.utils';
-import { validateWorkflowDeadlines } from './PhvbMagSla.utils';
+import { findDuplicateAttachmentGroupFileName, type IRequestTypeFormRules } from './PhvbMagRequestForm.utils';
 
 export type CreateRequestFieldKey =
   | 'folderLuuTru'
@@ -178,27 +177,6 @@ function validateSubmitForm(
 
   if (input.approvalUsers.length === 0) {
     pushError(errors, 'approvalUsers', 'Vui lòng chọn ít nhất một người phê duyệt.');
-  }
-
-  const deadlineResult = validateWorkflowDeadlines({
-    deadlineGopY: input.deadlineGopY,
-    deadlineThamDinh: input.deadlineThamDinh,
-    deadlinePheDuyet: input.deadlinePheDuyet,
-    loaiSla: input.loaiSla,
-    skipGopY: shouldSkipGopYStage(input),
-    skipThamDinh: !rules.includeGopYThamDinhWorkflow
-  });
-
-  if (deadlineResult.deadlineGopY) {
-    pushError(errors, 'deadlineGopY', deadlineResult.deadlineGopY);
-  }
-
-  if (deadlineResult.deadlineThamDinh) {
-    pushError(errors, 'deadlineThamDinh', deadlineResult.deadlineThamDinh);
-  }
-
-  if (deadlineResult.deadlinePheDuyet) {
-    pushError(errors, 'deadlinePheDuyet', deadlineResult.deadlinePheDuyet);
   }
 
   return errors;

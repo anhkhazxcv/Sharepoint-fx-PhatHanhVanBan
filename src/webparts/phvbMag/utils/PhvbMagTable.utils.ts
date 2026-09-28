@@ -6,7 +6,7 @@ export type RequestTableSortKey =
   | 'Tenvanban'
   | 'SoVanBan'
   | 'LoaiYeuCau'
-  | 'KhoaPhongNguoiTao'
+  | 'NguoiTao'
   | 'Created'
   | 'StatusApproved'
   | 'Id';
@@ -187,8 +187,8 @@ export function sortRequestTableItems(
       case 'LoaiYeuCau':
         result = compareOptionalStrings(left.LoaiYeuCau, right.LoaiYeuCau);
         break;
-      case 'KhoaPhongNguoiTao':
-        result = compareOptionalStrings(left.KhoaPhongNguoiTao, right.KhoaPhongNguoiTao);
+      case 'NguoiTao':
+        result = compareOptionalStrings(left.NguoiTao, right.NguoiTao);
         break;
       case 'Created':
         result = compareDates(left.Created, right.Created);

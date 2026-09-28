@@ -131,7 +131,8 @@ export function usePhvbDmvlFlow(options: IUsePhvbDmvlFlowOptions): IUsePhvbDmvlF
         const detailPartial = await phvbDetailService.loadRequestDetailPartial(
           documentContext,
           requestReferenceId,
-          ['attachments', 'release']
+          ['attachments', 'release'],
+          documentContext.userEmail
         );
 
         if (!detailPartial?.release) {

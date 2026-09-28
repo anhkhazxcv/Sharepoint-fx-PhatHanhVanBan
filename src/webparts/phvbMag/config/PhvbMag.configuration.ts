@@ -56,9 +56,6 @@ export const REQUEST_STATUS = {
   DANG_GOP_Y: 'Đang góp ý',
   DANG_PHE_DUYET: 'Đang phê duyệt',
   DANG_THAM_DINH: 'Đang thẩm định',
-  CHO_ADMIN_THU_HOI: 'Chờ admin thu hồi',
-  CHO_SUPER_ADMIN_THU_HOI: 'Chờ supper admin thu hồi',
-  THU_HOI: 'Thu hồi',
   BAN_NHAP: 'Bản nháp',
   TU_CHOI: 'Từ chối',
   TU_CHOI_THAM_DINH: 'Từ chối thẩm định',
@@ -88,7 +85,8 @@ export const SEND_MAIL_TYPE = {
   XAC_NHAN_BAN_HANH_VN: 'XAC_NHAN_BAN_HANH_VN',
   XAC_NHAN_BAN_HANH_EN: 'XAC_NHAN_BAN_HANH_EN',
   TRA_LAI_ADMIN_BAN_HANH: 'TRA_LAI_ADMIN_BAN_HANH',
-  THONG_BAO_LUU_TRU: 'THONG_BAO_LUU_TRU'
+  THONG_BAO_LUU_TRU: 'THONG_BAO_LUU_TRU',
+  THONG_BAO_ADMIN_BAN_HANH_LOI: 'THONG_BAO_ADMIN_BAN_HANH_LOI'
 } as const;
 
 export const SHORT_URL_TAGS = ['mas_phvb'] as const;
@@ -219,6 +217,9 @@ export const WORKFLOW_FILTER_NAM_TAO_YEU_CAU_LABEL = 'workflowFilterNamTaoYeuCau
 
 /** Label trong lstConfigLabelCustom — Value = URL HTTPS tới file PDF sổ tay. */
 export const GUIDE_PDF_URL_LABEL = 'urlSoTayHuongDan';
+
+/** Label trong lstConfigLabelCustom — bật log GET tài liệu trên màn chi tiết. Value trống = luôn ghi. */
+export const ENABLE_LOG_GET_TAI_LIEU_LABEL = 'enableLogGetTaiLieu';
 
 /** Subtitle trên tab Hướng dẫn (header view). */
 export const GUIDE_VIEW_SUBTITLE = 'Hướng dẫn sử dụng hệ thống';
@@ -357,9 +358,6 @@ export function getWorkflowStepFromStatus(statusApproved?: string): number {
       return 4;
     case REQUEST_STATUS.CHO_CAP_SO:
     case REQUEST_STATUS.DA_CAP_SO:
-      return 5;
-    case REQUEST_STATUS.CHO_ADMIN_THU_HOI:
-    case REQUEST_STATUS.CHO_SUPER_ADMIN_THU_HOI:
       return 5;
     case REQUEST_STATUS.CHO_BAN_HANH:
     case REQUEST_STATUS.BAN_HANH:

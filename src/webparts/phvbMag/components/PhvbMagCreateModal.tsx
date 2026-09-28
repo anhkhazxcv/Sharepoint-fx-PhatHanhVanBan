@@ -12,8 +12,6 @@ import {
   findDuplicateAttachmentGroupFileName,
   getDmvlFormRules,
   getRequestTypeFormRules,
-  getRevokeExcludedFormFields,
-  isRevokeRequestType,
   sanitizeRequestInputForSave
 } from '../utils/PhvbMagRequestForm.utils';
 import {
@@ -569,58 +567,40 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
     setSystemError(undefined);
     setFileRejectError(undefined);
 
-    if (isRevokeRequestType(type)) {
-      setRemovedAttachmentIds(previousRemovedIds =>
-        collectAttachmentRemovalIds(existingTaiLieu, existingBieuMau, previousRemovedIds)
-      );
-      setExistingTaiLieu([]);
-      setExistingBieuMau([]);
-    }
-
     setFormValues(previousState => {
       if (previousState.requestType === type) {
         return previousState;
       }
 
-      const nextState = {
+      return {
         ...previousState,
         requestType: type,
         title: '',
         folderLuuTru: '',
         folder: '',
         idFolderOld: undefined,
-        isSendMailNotify: type === 'Thu hồi' ? false : true
+        isSendMailNotify: true
       };
-
-      if (isRevokeRequestType(type)) {
-        return {
-          ...nextState,
-          ...getRevokeExcludedFormFields()
-        };
-      }
-
-      return nextState;
     });
   };
 
-  const isAdjustOrRevokeRequest = formValues.requestType === 'Điều chỉnh' || isRevokeRequestType(formValues.requestType);
-  const isRevoke = isRevokeRequestType(formValues.requestType);
+  const isAdjustRequest = formValues.requestType === 'Điều chỉnh';
 
   const handleFolderConfirm = (folder: ISelectedBanHanhFolder): void => {
-    const storagePath = isAdjustOrRevokeRequest
+    const storagePath = isAdjustRequest
       ? getParentStoragePathAfterLibrary(folder.serverRelativePath, ISSUANCE_LIBRARY_TITLE)
       : folder.storagePath || getStoragePathAfterLibrary(folder.serverRelativePath, ISSUANCE_LIBRARY_TITLE);
 
     markFieldTouched('folderLuuTru');
-    if (isAdjustOrRevokeRequest) {
+    if (isAdjustRequest) {
       markFieldTouched('title');
     }
     setFormValues(previousState => ({
       ...previousState,
       folderLuuTru: storagePath,
       folder: storagePath,
-      title: isAdjustOrRevokeRequest ? normalizeDocumentTitle(folder.name) : previousState.title,
-      idFolderOld: isAdjustOrRevokeRequest ? folder.id : undefined
+      title: isAdjustRequest ? normalizeDocumentTitle(folder.name) : previousState.title,
+      idFolderOld: isAdjustRequest ? folder.id : undefined
     }));
   };
 
@@ -877,12 +857,12 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 <input
                   id={CREATE_REQUEST_FIELD_IDS.title}
                   type="text"
-                  placeholder={isAdjustOrRevokeRequest ? 'Chọn thư mục ban hành để tự điền...' : 'Nhập tên đầy đủ...'}
+                  placeholder={isAdjustRequest ? 'Chọn thư mục ban hành để tự điền...' : 'Nhập tên đầy đủ...'}
                   value={formValues.title}
                   onChange={event => handleTitleChange(event.target.value)}
                   onBlur={() => markFieldTouched('title')}
-                  readOnly={isAdjustOrRevokeRequest}
-                  disabled={isAdjustOrRevokeRequest}
+                  readOnly={isAdjustRequest}
+                  disabled={isAdjustRequest}
                   className={`${styles.formInput} ${titleFieldError ? styles.formInputInvalid : ''}`}
                   aria-invalid={Boolean(titleFieldError)}
                   aria-describedby={titleFieldError ? `${CREATE_REQUEST_FIELD_IDS.title}-error` : undefined}
@@ -940,20 +920,16 @@ export function PhvbMagCreateModal(props: IPhvbMagCreateModalProps): React.React
                 <label className={styles.fieldLabel}>
                   LÝ DO BAN HÀNH / TÓM TẮT NỘI DUNG <span className={styles.required}>*</span>
                 </label>
-                {!isRevoke && (
-                  <div className={styles.createSummaryHintCallout}>
-                    <SummaryHintIcon className={styles.createSummaryHintIcon} />
-                    <p className={styles.createSummaryHintText}>
-                      Đây là nội dung mô tả được hiển thị trên Intranet. Ghi chú nội bộ cho cấp thẩm định/phê duyệt vui lòng điền ở phần Ghi chú cho cấp thẩm định / phê duyệt bên dưới.
-                    </p>
-                  </div>
-                )}
+                <div className={styles.createSummaryHintCallout}>
+                  <SummaryHintIcon className={styles.createSummaryHintIcon} />
+                  <p className={styles.createSummaryHintText}>
+                    Đây là nội dung mô tả được hiển thị trên Intranet. Ghi chú nội bộ cho cấp thẩm định/phê duyệt vui lòng điền ở phần Ghi chú cho cấp thẩm định / phê duyệt bên dưới.
+                  </p>
+                </div>
                 <textarea
                   id={CREATE_REQUEST_FIELD_IDS.summary}
                   rows={4}
-                  placeholder={isRevokeRequestType(formValues.requestType)
-                    ? 'Nêu rõ lý do thu hồi văn bản...'
-                    : 'Mục đích, bối cảnh và nội dung chính của văn bản...'}
+                  placeholder="Mục đích, bối cảnh và nội dung chính của văn bản..."
                   value={formValues.summary}
                   onChange={event => updateField('summary', event.target.value)}
                   onBlur={() => markFieldTouched('summary')}

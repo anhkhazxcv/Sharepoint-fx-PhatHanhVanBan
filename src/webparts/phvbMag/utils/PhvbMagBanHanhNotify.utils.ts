@@ -48,8 +48,6 @@ export function resolveHanhDong(loaiYeuCau?: string): string {
       return 'ban hành';
     case 'Điều chỉnh':
       return 'điều chỉnh';
-    case 'Thu hồi':
-      return 'thu hồi';
     default:
       return 'ban hành';
   }

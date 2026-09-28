@@ -180,7 +180,7 @@ const WORKFLOW_STAGE_ORDER: WorkflowStage[] = ['gopy', 'thamdinh', 'pheduyet'];
  * Vị trí của giai đoạn hiện tại (theo StatusApproved thật của yêu cầu) trong
  * WORKFLOW_STAGE_ORDER. -1: chưa bắt đầu duyệt (Bản nháp). 0-2: đang ở đúng 1
  * trong 3 giai đoạn. WORKFLOW_STAGE_ORDER.length: đã đi qua/đóng cả 3 giai đoạn
- * (Chờ cấp số, Đã cấp số, Ban hành, Từ chối, Thu hồi,...).
+ * (Chờ cấp số, Đã cấp số, Ban hành, Từ chối,...).
  */
 function resolveWorkflowStageProgressIndex(statusApproved?: string): number {
   const stage = resolveWorkflowStageFromStatus(statusApproved);

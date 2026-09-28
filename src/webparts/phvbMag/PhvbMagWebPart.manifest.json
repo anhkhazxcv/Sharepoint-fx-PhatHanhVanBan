@@ -1,6 +1,6 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json",
-  "id": "7db6d7b3-dbe0-48ec-9506-6d58e071d502",
+  "id": "7db6d7b3-dbe0-48ec-9506-6d58e071d506",
   "alias": "PhvbMagWebPart",
   "componentType": "WebPart",
   "version": "*",
@@ -21,14 +21,14 @@
         "default": "Advanced"
       },
       "title": {
-        "default": "PHVB-MAG UAT"
+        "default": "PHVB-MAG PROD"
       },
       "description": {
-        "default": "PHVB-MAG UAT description"
+        "default": "PHVB-MAG PROD description"
       },
       "officeFabricIconFontName": "Page",
       "properties": {
-        "description": "PHVB-MAG UAT"
+        "description": "PHVB-MAG PROD"
       }
     }
   ]

@@ -21,7 +21,8 @@ function normalizeRefreshScopes(
 
 export function usePhvbRequestDetail(
   siteContext: IPhvbSiteContext,
-  idYeuCau?: string
+  idYeuCau?: string,
+  userEmail?: string
 ): IUsePhvbRequestDetailResult {
   const [data, setData] = useState<IRequestDetailData | undefined>(undefined);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -60,7 +61,7 @@ export function usePhvbRequestDetail(
 
       try {
         if (isFullReload) {
-          const result = await phvbDetailService.loadRequestDetail(siteContext, normalizedId);
+          const result = await phvbDetailService.loadRequestDetail(siteContext, normalizedId, userEmail);
 
           if (!isMounted) {
             return;
@@ -76,7 +77,7 @@ export function usePhvbRequestDetail(
           return;
         }
 
-        const partial = await phvbDetailService.loadRequestDetailPartial(siteContext, normalizedId, scopes);
+        const partial = await phvbDetailService.loadRequestDetailPartial(siteContext, normalizedId, scopes, userEmail);
 
         if (!isMounted) {
           return;
@@ -124,7 +125,7 @@ export function usePhvbRequestDetail(
     return () => {
       isMounted = false;
     };
-  }, [siteContext, idYeuCau, reloadRequest]);
+  }, [siteContext, idYeuCau, reloadRequest, userEmail]);
 
   return {
     data,

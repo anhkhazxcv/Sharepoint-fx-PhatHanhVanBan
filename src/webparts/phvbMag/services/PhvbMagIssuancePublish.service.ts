@@ -40,12 +40,6 @@ interface IIssuancePublishResult {
   expiredFolderServerRelativePath?: string;
 }
 
-interface IFolderChildItem {
-  name: string;
-  serverRelativeUrl: string;
-  isFolder: boolean;
-}
-
 interface IResolveFileListItemFieldsOptions {
   pollUntilReady?: boolean;
   timeoutMs?: number;
@@ -166,13 +160,6 @@ function buildCopyToRequestUrl(siteUrl: string, sourcePath: string, targetPath: 
 function buildMoveFileRequestUrl(siteUrl: string, sourcePath: string, targetPath: string): string {
   return `${normalizeSiteUrl(siteUrl)}/_api/web/GetFileByServerRelativeUrl(@fileUrl)/moveto(newurl=@newUrl,flags=1)?${buildODataParameterQuery({
     '@fileUrl': sourcePath,
-    '@newUrl': targetPath
-  })}`;
-}
-
-function buildMoveFolderRequestUrl(siteUrl: string, sourcePath: string, targetPath: string): string {
-  return `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderUrl)/moveto(newUrl=@newUrl)?${buildODataParameterQuery({
-    '@folderUrl': sourcePath,
     '@newUrl': targetPath
   })}`;
 }
@@ -808,34 +795,6 @@ export class PhvbIssuancePublishService {
       '@folderPath': normalizeServerRelativePath(folderPath)
     })}`;
     const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
-    await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_GET', ATTACHMENT_LIBRARY_TITLE);
-    const data = await response.json() as {
-      value?: Array<{ Name?: string; ServerRelativeUrl?: string }>;
-    };
-
-    return (data.value || [])
-      .map(item => ({
-        name: (item.Name || '').trim(),
-        serverRelativeUrl: normalizeServerRelativePath((item.ServerRelativeUrl || '').trim())
-      }))
-      .filter(item => Boolean(item.name) && Boolean(item.serverRelativeUrl));
-  }
-
-  private async listFoldersInFolder(
-    siteUrl: string,
-    context: IIssuancePublishContext,
-    folderPath: string
-  ): Promise<Array<{ name: string; serverRelativeUrl: string }>> {
-    const exists = await this.folderExists(siteUrl, context, folderPath);
-
-    if (!exists) {
-      return [];
-    }
-
-    const requestUrl = `${normalizeSiteUrl(siteUrl)}/_api/web/GetFolderByServerRelativeUrl(@folderPath)/Folders?$select=Name,ServerRelativeUrl&${buildODataParameterQuery({
-      '@folderPath': normalizeServerRelativePath(folderPath)
-    })}`;
-    const response = await context.spHttpClient.get(requestUrl, SPHttpClient.configurations.v1);
     await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_GET', ISSUANCE_LIBRARY_TITLE);
     const data = await response.json() as {
       value?: Array<{ Name?: string; ServerRelativeUrl?: string }>;
@@ -846,25 +805,7 @@ export class PhvbIssuancePublishService {
         name: (item.Name || '').trim(),
         serverRelativeUrl: normalizeServerRelativePath((item.ServerRelativeUrl || '').trim())
       }))
-      .filter(item => {
-        const name = item.name;
-        return Boolean(name) && Boolean(item.serverRelativeUrl) && name !== 'Forms';
-      });
-  }
-
-  private async listFolderChildren(
-    siteUrl: string,
-    context: IIssuancePublishContext,
-    folderPath: string
-  ): Promise<IFolderChildItem[]> {
-    const [files, folders] = await Promise.all([
-      this.listFilesInFolder(siteUrl, context, folderPath),
-      this.listFoldersInFolder(siteUrl, context, folderPath)
-    ]);
-
-    return files
-      .map(item => ({ ...item, isFolder: false }))
-      .concat(folders.map(item => ({ ...item, isFolder: true })));
+      .filter(item => Boolean(item.name) && Boolean(item.serverRelativeUrl));
   }
 
   private async resolveFolderPathByListItemId(
@@ -919,28 +860,6 @@ export class PhvbIssuancePublishService {
     return requestUrl;
   }
 
-  private async moveFolder(
-    siteUrl: string,
-    context: IIssuancePublishContext,
-    sourcePath: string,
-    targetPath: string
-  ): Promise<string> {
-    const requestUrl = buildMoveFolderRequestUrl(siteUrl, sourcePath, targetPath);
-    const response = await context.spHttpClient.post(requestUrl, SPHttpClient.configurations.v1, {
-      headers: {
-        accept: 'application/json;odata=nometadata',
-        'content-type': 'application/json;odata=nometadata',
-        'odata-version': ''
-      }
-    });
-
-    await ensureIssuanceResponseOk(response, requestUrl, context, 'SP_MOVE', ISSUANCE_LIBRARY_TITLE, {
-      sourcePath,
-      targetPath
-    });
-    return requestUrl;
-  }
-
   private async archiveOldDocumentsIntoExpired(
     siteUrl: string,
     context: IIssuancePublishContext,
@@ -969,34 +888,26 @@ export class PhvbIssuancePublishService {
 
       const createExpiredFolderUrl = await this.createFolder(siteUrl, context, expiredFolderPath, ISSUANCE_LIBRARY_TITLE);
 
-      const children = await this.listFolderChildren(siteUrl, context, documentFolderPath);
-      const itemsToMove = children.filter(item => item.name !== expiredFolderName);
-      const movedItems: Array<{ name: string; sourcePath: string; targetPath: string; isFolder: boolean }> = [];
+      const filesToMove = await this.listFilesInFolder(siteUrl, context, documentFolderPath);
+      const movedItems: Array<{ name: string; sourcePath: string; targetPath: string }> = [];
 
-      await runInChunks(itemsToMove, async (child) => {
-        const targetPath = joinServerRelativePath(expiredFolderPath, child.name);
-        const requestUrl = child.isFolder
-          ? buildMoveFolderRequestUrl(siteUrl, child.serverRelativeUrl, targetPath)
-          : buildMoveFileRequestUrl(siteUrl, child.serverRelativeUrl, targetPath);
+      await runInChunks(filesToMove, async (file) => {
+        const targetPath = joinServerRelativePath(expiredFolderPath, file.name);
+        const requestUrl = buildMoveFileRequestUrl(siteUrl, file.serverRelativeUrl, targetPath);
 
         try {
-          if (child.isFolder) {
-            await this.moveFolder(siteUrl, context, child.serverRelativeUrl, targetPath);
-          } else {
-            await this.moveFile(siteUrl, context, child.serverRelativeUrl, targetPath);
-          }
+          await this.moveFile(siteUrl, context, file.serverRelativeUrl, targetPath);
 
           movedItems.push({
-            name: child.name,
-            sourcePath: child.serverRelativeUrl,
-            targetPath,
-            isFolder: child.isFolder
+            name: file.name,
+            sourcePath: file.serverRelativeUrl,
+            targetPath
           });
 
           await auditLogger.logMoveFile(
             {
-              fileName: child.name,
-              sourcePath: child.serverRelativeUrl,
+              fileName: file.name,
+              sourcePath: file.serverRelativeUrl,
               targetPath
             },
             'success',
@@ -1006,8 +917,8 @@ export class PhvbIssuancePublishService {
         } catch (error) {
           await auditLogger.logMoveFile(
             {
-              fileName: child.name,
-              sourcePath: child.serverRelativeUrl,
+              fileName: file.name,
+              sourcePath: file.serverRelativeUrl,
               targetPath
             },
             'failed',
@@ -1029,7 +940,7 @@ export class PhvbIssuancePublishService {
         expiredFolderPath,
         expiredEndDateFieldValue,
         auditLogger,
-        { pollIfEmpty: itemsToMove.length > 0 }
+        { pollIfEmpty: filesToMove.length > 0 }
       );
 
       // Khoá hoàn toàn quyền xem thư mục Expired: break kế thừa, không cấp lại quyền cho ai —

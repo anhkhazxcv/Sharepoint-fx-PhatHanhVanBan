@@ -49,58 +49,16 @@ const DMVL_FORM_RULES: IRequestTypeFormRules = {
   includeAttachmentsOnSave: true
 };
 
-const REVOKE_FORM_RULES: IRequestTypeFormRules = {
-  showNguoiGopY: false,
-  showNguoiThamDinh: false,
-  showTaiLieuSoanThao: false,
-  showBieuMauDinhKem: false,
-  showGhiChuThamDinh: false,
-  requireTaiLieuSoanThao: false,
-  requireNguoiGopY: false,
-  requireNguoiThamDinh: false,
-  requireGhiChuThamDinh: false,
-  includeGopYThamDinhWorkflow: false,
-  includeAttachmentsOnSave: false
-};
-
 export function getDmvlFormRules(): IRequestTypeFormRules {
   return DMVL_FORM_RULES;
 }
 
 export function getRequestTypeFormRules(requestType: RequestTypeValue): IRequestTypeFormRules {
-  if (requestType === 'Thu hồi') {
-    return REVOKE_FORM_RULES;
-  }
-
   if (requestType === 'Điều chỉnh') {
     return ADJUST_FORM_RULES;
   }
 
   return STANDARD_FORM_RULES;
-}
-
-export function isRevokeRequestType(requestType: RequestTypeValue): boolean {
-  return requestType === 'Thu hồi';
-}
-
-export function shouldSkipGopYStage(input: Pick<ICreateRequestInput, 'requestType' | 'nguoiGopY'>): boolean {
-  const rules = getRequestTypeFormRules(input.requestType);
-  return !rules.includeGopYThamDinhWorkflow || input.nguoiGopY.length === 0;
-}
-
-export function getRevokeExcludedFormFields(): Pick<
-  ICreateRequestInput,
-  'nguoiGopY' | 'nguoiThamDinh' | 'deadlineGopY' | 'deadlineThamDinh' | 'ghiChuThamDinh' | 'taiLieuFiles' | 'bieuMauFiles'
-> {
-  return {
-    nguoiGopY: [],
-    nguoiThamDinh: [],
-    deadlineGopY: '',
-    deadlineThamDinh: '',
-    ghiChuThamDinh: '',
-    taiLieuFiles: [],
-    bieuMauFiles: []
-  };
 }
 
 export function collectAttachmentRemovalIds(
@@ -145,21 +103,5 @@ export function findDuplicateAttachmentGroupFileName(
 }
 
 export function sanitizeRequestInputForSave(input: ICreateRequestInput): ICreateRequestInput {
-  const rules = getRequestTypeFormRules(input.requestType);
-
-  if (rules.includeAttachmentsOnSave) {
-    return input;
-  }
-
-  return {
-    ...input,
-    ...getRevokeExcludedFormFields(),
-    existingTaiLieuAttachments: [],
-    existingBieuMauAttachments: [],
-    removedAttachmentIds: collectAttachmentRemovalIds(
-      input.existingTaiLieuAttachments || [],
-      input.existingBieuMauAttachments || [],
-      input.removedAttachmentIds || []
-    )
-  };
+  return input;
 }

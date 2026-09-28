@@ -25,7 +25,7 @@ export class PhvbDeleteRequestService {
       throw new Error('Yêu cầu chưa có mã IdYeuCau.');
     }
 
-    const detail = await phvbDetailService.loadRequestDetail(context, idYeuCau);
+    const detail = await phvbDetailService.loadRequestDetail(context, idYeuCau, context.userEmail);
 
     if (!detail) {
       throw new Error('Không tìm thấy dữ liệu yêu cầu cần xóa.');

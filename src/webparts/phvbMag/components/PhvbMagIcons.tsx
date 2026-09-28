@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
   FaAdjust,
-  FaBan,
   FaBars,
   FaBell,
   FaBookOpen,
@@ -313,10 +312,6 @@ export function StatusNumberedIcon(props: IIconProps): React.ReactElement {
 
 export function StatusPublishedIcon(props: IIconProps): React.ReactElement {
   return <FaCheck className={props.className} style={props.style} aria-hidden />;
-}
-
-export function StatusRevokedIcon(props: IIconProps): React.ReactElement {
-  return <FaBan className={props.className} style={props.style} aria-hidden />;
 }
 
 export function CreateActionIcon(props: IIconProps): React.ReactElement {

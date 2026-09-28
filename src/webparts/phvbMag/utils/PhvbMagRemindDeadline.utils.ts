@@ -280,7 +280,7 @@ export function canRemindDeadline(
 }
 
 export function buildRemindDeadlinePayload(
-  actorEmail: string,
+  nguoiThucHien: string,
   selectedEmails: ReadonlyArray<string>,
   context: IRemindDeadlineContext,
   documentInfo: ISendMailDocumentInfo
@@ -292,7 +292,7 @@ export function buildRemindDeadlinePayload(
   }
 
   const payload = buildSendMailPayload(
-    actorEmail,
+    nguoiThucHien,
     context.mailType,
     emailTo,
     undefined,

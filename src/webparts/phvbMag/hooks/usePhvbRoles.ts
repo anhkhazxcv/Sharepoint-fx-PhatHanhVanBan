@@ -17,22 +17,26 @@ interface IUsePhvbRolesResult {
 
 export function usePhvbRoles(options: IUsePhvbRolesOptions): IUsePhvbRolesResult {
   const { siteContext, userEmail } = options;
-  const [roles, setRoles] = useState<IPhvbRoleEntry[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [roles, setRoles] = useState<IPhvbRoleEntry[]>(() => phvbRoleService.getCachedRoles() || []);
+  const [isLoading, setIsLoading] = useState<boolean>(() => !phvbRoleService.getCachedRoles());
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let isMounted = true;
+    const hasCachedRoles = Boolean(phvbRoleService.getCachedRoles());
 
     const loadRoles = async (): Promise<void> => {
-      setIsLoading(true);
-      setErrorMessage(undefined);
+      if (!hasCachedRoles) {
+        setIsLoading(true);
+        setErrorMessage(undefined);
+      }
 
       try {
         const nextRoles = await phvbRoleService.loadRoles(siteContext);
 
         if (isMounted) {
           setRoles(nextRoles);
+          setErrorMessage(undefined);
         }
       } catch (error) {
         if (isMounted) {

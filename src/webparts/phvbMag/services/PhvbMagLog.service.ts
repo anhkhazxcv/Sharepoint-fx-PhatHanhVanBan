@@ -51,6 +51,8 @@ export function serializeLogPayload(value: unknown, maxLength: number = SHAREPOI
   return clipSharePointNote(serialized, maxLength);
 }
 
+let currentUserEmail = '';
+
 function getLogItemsEndpoint(siteUrl: string): string {
   return `${normalizeSiteUrl(siteUrl)}/_api/web/lists/getByTitle('${escapeODataValue(LOG_LIST_TITLE)}')/items`;
 }
@@ -58,7 +60,7 @@ function getLogItemsEndpoint(siteUrl: string): string {
 function mapLogEntryToPayload(entry: IPhvbLogEntry): Record<string, string> {
   return {
     Title: entry.title,
-    UserEmail: entry.userEmail || '',
+    UserEmail: (entry.userEmail || currentUserEmail || '').trim(),
     ScreenName: entry.screenName || '',
     ActionName: entry.actionName || '',
     ListName: entry.listName || '',
@@ -97,6 +99,10 @@ function resolveErrorMessage(error: unknown): string {
 }
 
 export class PhvbMagLogService {
+  public setCurrentUserEmail(email?: string): void {
+    currentUserEmail = (email || '').trim();
+  }
+
   public async writeAuditLog(context: IPhvbSiteContext, entry: IPhvbLogEntry): Promise<void> {
     await this.writeErrorLog(context, entry);
   }

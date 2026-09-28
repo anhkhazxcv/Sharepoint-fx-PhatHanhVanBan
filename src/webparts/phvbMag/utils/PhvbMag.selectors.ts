@@ -1,19 +1,11 @@
 import { ALL_FILTER_VALUE, REQUEST_STATUS } from '../config/PhvbMag.configuration';
 import type { BadgeVariant, IVanBanItem, UniqueItemField } from '../models/PhvbMag.models';
 
-export type RequestStatusFilterKey = 'all' | 'processing' | 'approved' | 'rejected' | 'revoked';
+export type RequestStatusFilterKey = 'all' | 'processing' | 'approved' | 'rejected';
 
 export interface IRequestStatusDisplay {
   filterKey: RequestStatusFilterKey;
   label: string;
-}
-
-function isRevokedStatus(status: string): boolean {
-  return (
-    status === REQUEST_STATUS.THU_HOI ||
-    status === REQUEST_STATUS.CHO_ADMIN_THU_HOI ||
-    status === REQUEST_STATUS.CHO_SUPER_ADMIN_THU_HOI
-  );
 }
 
 function isRejectedStatus(status: string): boolean {
@@ -46,13 +38,6 @@ export function getRequestStatusDisplay(status?: string): IRequestStatusDisplay 
     return {
       filterKey: 'processing',
       label: 'Chờ xử lý'
-    };
-  }
-
-  if (isRevokedStatus(value)) {
-    return {
-      filterKey: 'revoked',
-      label: value
     };
   }
 

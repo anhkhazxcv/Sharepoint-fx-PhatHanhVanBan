@@ -23,6 +23,7 @@ import { RETURN_BAN_HANH_TO_ADMIN_COMMENT_REQUIRED_MESSAGE } from '../utils/Phvb
 import { getRoleEmails } from '../utils/PhvbMagRole.utils';
 import { isDmvlBanHanhActor, isDmvlSubmissionRelease } from '../utils/PhvbMagDmvl.utils';
 import {
+  buildThongBaoAdminBanHanhLoiPayload,
   buildThongBaoLuuTruPayload,
   buildTraLaiAdminBanHanhPayload,
   buildXacNhanBanHanhPayload,
@@ -203,6 +204,101 @@ async function sendThongBaoLuuTruMail(
       error instanceof Error ? error.message : String(error),
       mailUrl
     );
+    throw error;
+  }
+}
+
+async function notifyAdminsBanHanhLoi(
+  context: IPhvbDocumentContext,
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  release: IVanBanItem,
+  error: unknown,
+  logContext: IPhvbLogContext | undefined
+): Promise<void> {
+  try {
+    const payload = buildThongBaoAdminBanHanhLoiPayload(
+      context.userDisplayName,
+      roles,
+      release,
+      mapBanHanhPublishToastError(error)
+    );
+
+    if (!payload) {
+      return;
+    }
+
+    await phvbSendMailService.sendMail(context, payload, logContext);
+  } catch {
+    return;
+  }
+}
+
+async function commitBanHanhRelease(
+  context: IPhvbDocumentContext,
+  detail: IRequestDetailData,
+  logContext: IPhvbLogContext | undefined,
+  auditLogger: ReturnType<typeof createBanHanhPublishAuditLogger>
+): Promise<void> {
+  const idYeuCau = (detail.release.IdYeuCau || '').trim();
+  if (!idYeuCau) {
+    throw new Error('Yêu cầu chưa có mã IdYeuCau.');
+  }
+
+  if (!isFullIssuancePublishRequest(detail.release)) {
+    throw new Error('Không ban hành được yêu cầu này. Chỉ hỗ trợ Tạo mới hoặc Điều chỉnh.');
+  }
+
+  assertPublishNotifyReady(detail.release);
+
+  const lienHe = (detail.release.NguoiTao || detail.release.EmailNguoiTao || '').trim();
+  const releaseItemUrl =
+    `${normalizeSiteUrl(context.currentWebUrl)}/_api/web/lists/getByTitle('${escapeODataValue(DEFAULT_LIST_TITLE)}')` +
+    `/items(${detail.release.Id})`;
+
+  try {
+    await Promise.all([
+      phvbRepository.updateItem({
+        ...context,
+        logContext,
+        listTitle: DEFAULT_LIST_TITLE,
+        itemId: detail.release.Id,
+        payload: {
+          StatusApproved: REQUEST_STATUS.BAN_HANH,
+          LienHe: lienHe
+        }
+      }),
+      appendHistory(
+        { ...context, logContext },
+        {
+          idYeuCau,
+          trangThaiThucHien: TRANG_THAI_THUC_HIEN.BAN_HANH,
+          noiDung: '',
+          department: detail.release.KhoaPhongNguoiTao,
+          isComment: false
+        }
+      )
+    ]);
+
+    await auditLogger.logUpdateRelease(
+      {
+        StatusApproved: REQUEST_STATUS.BAN_HANH,
+        LienHe: lienHe
+      },
+      'success',
+      undefined,
+      releaseItemUrl
+    );
+  } catch (error) {
+    await auditLogger.logUpdateRelease(
+      {
+        StatusApproved: REQUEST_STATUS.BAN_HANH,
+        LienHe: lienHe
+      },
+      'failed',
+      error instanceof Error ? error.message : String(error),
+      releaseItemUrl
+    );
+    throw error;
   }
 }
 
@@ -213,7 +309,6 @@ export async function publishIssuanceWithNotify(
   logContext: IPhvbLogContext | undefined,
   auditLogger: ReturnType<typeof createBanHanhPublishAuditLogger>
 ): Promise<void> {
-  const idYeuCau = (detail.release.IdYeuCau || '').trim();
   const mainDocumentId = resolveMainDocumentId(
     detail.attachments,
     options?.mainDocumentId,
@@ -311,11 +406,8 @@ export async function publishIssuanceWithNotify(
     linkFile,
     linkTatCaTaiLieu
   });
-  const lienHe = (detail.release.NguoiTao || detail.release.EmailNguoiTao || '').trim();
   const releaseUpdatePayload: Record<string, string | boolean | number> = {
-    StatusApproved: REQUEST_STATUS.BAN_HANH,
-    BodyEmail: resolvedBody,
-    LienHe: lienHe
+    BodyEmail: resolvedBody
   };
 
   try {
@@ -329,8 +421,7 @@ export async function publishIssuanceWithNotify(
 
     await auditLogger.logUpdateRelease(
       {
-        StatusApproved: REQUEST_STATUS.BAN_HANH,
-        LienHe: lienHe
+        BodyEmail: 'updated'
       },
       'success',
       undefined,
@@ -339,8 +430,7 @@ export async function publishIssuanceWithNotify(
   } catch (error) {
     await auditLogger.logUpdateRelease(
       {
-        StatusApproved: REQUEST_STATUS.BAN_HANH,
-        LienHe: lienHe
+        BodyEmail: 'updated'
       },
       'failed',
       error instanceof Error ? error.message : String(error),
@@ -355,24 +445,19 @@ export async function publishIssuanceWithNotify(
     throw new Error('Không tạo được nội dung email xác nhận ban hành.');
   }
 
-  const historyTask = appendHistory(
-    { ...context, logContext },
-    {
-      idYeuCau,
-      trangThaiThucHien: TRANG_THAI_THUC_HIEN.BAN_HANH,
-      noiDung: '',
-      department: detail.release.KhoaPhongNguoiTao,
-      isComment: false
-    }
-  ).then(() => undefined).catch((error: unknown) => error);
-
-  const mailTask = phvbSendMailService.sendMail(context, mailPayload, logContext)
-    .then(() => undefined)
-    .catch((error: unknown) => error);
-
-  const [historyError, mailError] = await Promise.all([historyTask, mailTask]);
-
-  if (mailError) {
+  try {
+    await phvbSendMailService.sendMail(context, mailPayload, logContext);
+    await auditLogger.logSendMail(
+      {
+        TypeSendMail: mailPayload.TypeSendMail,
+        EmailTo: mailPayload.EmailTo,
+        subject: mailPayload.Subject || ''
+      },
+      'success',
+      undefined,
+      mailUrl
+    );
+  } catch (error) {
     await auditLogger.logSendMail(
       {
         TypeSendMail: mailPayload.TypeSendMail,
@@ -380,25 +465,10 @@ export async function publishIssuanceWithNotify(
         subject: mailPayload.Subject || ''
       },
       'failed',
-      mailError instanceof Error ? mailError.message : String(mailError),
+      error instanceof Error ? error.message : String(error),
       mailUrl
     );
-    throw mailError;
-  }
-
-  await auditLogger.logSendMail(
-    {
-      TypeSendMail: mailPayload.TypeSendMail,
-      EmailTo: mailPayload.EmailTo,
-      subject: mailPayload.Subject || ''
-    },
-    'success',
-    undefined,
-    mailUrl
-  );
-
-  if (historyError) {
-    throw historyError;
+    throw error;
   }
 
   await sendThongBaoLuuTruMail(context, detail.release, logContext, auditLogger);
@@ -442,11 +512,9 @@ export class PhvbBanHanhService {
       throw new Error('Bạn không có quyền chuẩn bị ban hành cho yêu cầu này.');
     }
 
-    if (isFullIssuancePublishRequest(detail.release)) {
-      const mainDocumentError = validateMainDocumentCandidate(detail.attachments, options?.mainDocumentId);
-      if (mainDocumentError) {
-        throw new Error(mainDocumentError);
-      }
+    const mainDocumentError = validateMainDocumentCandidate(detail.attachments, options?.mainDocumentId);
+    if (mainDocumentError) {
+      throw new Error(mainDocumentError);
     }
 
     const documentInfo = assertBanHanhMailReady(context, roles, detail.release);
@@ -468,7 +536,7 @@ export class PhvbBanHanhService {
           SubjectBanHanh: notify.subject.trim(),
           BodyEmail: notify.body.trim()
         },
-        isFullIssuancePublishRequest(detail.release) ? options?.mainDocumentId : undefined
+        options?.mainDocumentId
       )
     });
 
@@ -646,51 +714,21 @@ export class PhvbBanHanhService {
     }
 
     const auditLogger = createBanHanhPublishAuditLogger(context, logContext || {}, idYeuCau);
-    const isFullIssuancePublish = isFullIssuancePublishRequest(detail.release);
 
     await auditLogger.logStart(options?.mainDocumentId);
 
     try {
-      if (isFullIssuancePublish) {
-        await publishIssuanceWithNotify(context, detail, options, logContext, auditLogger);
-        return;
-      }
-
-      const lienHe = (detail.release.NguoiTao || detail.release.EmailNguoiTao || '').trim();
-
-      await phvbRepository.updateItem({
-        ...context,
-        logContext,
-        listTitle: DEFAULT_LIST_TITLE,
-        itemId: detail.release.Id,
-        payload: {
-          StatusApproved: REQUEST_STATUS.BAN_HANH,
-          LienHe: lienHe
-        }
-      });
-
-      await Promise.all([
-        appendHistory(
-          { ...context, logContext },
-          {
-            idYeuCau,
-            trangThaiThucHien: TRANG_THAI_THUC_HIEN.BAN_HANH,
-            noiDung: '',
-            department: detail.release.KhoaPhongNguoiTao,
-            isComment: false
-          }
-        ),
-        sendThongBaoLuuTruMail(context, detail.release, logContext, auditLogger)
-      ]);
-
-      await auditLogger.logSuccess({
-        loaiYeuCau: detail.release.LoaiYeuCau,
-        mode: 'simple',
-        LienHe: lienHe
-      });
+      await commitBanHanhRelease(context, detail, logContext, auditLogger);
     } catch (error) {
-      await auditLogger.logFailed(isFullIssuancePublish ? 'publish_issuance' : 'publish_simple', error);
+      await auditLogger.logFailed('commit_ban_hanh', error);
       throw error;
+    }
+
+    try {
+      await publishIssuanceWithNotify(context, detail, options, logContext, auditLogger);
+    } catch (error) {
+      await auditLogger.logFailed('publish_issuance', error);
+      await notifyAdminsBanHanhLoi(context, roles, detail.release, error, logContext);
     }
   }
 
@@ -732,7 +770,8 @@ export class PhvbBanHanhService {
     const refreshedPartial = await phvbDetailService.loadRequestDetailPartial(
       context,
       idYeuCau,
-      ['release', 'attachments']
+      ['release', 'attachments'],
+      context.userEmail
     );
     const refreshedRelease = refreshedPartial.release;
 
@@ -780,6 +819,13 @@ export class PhvbBanHanhService {
     await auditLogger.logStart(options?.mainDocumentId);
 
     try {
+      await commitBanHanhRelease(context, publishDetail, logContext, auditLogger);
+    } catch (error) {
+      await auditLogger.logFailed('commit_ban_hanh', error);
+      throw error;
+    }
+
+    try {
       await publishIssuanceWithNotify(
         context,
         publishDetail,
@@ -789,7 +835,7 @@ export class PhvbBanHanhService {
       );
     } catch (error) {
       await auditLogger.logFailed('publish_issuance', error);
-      throw error;
+      await notifyAdminsBanHanhLoi(context, roles, publishDetail.release, error, logContext);
     }
   }
 

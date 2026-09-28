@@ -33,6 +33,8 @@ import { isDraftStatus } from '../utils/PhvbMagDraftEdit.utils';
 import { resolveTabFromPathname } from '../utils/PhvbMagRoute.utils';
 import { ToastService } from '../utils/ToastService';
 import { phvbDetailService } from '../services/PhvbMagDetail.service';
+import { phvbLogService } from '../services/PhvbMagLog.service';
+import { phvbRoleService } from '../services/PhvbMagRole.service';
 import { drainAllHistoryQueues } from '../services/PhvbMagExecutionHistory.service';
 import styles from './PhvbMag.module.scss';
 import type { IPhvbMagProps } from './IPhvbMagProps';
@@ -232,7 +234,7 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
     isLoading: isDetailLoading,
     errorMessage: detailErrorMessage,
     refetch: refetchDetail
-  } = usePhvbRequestDetail(siteContext, isProtectedRouteBlocked ? undefined : idYeuCau);
+  } = usePhvbRequestDetail(siteContext, isProtectedRouteBlocked ? undefined : idYeuCau, userEmail);
 
   const handleDetailStatusChanged = useCallback((): void => {
     refetchDetail(['release', 'activity', 'workflow']);
@@ -284,7 +286,8 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
       const partial = await phvbDetailService.loadRequestDetailPartial(
         siteContext,
         idYeuCau.trim(),
-        ['attachments']
+        ['attachments'],
+        userEmail
       );
 
       const freshDetail: IRequestDetailData = {
@@ -1096,23 +1099,84 @@ function PhvbMagInner(props: IPhvbMagProps): React.ReactElement {
 }
 
 export default function PhvbMag(props: IPhvbMagProps): React.ReactElement {
+  const {
+    spHttpClient,
+    httpClient,
+    currentWebUrl,
+    siteCollectionUrl,
+    sourceSiteUrl,
+    listTitle,
+    issuanceLibraryTitle,
+    endPointSendMail,
+    endPointShortUrl,
+    roleGroupID
+  } = props;
+  const siteContext = useMemo(() => ({
+    spHttpClient,
+    httpClient,
+    currentWebUrl,
+    siteCollectionUrl,
+    sourceSiteUrl,
+    listTitle,
+    issuanceLibraryTitle: resolveIssuanceLibraryTitle(issuanceLibraryTitle),
+    endPointSendMail,
+    endPointShortUrl,
+    roleGroupID
+  }), [
+    spHttpClient,
+    httpClient,
+    currentWebUrl,
+    siteCollectionUrl,
+    sourceSiteUrl,
+    listTitle,
+    issuanceLibraryTitle,
+    endPointSendMail,
+    endPointShortUrl,
+    roleGroupID
+  ]);
+  phvbLogService.setCurrentUserEmail(props.userEmail);
+  const [rolesReady, setRolesReady] = useState<boolean>(() => Boolean(phvbRoleService.getCachedRoles()));
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (phvbRoleService.getCachedRoles()) {
+      setRolesReady(true);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    phvbRoleService.loadRoles(siteContext).catch(() => undefined).then(() => {
+      if (isMounted) {
+        setRolesReady(true);
+      }
+    }).catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [siteContext]);
+
   return (
     <HashRouter>
       <PhvbBusyProvider>
-        <Routes>
-          <Route path="/tab/TrangChu/*" element={<PhvbMagInner {...props} />} />
-          <Route path="/tab/TrangChu" element={<PhvbMagInner {...props} />} />
-          <Route path="/tab/ThuVienTaiLieu/*" element={<PhvbMagInner {...props} />} />
-          <Route path="/tab/ThuVienTaiLieu" element={<Navigate to="/tab/ThuVienTaiLieu/all" replace />} />
-          <Route path="/tab/:tabName" element={<PhvbMagInner {...props} />} />
-          <Route path="/tab/:tabName/detail/:idYeuCau" element={<PhvbMagInner {...props} />} />
-          <Route path="/tab/:tabName/edit/:editIdYeuCau" element={<PhvbMagInner {...props} />} />
-          <Route path="/tab/:tabName/duplicate/:duplicateIdYeuCau" element={<PhvbMagInner {...props} />} />
-          <Route path="/tab/:tabName/create-dmvl" element={<PhvbMagInner {...props} />} />
-          <Route path="/tab/:tabName/create" element={<PhvbMagInner {...props} />} />
-          <Route path="/tab/:tabName/item/:itemId" element={<Navigate to="../" replace />} />
-          <Route path="*" element={<Navigate to="/tab/TrangChu" replace />} />
-        </Routes>
+        {rolesReady ? (
+          <Routes>
+            <Route path="/tab/TrangChu/*" element={<PhvbMagInner {...props} />} />
+            <Route path="/tab/TrangChu" element={<PhvbMagInner {...props} />} />
+            <Route path="/tab/ThuVienTaiLieu/*" element={<PhvbMagInner {...props} />} />
+            <Route path="/tab/ThuVienTaiLieu" element={<Navigate to="/tab/ThuVienTaiLieu/all" replace />} />
+            <Route path="/tab/:tabName" element={<PhvbMagInner {...props} />} />
+            <Route path="/tab/:tabName/detail/:idYeuCau" element={<PhvbMagInner {...props} />} />
+            <Route path="/tab/:tabName/edit/:editIdYeuCau" element={<PhvbMagInner {...props} />} />
+            <Route path="/tab/:tabName/duplicate/:duplicateIdYeuCau" element={<PhvbMagInner {...props} />} />
+            <Route path="/tab/:tabName/create-dmvl" element={<PhvbMagInner {...props} />} />
+            <Route path="/tab/:tabName/create" element={<PhvbMagInner {...props} />} />
+            <Route path="/tab/:tabName/item/:itemId" element={<Navigate to="../" replace />} />
+            <Route path="*" element={<Navigate to="/tab/TrangChu" replace />} />
+          </Routes>
+        ) : null}
         <ToastContainer />
       </PhvbBusyProvider>
     </HashRouter>

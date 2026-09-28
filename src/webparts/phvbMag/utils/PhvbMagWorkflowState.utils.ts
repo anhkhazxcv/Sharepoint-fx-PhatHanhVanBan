@@ -1,6 +1,6 @@
 import { REQUEST_STATUS, TRANG_THAI_THUC_HIEN, TrangThaiThucHien } from '../config/PhvbMag.configuration';
 import type { IAllUserWorkflowItem, IVanBanItem, WorkflowStage } from '../models/PhvbMag.models';
-import { isIssueOrAdjustRequest, isRevokeRelease } from './PhvbMagCapSo.utils';
+import { isIssueOrAdjustRequest } from './PhvbMagCapSo.utils';
 import { isWorkflowParticipantConfirmed } from './PhvbMagWorkflowTimeline.utils';
 
 export type WorkflowDocumentStage = WorkflowStage | 'none';
@@ -128,10 +128,6 @@ export function resolveNextDocumentStatusAfterStageComplete(
     return resolveStatusForWorkflowStage(nextStage);
   }
 
-  if (isRevokeRelease({ LoaiYeuCau: loaiYeuCau })) {
-    return REQUEST_STATUS.CHO_ADMIN_THU_HOI;
-  }
-
   if (isIssueOrAdjustRequest(loaiYeuCau)) {
     return REQUEST_STATUS.CHO_CAP_SO;
   }
@@ -191,9 +187,6 @@ export function isTerminalWorkflowStatus(statusApproved?: string): boolean {
     status === REQUEST_STATUS.DA_CAP_SO ||
     status === REQUEST_STATUS.CHO_BAN_HANH ||
     status === REQUEST_STATUS.BAN_HANH ||
-    status === REQUEST_STATUS.THU_HOI ||
-    status === REQUEST_STATUS.CHO_ADMIN_THU_HOI ||
-    status === REQUEST_STATUS.CHO_SUPER_ADMIN_THU_HOI ||
     status === REQUEST_STATUS.TU_CHOI ||
     status === REQUEST_STATUS.TU_CHOI_THAM_DINH ||
     status === REQUEST_STATUS.TU_CHOI_PHE_DUYET ||

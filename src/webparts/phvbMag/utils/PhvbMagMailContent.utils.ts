@@ -9,7 +9,9 @@ const MAIL_TOKEN_FIELDS: ReadonlyArray<keyof ISendMailRequest> = [
   'ApprovalStatus',
   'SoVanBan',
   'NguoiTao',
-  'LinkYeuCau'
+  'LinkYeuCau',
+  'LoiBanHanh',
+  'GhiChu'
 ];
 
 function toHtmlLineBreaks(value: string): string {

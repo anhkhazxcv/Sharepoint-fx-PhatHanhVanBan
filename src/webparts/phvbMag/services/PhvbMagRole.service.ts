@@ -23,6 +23,10 @@ function mapRoleItem(item: ISharePointRoleItem): IPhvbRoleEntry | undefined {
 }
 
 export class PhvbRoleService {
+  public getCachedRoles(): IPhvbRoleEntry[] | undefined {
+    return cachedRoles ? cachedRoles.slice() : undefined;
+  }
+
   public async loadRoles(context: IPhvbSiteContext): Promise<IPhvbRoleEntry[]> {
     if (cachedRoles) {
       return cachedRoles.slice();

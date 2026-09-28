@@ -209,7 +209,7 @@ export interface ICreateRequestInput {
   noiLuu: string;
 
   // New fields for the redesigned UI dialog:
-  requestType: 'Tạo mới' | 'Điều chỉnh' | 'Thu hồi';
+  requestType: 'Tạo mới' | 'Điều chỉnh';
   titleEn?: string;
   folderLuuTru: string;
   taiLieuFiles: File[];
@@ -357,6 +357,7 @@ export interface ISendMailDocumentInfo {
   tenVanBan: string;
   tomTatNoiDung: string;
   soVanBan?: string;
+  ghiChu?: string;
 }
 
 export interface ISendMailRequest {
@@ -372,6 +373,8 @@ export interface ISendMailRequest {
   Subject?: string;
   Body?: string;
   LinkYeuCau?: string;
+  LoiBanHanh?: string;
+  GhiChu?: string;
 }
 
 /** Payload JSON thực sự gửi lên endpoint Power Automate — chỉ 3 field, nội dung đã build sẵn. */

@@ -60,7 +60,8 @@ export function resolveSendMailDocumentInfoFromRelease(release: IVanBanItem): IS
     idYeuCau: (release.IdYeuCau || '').trim(),
     tenVanBan: (release.Tenvanban || '').trim(),
     tomTatNoiDung: (release.TomTatNoiDung || '').trim(),
-    soVanBan: (release.SoVanBan || '').trim()
+    soVanBan: (release.SoVanBan || '').trim(),
+    ghiChu: (release.GhiChuChoThamDinh || '').trim()
   };
 }
 
@@ -81,7 +82,8 @@ export function resolveSendMailDocumentInfoFromCreateInput(
   return {
     idYeuCau: requestReferenceId.trim(),
     tenVanBan: (input.title || '').trim(),
-    tomTatNoiDung: (input.summary || '').trim()
+    tomTatNoiDung: (input.summary || '').trim(),
+    ghiChu: (input.ghiChuThamDinh || '').trim()
   };
 }
 
@@ -192,6 +194,7 @@ export function resolveTabForSendMailType(
     case SEND_MAIL_TYPE.XAC_NHAN_CAP_SO:
     case SEND_MAIL_TYPE.YEU_CAU_BAN_HANH:
     case SEND_MAIL_TYPE.TRA_LAI_ADMIN_BAN_HANH:
+    case SEND_MAIL_TYPE.THONG_BAO_ADMIN_BAN_HANH_LOI:
       return 'QLVanBan';
 
     default:
@@ -225,6 +228,9 @@ export function buildSendMailPayload(
 
   const tabForLink = resolveTabForSendMailType(typeSendMail, approvalStatus);
   const linkYeuCau = tabForLink ? buildYeuCauDetailUrl(tabForLink, normalizedIdYeuCau) : undefined;
+  const includeGhiChu =
+    typeSendMail === SEND_MAIL_TYPE.YEU_CAU_THAM_DINH ||
+    typeSendMail === SEND_MAIL_TYPE.YEU_CAU_PHE_DUYET;
 
   return {
     NguoiThucHien: normalizedActor,
@@ -234,7 +240,8 @@ export function buildSendMailPayload(
     IDYeuCau: normalizedIdYeuCau,
     TenVanBan: normalizedTenVanBan,
     TomTatNoiDung: normalizedTomTat,
-    LinkYeuCau: linkYeuCau
+    LinkYeuCau: linkYeuCau,
+    GhiChu: includeGhiChu ? (documentInfo.ghiChu || '').trim() : undefined
   };
 }
 
@@ -442,6 +449,36 @@ export function buildThongBaoLuuTruPayload(
   return {
     ...basePayload,
     NguoiTao: nguoiTao
+  };
+}
+
+export function buildThongBaoAdminBanHanhLoiPayload(
+  nguoiThucHien: string,
+  roles: ReadonlyArray<IPhvbRoleEntry>,
+  release: IVanBanItem,
+  loiBanHanh: string
+): ISendMailRequest | undefined {
+  const documentInfo = resolveSendMailDocumentInfoFromRelease(release);
+  const emailTo = joinEmails(getRoleEmails(roles, PHVB_ROLES.ADMIN));
+  const normalizedLoi = (loiBanHanh || '').trim();
+
+  const basePayload = buildSendMailPayload(
+    nguoiThucHien,
+    SEND_MAIL_TYPE.THONG_BAO_ADMIN_BAN_HANH_LOI,
+    emailTo,
+    undefined,
+    documentInfo
+  );
+
+  if (!basePayload || !normalizedLoi) {
+    return undefined;
+  }
+
+  return {
+    ...basePayload,
+    SoVanBan: documentInfo.soVanBan,
+    NguoiTao: (release.NguoiTao || '').trim(),
+    LoiBanHanh: normalizedLoi
   };
 }
 

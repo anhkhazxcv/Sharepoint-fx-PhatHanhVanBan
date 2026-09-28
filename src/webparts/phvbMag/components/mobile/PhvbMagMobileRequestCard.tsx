@@ -13,7 +13,7 @@ interface IPhvbMagMobileRequestCardProps {
 
 /**
  * Một dòng của bảng desktop, xếp lại thành card cho khổ điện thoại. Chỉ giữ
- * các cột đọc được trên màn hẹp (tên · loại tác vụ · phòng ban · ngày tạo ·
+ * các cột đọc được trên màn hẹp (tên · loại tác vụ · người tạo · ngày tạo ·
  * trạng thái); mã hiệu chỉ hiện khi đã cấp số.
  */
 export function PhvbMagMobileRequestCard(
@@ -42,7 +42,7 @@ export function PhvbMagMobileRequestCard(
             </span>
           ) : null}
           <span className={styles.mobileRequestCardDept}>
-            {item.KhoaPhongNguoiTao || '---'}
+            {item.NguoiTao || '---'}
           </span>
           {createdLabel ? <span>{createdLabel}</span> : null}
         </span>
